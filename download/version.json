@@ -1,0 +1,15 @@
+{
+ "version": "2.0.93",
+ "notes": "Новый адрес сайта и обновлений: slavahoh1976-ops.github.io/-tz. Всё из 2.0.92: волюметрик (логичная коммутация, линии «Прямые»/«Дуги»), каше в проекции и куполе, общее поле (наложение масок, слои, лента полей), ТЗ «Крупно», картинки общего плана в проекте.",
+ "mac": {
+  "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
+  "sha256": "d198a72194108cd128314ab0601236332f0e6362e0eb96c7920d2983f1fc100c"
+ },
+ "windows": {
+  "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
+  "sha256": "901a7ea81eef8e2807a54b2deeff3ba6764869a07e7222b3c8ad23cfcd62c4b2"
+ },
+ "android": {
+  "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
+ }
+}
