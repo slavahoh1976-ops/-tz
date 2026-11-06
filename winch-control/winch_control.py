@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.08 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.09 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.08'
+VERSION = '1.09'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
 SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
@@ -76,7 +76,7 @@ def fnum(v, d=0.0):
 def mk_winch(i, u, a):
     return {'id': i, 'name': str(i), 'universe': u, 'address': a, 'invert': False,
             'min': 0.0, 'max': 100.0, 'home': 0.0, 'enabled': True, 'fixture': DEFAULT_FIXTURE,
-            'px': None, 'pz': None}   # px/pz — положение точки подвеса в метрах (None = по сетке)
+            'px': None, 'pz': None, 'py': None}   # px/pz — точка подвеса в плане, py — высота подвеса, м (None = по умолчанию)
 
 
 def default_show():
@@ -188,6 +188,7 @@ def normalize(s):
         x['home'] = clamp(fnum(x['home']), 0, 100)
         for k in ('px', 'pz'):
             x[k] = None if x.get(k) in (None, '') else round(clamp(fnum(x[k]), -1000, 1000), 3)
+        x['py'] = None if x.get('py') in (None, '') else round(clamp(fnum(x['py']), 0.5, 200), 3)
         ws.append({k: x[k] for k in mk_winch(0, 0, 1)})
     s['winches'] = ws
 
@@ -1738,7 +1739,7 @@ function objInfo(w,i){const o=objOf(w.id);if(!o)return{cls:'',sty:'',tag:''};con
 
 /* ---------- 3D-вид (Canvas, без внешних библиотек) ---------- */
 let view3d=(()=>{try{const v=localStorage.getItem('view3d');return v===null?true:v==='1'}catch(e){return true}})();
-const cam={yaw:-0.62,pitch:0.32,dist:0,tx:0,ty:0,tz:0,fitted:false};let v3disp={},v3pick=[],v3drag=null,V3=null,v3arr=false,v3over={},v3fr=0;
+const cam={yaw:-0.62,pitch:0.32,dist:0,tx:0,ty:0,tz:0,fitted:false,ortho:false,view:'q'};let v3disp={},v3pick=[],v3drag=null,V3=null,v3arr=false,v3over={},v3fr=0;
 function setView(on){view3d=!!on;try{localStorage.setItem('view3d',view3d?'1':'0')}catch(e){}
   $('#stage').hidden=view3d;$('#stage3d').hidden=!view3d;const a=$('#v2dbtn'),b=$('#v3dbtn');if(a){a.classList.toggle('on',!view3d);b.classList.toggle('on',view3d)}
   $$('#selbar .zoom .t, #cwz, #cwauto').forEach(x=>{if(x.id==='cwz'||x.id==='cwauto'||(x.classList.contains('t')&&x.textContent==='Ширина'))x.style.display=view3d?'none':''});
@@ -1746,10 +1747,11 @@ function setView(on){view3d=!!on;try{localStorage.setItem('view3d',view3d?'1':'0
 function v3cfg(){const v=show.layout.v3d||{};return{H:+v.height||8,T:+v.travel||6,S:+v.step||1,R:+v.row||2,P:+v.panel||1.5}}
 function v3geo(C){const n=show.winches.length,cols=Math.max(1,Math.min(show.layout.cols,n||1)),rows=Math.ceil((n||1)/cols),G={};let spatial=false;
   show.winches.forEach((w,i)=>{const c=i%cols,r=Math.floor(i/cols);let x=(c-(cols-1)/2)*C.S,z=(r-(rows-1)/2)*C.R;
-    if(w.px!=null&&w.pz!=null){x=w.px;z=w.pz;spatial=true}const o=v3over[w.id];if(o){x=o.x;z=o.z;spatial=true}G[w.id]={x,z,row:r}});
+    let y=w.py!=null?w.py:C.H;if(w.px!=null&&w.pz!=null){x=w.px;z=w.pz;spatial=true}const o=v3over[w.id];if(o){x=o.x;z=o.z;if(o.y!=null)y=o.y;spatial=true}G[w.id]={x,z,y,row:r}});
   const xs=Object.values(G).map(o=>o.x),zs=Object.values(G).map(o=>o.z),x0=Math.min(...xs,0),x1=Math.max(...xs,0),z0=Math.min(...zs,0),z1=Math.max(...zs,0);
   return{G,spatial,x0,x1,z0,z1,w:x1-x0,d:z1-z0,mx:(x0+x1)/2,mz:(z0+z1)/2}}
-function v3view(v){if(v==='f'){cam.yaw=0;cam.pitch=0.06}else if(v==='s'){cam.yaw=Math.PI/2;cam.pitch=0.12}else if(v==='t'){cam.yaw=0;cam.pitch=1.5}else if(v==='q'){cam.yaw=-0.62;cam.pitch=0.32}else cam.fitted=false}
+function v3view(v){if(v==='f'){cam.yaw=0;cam.pitch=0}else if(v==='s'){cam.yaw=Math.PI/2;cam.pitch=0}else if(v==='t'){cam.yaw=0;cam.pitch=1.5697}else if(v==='q'){cam.yaw=-0.62;cam.pitch=0.32}else{cam.fitted=false;return}
+  cam.view=v;cam.ortho=v!=='q';$$('.v3ui [data-v]').forEach(b=>b.classList.toggle('tglon',b.dataset.v===cam.view))}
 function v3loop(){if(!view3d)return;try{draw3d()}catch(e){console.error(e)}if(v3arr&&++v3fr%12===0)liveArr();requestAnimationFrame(v3loop)}
 function draw3d(){
   const c=$('#c3d');if(!c||!show)return;const W=c.clientWidth,Hh=c.clientHeight,dpr=window.devicePixelRatio||1;if(!W||!Hh)return;
@@ -1757,10 +1759,11 @@ function draw3d(){
   const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,Hh);
   const C=v3cfg(),GE=v3geo(C),G=GE.G;
   if(!cam.fitted){cam.tx=GE.mx;cam.tz=GE.mz;cam.ty=C.H-C.T*0.55;cam.dist=Math.max(GE.w*1.3+2,C.H*1.6,GE.d*2.2+4,(GE.w+GE.d)*0.95+3,7);cam.fitted=true}
-  const cp=Math.cos(cam.pitch),ex=cam.tx+cam.dist*cp*Math.sin(cam.yaw),ey=cam.ty+cam.dist*Math.sin(cam.pitch),ez=cam.tz+cam.dist*cp*Math.cos(cam.yaw);
+  const OR=cam.ortho?30:1,DI=cam.dist*OR;   // «чертёжные» виды: камера очень далеко с узким углом — почти без перспективы
+  const cp=Math.cos(cam.pitch),ex=cam.tx+DI*cp*Math.sin(cam.yaw),ey=cam.ty+DI*Math.sin(cam.pitch),ez=cam.tz+DI*cp*Math.cos(cam.yaw);
   let fx=cam.tx-ex,fy=cam.ty-ey,fz=cam.tz-ez;const fl=Math.hypot(fx,fy,fz);fx/=fl;fy/=fl;fz/=fl;
   let rx=-fz,rz=fx;const rl=Math.hypot(rx,rz)||1;rx/=rl;rz/=rl;const ry=0;
-  const ux=ry*fz-rz*fy,uy=rz*fx-rx*fz,uz=rx*fy-ry*fx,F=Math.min(W,Hh*1.6)*0.9,cx=W/2,cy=Hh/2;
+  const ux=ry*fz-rz*fy,uy=rz*fx-rx*fz,uz=rx*fy-ry*fx,F=Math.min(W,Hh*1.6)*0.9*OR,cx=W/2,cy=Hh/2;
   V3={ex,ey,ez,fx,fy,fz,rx,rz,ux,uy,uz,F,cx,cy,C,G};
   const P=(x,y,z)=>{const dx=x-ex,dy=y-ey,dz=z-ez,zz=dx*fx+dy*fy+dz*fz;if(zz<0.05)return null;return[cx+(dx*rx+dz*rz)*F/zz,cy-(dx*ux+dy*uy+dz*uz)*F/zz,zz]};
   const line=(a,b,col,lw,dash)=>{if(!a||!b)return;g.strokeStyle=col;g.lineWidth=lw;if(dash)g.setLineDash(dash);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();if(dash)g.setLineDash([])};
@@ -1773,20 +1776,20 @@ function draw3d(){
   const hz=GE.z1+1.6,hx=GE.x0-1.2,hd=P(hx,1.62,hz),ft=P(hx,0,hz);if(hd&&ft){const sc=(ft[1]-hd[1])/1.62;g.strokeStyle='rgba(138,148,163,.55)';g.lineWidth=Math.max(1,sc*0.09);g.beginPath();g.moveTo(ft[0]-sc*.18,ft[1]);g.lineTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0]+sc*.18,ft[1]);g.moveTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0],ft[1]-sc*1.42);g.moveTo(ft[0]-sc*.25,ft[1]-sc*1.05);g.lineTo(ft[0],ft[1]-sc*1.32);g.lineTo(ft[0]+sc*.25,ft[1]-sc*1.05);g.stroke();g.fillStyle='rgba(138,148,163,.55)';g.beginPath();g.arc(hd[0],hd[1]-sc*.02,sc*.13,0,7);g.fill();g.font='10px system-ui';g.fillText('1,8 м',ft[0]+sc*.3,ft[1]-sc*.9)}
   const items=[],k=0.3;
   for(const wv of show.winches){const t=st?.pos?.[wv.id]??0;v3disp[wv.id]=v3disp[wv.id]==null?t:v3disp[wv.id]+(t-v3disp[wv.id])*k}
-  const hook=id=>C.H-0.3-(v3disp[id]??0)/100*C.T;
+  const hook=id=>(G[id]?G[id].y:C.H)-0.3-(v3disp[id]??0)/100*C.T;
   // потолок: фермы по рядам (сетка) или контур подвеса (свободная расстановка)
   if(!GE.spatial){[...new Set(Object.values(G).map(o=>o.z))].forEach(z=>{const a=P(GE.x0-0.6,C.H,z),b=P(GE.x1+0.6,C.H,z);if(a&&b)items.push({z:(a[2]+b[2])/2+0.5,f:()=>{const lw=Math.max(2,0.16*F/((a[2]+b[2])/2));line(a,b,'#3d4652',lw);line(a,b,'#5a6574',Math.max(1,lw*0.35))}})})}
   else{const q=[[GE.x0-0.6,GE.z0-0.6],[GE.x1+0.6,GE.z0-0.6],[GE.x1+0.6,GE.z1+0.6],[GE.x0-0.6,GE.z1+0.6]].map(([x,z])=>P(x,C.H,z));
     for(let i=0;i<4;i++){const a=q[i],b=q[(i+1)%4];if(a&&b)items.push({z:(a[2]+b[2])/2+1,f:()=>line(a,b,'rgba(90,101,116,.55)',Math.max(1.5,0.08*F/((a[2]+b[2])/2)))})}}
   const inObj={};show.objects.forEach((o,oi)=>o.members.forEach(m=>inObj[m]=oi));
   v3pick=[];
-  for(const wv of show.winches){const o=G[wv.id];if(!o)continue;const top=P(o.x,C.H,o.z),hk=P(o.x,hook(wv.id),o.z);if(!top||!hk)continue;const fxOn=!!st?.fxOf?.[wv.id],sl=sel.has(wv.id);
+  for(const wv of show.winches){const o=G[wv.id];if(!o)continue;const top=P(o.x,o.y,o.z),hk=P(o.x,hook(wv.id),o.z);if(!top||!hk)continue;const fxOn=!!st?.fxOf?.[wv.id],sl=sel.has(wv.id);
     if(v3arr){const fl0=P(o.x,0,o.z);if(fl0)items.push({z:fl0[2]+0.2,f:()=>{line(hk,fl0,sl?'rgba(255,176,32,.5)':'rgba(255,255,255,.12)',1,[3,4]);g.fillStyle=sl?'#ffb020':'rgba(255,255,255,.35)';g.beginPath();g.arc(fl0[0],fl0[1],sl?4:2.5,0,7);g.fill();
-      if(sl){g.font='10px system-ui';g.fillText(`x ${o.x.toFixed(2)}  z ${o.z.toFixed(2)}`,fl0[0]+6,fl0[1]+12)}}})}
+      if(sl&&wv.id===Math.min(...sel)){g.font='10px system-ui';g.fillText(`x ${o.x.toFixed(2)}  z ${o.z.toFixed(2)}  y ${o.y.toFixed(2)}`,fl0[0]+6,fl0[1]+12)}}})}
     items.push({z:(top[2]+hk[2])/2,f:()=>{line(top,hk,fxOn?'rgba(61,214,198,.9)':'rgba(170,180,195,.75)',Math.max(1,0.012*F/hk[2]));const b=Math.max(2.5,0.09*F/top[2]);g.fillStyle=sl?'#ffb020':'#8a94a3';g.fillRect(top[0]-b,top[1]-b*0.6,b*2,b*1.2)}});
     if(inObj[wv.id]==null){const r=Math.max(3,0.17*F/hk[2]);items.push({z:hk[2]-0.01,f:()=>{const gr=g.createRadialGradient(hk[0]-r*.35,hk[1]-r*.35,r*.1,hk[0],hk[1],r);gr.addColorStop(0,'#fff');gr.addColorStop(.35,fxOn?'#8ff3ea':'#ffcf6a');gr.addColorStop(1,fxOn?'#13a395':'#d98a00');g.fillStyle=gr;g.beginPath();g.arc(hk[0],hk[1],r,0,7);g.fill();if(sl){g.strokeStyle='#fff';g.lineWidth=2;g.stroke()}}});
       v3pick.push({ids:[wv.id],x:hk[0],y:hk[1],r:Math.max(10,r+4),z:hk[2]},{ids:[wv.id],x:top[0],y:top[1],r:9,z:top[2]})}
-    if(F/hk[2]>16){const lb=P(o.x,C.H+0.25,o.z);if(lb)items.push({z:lb[2]-1,f:()=>{g.fillStyle=sl?'#ffb020':'rgba(231,234,239,.8)';g.font=`600 ${Math.min(13,Math.max(9,0.22*F/lb[2]))}px system-ui`;g.textAlign='center';g.fillText(wv.name,lb[0],lb[1]);g.textAlign='left'}})}}
+    if(F/hk[2]>16){const lb=P(o.x,o.y+0.25,o.z);if(lb)items.push({z:lb[2]-1,f:()=>{g.fillStyle=sl?'#ffb020':'rgba(231,234,239,.8)';g.font=`600 ${Math.min(13,Math.max(9,0.22*F/lb[2]))}px system-ui`;g.textAlign='center';g.fillText(wv.name,lb[0],lb[1]);g.textAlign='left'}})}}
   show.objects.forEach((ob,oi)=>{const ms=ob.members.filter(m=>G[m]);if(!ms.length)return;
     const A=G[ms[0]],B=G[ms[ms.length-1]],pad=ms.length>1?0.18*C.S:0.4,dx=B.x-A.x,dz=B.z-A.z,L=Math.hypot(dx,dz)||1,ux_=ms.length>1?dx/L:1,uz_=ms.length>1?dz/L:0;
     const y1=hook(ms[0]),y2=hook(ms[ms.length-1]),x1=A.x-ux_*pad,z1=A.z-uz_*pad,x2=B.x+ux_*pad,z2=B.z+uz_*pad;
@@ -1802,14 +1805,16 @@ function draw3d(){
 }
 function v3hit(x,y){let best=null;for(const p of v3pick){let hit=false;if(p.poly){let ins=false;const q=p.poly;for(let i=0,j=3;i<4;j=i++){if(((q[i][1]>y)!==(q[j][1]>y))&&(x<(q[j][0]-q[i][0])*(y-q[i][1])/(q[j][1]-q[i][1])+q[i][0]))ins=!ins}hit=ins}else hit=Math.hypot(x-p.x,y-p.y)<=p.r;
   if(hit&&(!best||p.z<best.z))best=p}return best}
-function v3ray(sx,sy,py){const V=V3;if(!V)return null;const a=(sx-V.cx)/V.F,b=-(sy-V.cy)/V.F,dx=V.fx+a*V.rx+b*V.ux,dy=V.fy+b*V.uy,dz=V.fz+a*V.rz+b*V.uz;if(Math.abs(dy)<1e-6)return null;const t=(py-V.ey)/dy;if(t<=0)return null;return{x:V.ex+dx*t,z:V.ez+dz*t}}
+function v3ray(sx,sy,py){return v3plane(sx,sy,[0,1,0],py)}
+function v3plane(sx,sy,n,d){const V=V3;if(!V)return null;const a=(sx-V.cx)/V.F,b=-(sy-V.cy)/V.F,dx=V.fx+a*V.rx+b*V.ux,dy=V.fy+b*V.uy,dz=V.fz+a*V.rz+b*V.uz;
+  const den=n[0]*dx+n[1]*dy+n[2]*dz;if(Math.abs(den)<1e-9)return null;const t=(d-(n[0]*V.ex+n[1]*V.ey+n[2]*V.ez))/den;if(t<=0)return null;return{x:V.ex+dx*t,y:V.ey+dy*t,z:V.ez+dz*t}}
 /* расстановка в пространстве */
 function arrUnits(onlySel){const out=[],seen=new Set();show.winches.forEach(w=>{if(seen.has(w.id)||(onlySel&&!sel.has(w.id)))return;const o=single?null:objOf(w.id);
   if(o){o.members.forEach(m=>seen.add(m));out.push({ids:o.members.slice(),name:o.name})}else{seen.add(w.id);out.push({ids:[w.id],name:'Лебёдка '+w.name})}});return out}
 function unitPose(u,G){const ps=u.ids.map(i=>G[i]).filter(Boolean),cx=ps.reduce((a,p)=>a+p.x,0)/ps.length,cz=ps.reduce((a,p)=>a+p.z,0)/ps.length;
   const A=ps[0],B=ps[ps.length-1],ang=ps.length>1?Math.atan2(B.z-A.z,B.x-A.x)*180/Math.PI:0;return{cx,cz,ang}}
 function placeUnit(u,cx,cz,ang,S,out){const a=ang*Math.PI/180,n=u.ids.length;u.ids.forEach((id,k)=>{const o=(k-(n-1)/2)*S;out[id]={x:+(cx+Math.cos(a)*o).toFixed(3),z:+(cz+Math.sin(a)*o).toFixed(3)}})}
-function saveSpatial(pos,msg,refit){saveCfg({winches:show.winches.map(w=>pos[w.id]===undefined?w:pos[w.id]===null?{...w,px:null,pz:null}:{...w,px:pos[w.id].x,pz:pos[w.id].z})}).then(r=>{if(r.ok){v3over={};if(msg)toast(msg);if(refit)setTimeout(()=>{cam.fitted=false},250)}})}
+function saveSpatial(pos,msg,refit){saveCfg({winches:show.winches.map(w=>{const q=pos[w.id];if(q===undefined)return w;if(q===null)return{...w,px:null,pz:null,py:null};const o={...w,px:q.x,pz:q.z};if(q.y!==undefined)o.py=q.y;return o})}).then(r=>{if(r.ok){v3over={};if(msg)toast(msg);if(refit)setTimeout(()=>{cam.fitted=false},250)}})}
 function arrLayout(kind){const C=v3cfg(),onlySel=sel.size>0,U=arrUnits(onlySel);if(!U.length)return;const p=+$('#arrp').value||0,gap=0.6,wid=u=>(u.ids.length-1)*C.S+0.8,out={};
   const tot=U.reduce((a,u)=>a+wid(u),0)+gap*(U.length-1);
   if(kind==='grid'){U.forEach(u=>u.ids.forEach(i=>out[i]=null));return saveSpatial(out,'Возвращено по сетке',true)}
@@ -1823,25 +1828,28 @@ function arrLayout(kind){const C=v3cfg(),onlySel=sel.size>0,U=arrUnits(onlySel);
 function renderArr(){const p=$('#v3arr');if(!p)return;p.hidden=!(view3d&&v3arr);$('#v3arrbtn')?.classList.toggle('tglon',v3arr);if(p.hidden)return;
   const U=arrUnits(true),one=U.length===1?U[0]:null;
   p.innerHTML=`<b>Расстановка в пространстве</b>
-  <div class="hint">Тяните экран или лебёдку по полу мышью (шаг 5 см, с Alt — без шага). Клик — выделить.</div>
-  ${one?`<div class="t" style="margin-top:8px">${esc(one.name)}</div><div class="row" style="margin:6px 0"><span class="t">X</span><input type="number" step="0.05" id="arrx" class="num"><span class="t">Z</span><input type="number" step="0.05" id="arrz" class="num">${one.ids.length>1?'<span class="t">Угол°</span><input type="number" step="5" id="arra" class="num">':''}<button id="arrok">OK</button></div>`
+  <div class="hint">Тяните экран или лебёдку мышью (шаг 5 см, с Alt — без шага). <b>Сверху</b> и 3/4 — по площадке (X, Z); <b>Спереди</b> — X и высота подвеса; <b>Сбоку</b> — глубина Z и высота. Клик — выделить.</div>
+  ${one?`<div class="t" style="margin-top:8px">${esc(one.name)}</div><div class="row" style="margin:6px 0"><span class="t">X</span><input type="number" step="0.05" id="arrx" class="num"><span class="t">Z</span><input type="number" step="0.05" id="arrz" class="num"><span class="t">Y</span><input type="number" step="0.05" id="arry" class="num" title="Высота подвеса, м">${one.ids.length>1?'<span class="t">Угол°</span><input type="number" step="5" id="arra" class="num">':''}<button id="arrok">OK</button></div>`
    :`<div class="t" style="margin:8px 0 4px">${U.length?'Выделено объектов: '+U.length:'Ничего не выделено — раскладка применится ко всем'}</div>`}
   <div class="row" style="margin:6px 0 4px;gap:4px"><button data-l="line">Линия</button><button data-l="arc">Дуга</button><button data-l="circle">Круг</button><button data-l="rows">2 ряда</button><button data-l="scatter">Разброс</button><button data-l="grid" title="Вернуть положение по сетке сцены">По сетке</button></div>
   <div class="row" style="margin:0"><span class="t">Радиус / расстояние, м</span><input type="number" id="arrp" class="num" min="0" step="0.5" placeholder="авто"></div>`;
   $$('#v3arr [data-l]').forEach(b=>b.onclick=()=>arrLayout(b.dataset.l));
-  if(one){liveArr(true);$('#arrok').onclick=()=>{const C=v3cfg(),out={};placeUnit(one,+$('#arrx').value||0,+$('#arrz').value||0,one.ids.length>1?(+$('#arra').value||0):0,C.S,out);saveSpatial(out,'Положение сохранено')};
+  if(one){liveArr(true);$('#arrok').onclick=()=>{const C=v3cfg(),out={};placeUnit(one,+$('#arrx').value||0,+$('#arrz').value||0,one.ids.length>1?(+$('#arra').value||0):0,C.S,out);const yy=+$('#arry').value;if(yy>0)Object.values(out).forEach(o=>o.y=+clamp(yy,0.5,200).toFixed(3));saveSpatial(out,'Положение сохранено')};
     $$('#v3arr input.num').forEach(i=>i.onkeydown=e=>{if(e.key==='Enter')$('#arrok').click()})}}
 function liveArr(force){const U=arrUnits(true);if(U.length!==1||!V3)return;const x=$('#arrx');if(!x)return;if(!force&&$('#v3arr').contains(document.activeElement))return;
-  const ps=unitPose(U[0],V3.G);x.value=ps.cx.toFixed(2);$('#arrz').value=ps.cz.toFixed(2);const a=$('#arra');if(a)a.value=Math.round(ps.ang)}
+  const ps=unitPose(U[0],V3.G);x.value=ps.cx.toFixed(2);$('#arrz').value=ps.cz.toFixed(2);const yv=U[0].ids.map(i=>V3.G[i]?.y).filter(v=>v!=null);if($('#arry'))$('#arry').value=(yv.reduce((a,b)=>a+b,0)/yv.length).toFixed(2);const a=$('#arra');if(a)a.value=Math.round(ps.ang)}
 (()=>{const c=$('#c3d');
   c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);v3drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,pan:e.button===2||e.shiftKey};c.classList.add('drag');
     if(v3arr&&!v3drag.pan&&V3){const r=c.getBoundingClientRect(),h=v3hit(e.clientX-r.left,e.clientY-r.top);if(h){const idsx=single?h.ids:expand(h.ids);if(!idsx.every(i=>sel.has(i))){sel.clear();idsx.forEach(i=>sel.add(i));markSel()}
-      const p0=v3ray(e.clientX-r.left,e.clientY-r.top,V3.C.H);if(p0){const sp={};[...sel].forEach(i=>{if(V3.G[i])sp[i]={...V3.G[i]}});v3drag.move={p0,sp}}}}};
+      const g0=V3.G[idsx[0]]||{x:0,y:V3.C.H,z:0},vert=cam.ortho&&(cam.view==='f'||cam.view==='s');let n=[0,1,0],dd=g0.y;
+      if(vert){const hl=Math.hypot(V3.fx,V3.fz)||1;n=[V3.fx/hl,0,V3.fz/hl];dd=n[0]*g0.x+n[2]*g0.z}
+      const p0=v3plane(e.clientX-r.left,e.clientY-r.top,n,dd);if(p0){const sp={};[...sel].forEach(i=>{if(V3.G[i])sp[i]={...V3.G[i]}});v3drag.move={p0,sp,n,dd,vert}}}}};
   c.onpointermove=e=>{if(!v3drag)return;const dx=e.clientX-v3drag.x,dy=e.clientY-v3drag.y;v3drag.x=e.clientX;v3drag.y=e.clientY;
-    if(v3drag.move){const r=c.getBoundingClientRect(),p=v3ray(e.clientX-r.left,e.clientY-r.top,V3.C.H);if(!p)return;let mx=p.x-v3drag.move.p0.x,mz=p.z-v3drag.move.p0.z;if(!e.altKey){mx=Math.round(mx/0.05)*0.05;mz=Math.round(mz/0.05)*0.05}
-      for(const i in v3drag.move.sp){const s0=v3drag.move.sp[i];v3over[i]={x:+(s0.x+mx).toFixed(3),z:+(s0.z+mz).toFixed(3)}}v3drag.moved=true;return}
+    if(v3drag.move){const M=v3drag.move,r=c.getBoundingClientRect(),p=v3plane(e.clientX-r.left,e.clientY-r.top,M.n,M.dd);if(!p)return;
+      const q=v=>e.altKey?v:Math.round(v/0.05)*0.05;let mx=q(p.x-M.p0.x),mz=q(p.z-M.p0.z),my=M.vert?q(p.y-M.p0.y):0;
+      for(const i in M.sp){const s0=M.sp[i];v3over[i]={x:+(s0.x+mx).toFixed(3),z:+(s0.z+mz).toFixed(3),y:+clamp(s0.y+my,0.5,200).toFixed(3)}}v3drag.moved=true;return}
     if(v3drag.pan){const s=cam.dist/Math.max(400,c.clientWidth)*1.3;cam.tx-=(Math.cos(cam.yaw)*dx)*s;cam.tz-=(-Math.sin(cam.yaw)*dx)*s;cam.ty+=dy*s}
-    else{cam.yaw-=dx*0.008;cam.pitch=clamp(cam.pitch+dy*0.006,-0.05,1.52)}};
+    else{if(cam.ortho){cam.ortho=false;cam.view='';$$('.v3ui [data-v]').forEach(b=>b.classList.remove('tglon'))}cam.yaw-=dx*0.008;cam.pitch=clamp(cam.pitch+dy*0.006,-0.05,1.52)}};
   c.onpointerup=e=>{c.classList.remove('drag');if(!v3drag)return;const d=v3drag;v3drag=null;
     if(d.move&&d.moved){const out={};for(const i in v3over)out[i]=v3over[i];saveSpatial(out,'Перемещено');return}
     const moved=Math.hypot(e.clientX-d.x0,e.clientY-d.y0);
