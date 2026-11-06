@@ -1,0 +1,84 @@
+name: Winch Control — Windows build
+
+on:
+  push:
+    branches: [winch-control]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      VER: "1.01"
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller==6.11.1
+
+      - name: Build exe
+        working-directory: winch-control
+        run: >
+          pyinstaller --noconfirm --clean --onefile --console
+          --name "WinchControl_v${{ env.VER }}"
+          --icon icon.ico
+          --version-file version_info.txt
+          winch_control.py
+
+      - name: Smoke test (start exe, check API, stop)
+        shell: pwsh
+        working-directory: winch-control
+        run: |
+          $exe = "dist/WinchControl_v$env:VER.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "--no-browser","--port","8765" -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 40; $i++) {
+            Start-Sleep -Milliseconds 500
+            try { $r = Invoke-RestMethod "http://127.0.0.1:8765/api/state" -TimeoutSec 2; if ($r.rev -ge 1) { $ok = $true; break } } catch {}
+          }
+          $html = (Invoke-WebRequest "http://127.0.0.1:8765/" -UseBasicParsing).Content
+          Stop-Process -Id $p.Id -Force
+          if (-not $ok) { throw "API did not respond" }
+          if ($html -notmatch "Winch Control $env:VER") { throw "UI version mismatch" }
+          Write-Host "Smoke test OK: API + UI v$env:VER"
+          if (Test-Path winch_show.json) { Remove-Item winch_show.json }
+          if (Test-Path dist/winch_show.json) { Remove-Item dist/winch_show.json }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $dir = "WinchControl_v$env:VER"
+          New-Item -ItemType Directory $dir | Out-Null
+          Copy-Item "winch-control/dist/WinchControl_v$env:VER.exe" $dir/
+          Copy-Item winch-control/README.txt $dir/
+          Compress-Archive -Path "$dir/*" -DestinationPath "WinchControl_v${env:VER}_Windows.zip"
+          $src = "WinchControl_v${env:VER}_source"
+          New-Item -ItemType Directory $src | Out-Null
+          Copy-Item winch-control/* $src/ -Recurse -Exclude build,dist,*.spec
+          Compress-Archive -Path "$src/*" -DestinationPath "$src.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WinchControl_v${{ env.VER }}_Windows
+          path: WinchControl_v${{ env.VER }}_Windows.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: winch-v${{ env.VER }}
+          name: Winch Control ${{ env.VER }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Winch Control ${{ env.VER }} — Windows 10/11 (64-bit).
+            Скачайте WinchControl_v${{ env.VER }}_Windows.zip, распакуйте и запустите WinchControl_v${{ env.VER }}.exe.
+          files: |
+            WinchControl_v${{ env.VER }}_Windows.zip
+            WinchControl_v${{ env.VER }}_source.zip
