@@ -1,13 +1,13 @@
 {
- "version": "2.0.109",
- "notes": "Порядок масок и полей в ТЗ перетаскиванием, имя файла маски и общего поля можно изменить, титульный лист ТЗ без подложки у последнего пункта",
+ "version": "2.0.112",
+ "notes": "Копирование и выбор нескольких доп. текстов, стрелки, масштаб колесом мыши; тип ТЗ запоминается; номер в кружке — двойным щелчком; картинки общего плана больше не пропадают",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "fd6653608cf8968c1f7a34c320e632ca1c4cb60e70afd9deead1ddff46fa0aa9"
+  "sha256": "21fa071189e13e98bec957007030e8036cb709e3d425e06a2f2a00319e02b030"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "47c137afb8529b17bc6216d9157782c77bc5d5c33e6be6b363b41e0fae26c6c1"
+  "sha256": "8cd8960e2b69c174e00ca5200807177f5d1ef1d65ea7863dc10e92d01fde52ad"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
