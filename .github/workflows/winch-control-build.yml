@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: windows-latest
     env:
-      VER: "1.07"
+      VER: "1.08"
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4

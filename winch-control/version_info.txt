@@ -1,15 +1,15 @@
 VSVersionInfo(
-  ffi=FixedFileInfo(filevers=(1, 0, 7, 0), prodvers=(1, 0, 7, 0), mask=0x3f, flags=0x0, OS=0x40004,
+  ffi=FixedFileInfo(filevers=(1, 0, 8, 0), prodvers=(1, 0, 8, 0), mask=0x3f, flags=0x0, OS=0x40004,
                     fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[
     StringFileInfo([StringTable('040904B0', [
       StringStruct('CompanyName', 'Winch Control'),
       StringStruct('FileDescription', 'Winch Control - Art-Net controller for DMX winches'),
-      StringStruct('FileVersion', '1.07'),
+      StringStruct('FileVersion', '1.08'),
       StringStruct('InternalName', 'WinchControl'),
-      StringStruct('OriginalFilename', 'WinchControl_v1.07.exe'),
+      StringStruct('OriginalFilename', 'WinchControl_v1.08.exe'),
       StringStruct('ProductName', 'Winch Control'),
-      StringStruct('ProductVersion', '1.07')])]),
+      StringStruct('ProductVersion', '1.08')])]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]
 )
