@@ -784,6 +784,14 @@ class Engine:
         self.sync()
         self.changed()
 
+    def api_quit(self, b, now):
+        """Корректный выход по запросу (например, при запуске новой версии)."""
+        def stop():
+            time.sleep(0.2)
+            if SRV:
+                SRV.shutdown()
+        threading.Thread(target=stop, daemon=True).start()
+
     def api_example(self, b, now):
         self.api_show(json.loads(EXAMPLE_SHOW), now)
 
@@ -1016,7 +1024,7 @@ class Engine:
                    'fps': c['fps'] if c['source'] == 'internal' else T['rx_fps'],
                    'err': T['err'] if c['source'] == 'artnet' else '', 'last': T['last'], 'run': T['run']}
             return {
-                'rev': self.rev, 'armed': self.armed, 'master': self.master,
+                'version': VERSION, 'rev': self.rev, 'armed': self.armed, 'master': self.master,
                 'pos': {w: round(r['pos'], 2) for w, r in self.rt.items()},
                 'spd': {w: round(r['speed']) for w, r in self.rt.items()},
                 'out': {w: r['out'] for w, r in self.rt.items()},
@@ -1038,6 +1046,7 @@ class Engine:
 
 
 ENGINE = None
+SRV = None
 FAVICON = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAO1klEQVR42t2be4xc113HP79zzp3H7s7sjtfrt2PXbpxnExKRQBvaTUSkNBVqEXRDmtLQUNS0qMXwD1KFipWWAJVQKaCmBQJEJaiP7UMmAloKJC5qS5ugOHaydp063qztdbzep3f2MXPvOT/+uDPj2fXueu2sozUjHenOzD3nnt/3/n7f3+OcAxf+SHd3t+MK+9TmLBcUbqk/e3p6bG9vrwcQEd51/4evnjk7cWOlMrMNHwphFQlsjSvbyB0vtJRe/JdvPX5YNZwnw8UAILUWHnjgo6UTI6cfmposPzA9Xb7ZJ94lSUL9AavlI2KwzuKcC/l8y8HWQvEra9et+/tvPfnFIcAAWmsXBEDqN3bfe99DZ8dGHpk8O7F1qjxJEsco6gXRCyvXG/xRUFRArIsiWlvbKBQ6ThfXlD71vW9//bHaXQYISwEggO7Zsyfz3f/e/7ejI0MPjo6cIXifWGsNIqlmqK5OwxdJoVBV730wxrhSZxdrOru+sWXt1g/29j5Wng+CzBW+x3z84xvcsweO7R06PXjPxNhI4lxkRMToahV6USwERTWJ46TYXoq6Nmz6/rYbt7+z97HHppvNwTQRnoFe/+zBY48PnT51z8TYSNVFGadggmqjx5XSgiqqiIsy0dmJsXjotcE7jr/U/08iElJZa+TZzJTvuPe9D46cGdozMnw6jqJM5kp764t6COvszPRULMZdf93Nt41++6lv/E9PT4/t6+vTOtvznt/Y3d5/6MDhUycGumqGYeYOYq8oob0P80hfggbPxs1Xla950w3X9PY+dhr2iOvu7rb79u1LRgYHHipPnl3vQ5JYF7lmolOUiYkJQki5Q7XONyz4fcF7FiCdZfVb7thNv4kIbW1tNc5u3GWCajI5ebY4OHryo8Ce7u5nrACiqtz61rufP3Xy+E3BJwERe+5hijGGu+7sptjeDqqICIn3GBEUiKwl8R6tzcyIYI0hTpKUjFRxzqKqeB8aE3POkiQercFjxGCMkCS+qZ8jhEAIc/vFcZJKrNrQziRJsM4xVS7z9NPPUI1jjDHNSAURkQ2btx777Q/df+3DDz+cOEDffd9vvXl2ZubGuFoV65ypv31rLeNj4/zO7o/xx3/0SapV5djxQVrzOTZt7KRSSYU+cnSAXTuvwlqLEeHMyBgTk1Nc++YtzMwmRJHjyNEBujpLdJYKxEmgUq1ybGCQ63ftIHiPc5YTg0P4ENixbQMzswnWWg6/3M/2rRtpackRgjJZnuLU6WGuv2Y71UpClHG80j9ISz7Lpo2dTE9XKbZmePQzn+PRR/+Ejo4OvPd1zTBJkmhldnbH1//jBzcA+y3A5u277hwfG7l/ZrrsjTGmrrDGCDOzMzz44K+zc+fVjIyMoBp4bv9LKUACs7OzjI2Nc6DvZUrFVqanp1EN9P3kKCMj47S15iiXp6hWKzz3/EvkshHeJ8RxzKnXznDkaD8d7W1Mlsugyv4XDzMzUyGXiZienmZqaornXuij2NZCpTJL8AmvvHqC4ydeo73QymR5Cu8Tntv/Uhq+CngVJiYm2Lv3KXK57JyoVTX4TDZrWrOtP371aN9+A1CpzGxPkgRFVOe5vKBKpVKhvS1LW1sbmzeu5663386poVGMiygWC9x847Vs27KJV08O0dHRQXt7O7/Y/fPEXpmcqtDR0cGbtm3lbbffwqsnh8i3tFAoFLj91htZU2pn8PQoa9aU6OwscXf3Wxk7O0XslWKxyHXX7OSWm67j2PHXKBaLFIpF7rj9Z3BRxPDYJKVSB5s2pHMaHBrFWEupmKdSqeCDn+cetWEq1biyHcABBB/aQgjnhYUhBPL5PF/6xye56qqraMnnSbwnco5QrfD888/jrKWltY1iscjI0Cl+VB5vaI/3gSM/GeXEQA7vA1HkiGdmeO65/0UEOjpK5LIZXu3v5+zYGYIGrLVonHDw4EHyuUyj39TUND/+8bOoKmu71tGacxz96RHOnB7Ee49zDl+pcODAQV4U4e/+4Qmy2SznuXKRlFN8KDQAEJEFHb6qks1mOXToMPe/7/1EUdQY0BjBiGFiYoK773kXt7/1Dj7z6T+kpbWNEBo2h9QeWE8xjDGIGMbHRnngA7/Jmq61PPYXf0ah0L68fuOjfOz3fp/R4WG+8uQTFIrttfsUIwIiVKtVjDHkcrmG51ogatYGAA3fUm/zQMhls43rZtdjjSETRUTOETmLtZZM5AjBzI9E5vazNu0XWSJrscaSyUQEv4x+LiKyLu1n6/38nPtaW1oaGrzAW50j47IKHYuhqKpNLR28/n3JxG0l+qGL9gsXEcGaKzO4XbkQ3TUPqRc59Pz7lzvG/PsW73e+OdaZvM7qzb8tp9A1/znu4qd/aaIsPg1dpN/ca6mTYy2VFxQhIBIQQi0clprsugQIc5/jWJUqUA+NFWfT4EZQrFWqmUBkA5FV8plAzileNIUjKImvw7UICPPm51arfRsUDYGzUx5nUiAiF0hmqlSqEdWqIZmpUs3ExIknTiAg5POuSWf0goVhtzqrOanwne2WBz+4nmKrwaJYa4ira7j+ln4qM1PctulqokyeJAl4K5wcjHnyn0eoJtoEAssF4PXagK6ADaT27YwyOe25994Cn/hwDoanwRogAcnA7DNgDOzKgibnxmhp44W+SX54cIZs1uLDxXDAJbmg5ZDgpZWPjTNkZ8v4Q2WSsuKMNGoT9RQ3Dd+l4ftNZoScBsRI01OXNoOLcIN6gbc4xznNr7DPmcTS3HnuKihIZLEZwSwQsVjORYqigFWoZX6LyaJLcsCiCJx7w9aAqXkbayFjFWcUI0rGps3Xh1LFhwUIaUkEBBR8UKyAyYBM63lVoQUXODJplBvC8hFYBgc0CS9QrXgIAWshcoYQV0gSJUlcel3NkfiA92lens3ahtc+B8LSOuCDknXwvcOB/lcMG0sCVRYFIdUUeOEl5cUTSsZBCAtpITWeuQQOsAIaArde38LmTRmcKpEzVCsZrrspsH3LEL96zzoyuRaSJJCoUJ4O/OiFMpV4IVbWRRelvEJk4fAg3PNozPoOwQk4m2pf8wghQBIgDnBiWJmqpiU5r3JxofCShCRKkgR2bMnwr5/bSjYbg6/rXQl8P4RXuG/P5qayrEJHjt/91Gke/+YIhTZH7JcbxwuJgjMwPg1jU6npSc306ppQT+yCgg+CNXXhLyEXuJB9KbAm78meGiDMztVHIZ1Zc1aWeCXqcGyImMfKy1mX1QYIprHKU8sa52GoteTemBRznb/YtWwAFkwttUGxAoTEE2KDyUQslH80l1VMjaCTShUx9fGb09pQe4P164WfPVdpzgdy4QRKFv933nPcct59Xc2MARMJPr6wjvkAzgiRE0K4lAR2Yb7QS9/ucOkmoKQENDAMg8PKpq0C8dLPswCJcnBAMUYIryuFv3xr8curCCk4EYbOKr/y2ZhbdgoRKUkZM1fhUkJKVff4GeWHRyCfoSksXV0bCxwXjIRqpWRNM7KXX1MOnawFP/WgqJmV667Jp8SYjaQWDLFEyHwpecjryTYvqh7QxMo+jQcymaZ1uAXMVQ1ENlV775uZWV5fHWHl5V9uLiBNmiB4vzy71UXseBXJfzHZoDStFV+sLa+2DUUrVg+41CpuPWPUi6wjrKQO6BtZEWqu20rTFGTe93NgyRukOe6NEV2QJpdhrMVkIsSmflQyESZyqJFGgK+1HR5ymUFwl9MC6sJjhGRmFkURawmRI6lWIY6ROCapVokrFUKcoMEjCjaXg5COsaIgLF4Vvkx2aNKx1/3CbeS7ulADNnJMzUyTue0taFuRnfe9m9Z8Kz6OkQCzo6MMP/v8ufR9Ree0SByw0uIrINaQzMzS9bbbePveL1FJ4oZZiwgTScK4Kj/33u5GgqJByeda+P59H+Lkd54mamkh+LBiOvA63OClb97Uthb6TwxQGZ9ArD1/V5PWTEUgeE9uTQnf1oIRwwVrYaudBMUYkrhK8IEok70gsau1hBCIKxXEvJFeYJH9Aa9P39LMyFiLcZZkKkGsWdTMhFQDImsxzqWe4HLMaT4JquplgVpVEWeZffUk8fgEUecaNEkWV+valjdfnmL22ADiLBouT3BUl9mlhw3slIg557ZWgAqlRmg4R6X/OD/9yCfI79qR+nZbX/GcW9xTH0Bg9ugAM4d+ikQRrCAB0qAeQYwtNwDIZnIDLhOhNZe7ohrnA2ItM0deYfrQy4iztSKCzC1d1cpOmiSIMUgUpX1X0DOJpAvpLsoQudxAA4C2QulAFGUCorb2OlYMdAHUe8RaJFM7xrOECUjkIIS0z+XRfZvJZmhrL+6vhymy92tfeDnf2nrIuYxq0LDSe9dF0yKhVj0aJ2g1XrjFCVpNIAlpnxVuGjRY68jnWwfe/I6bDwKY7u5uKyKhvaP0ZKHQIT5JVC6T75XaGt6S7fI5ZLz3obXQLoWO0pf/avfuSnd3tzP79u3zgGzZvuPx9lLnqBhjlFV2ImplAjIFTEdp7XTX2s2fB2TfvjuDAbSnp8d8+W8+O9zZte4PutZvMnG14lMt0P8XTQTiaiVZu26D6VzX9em9X/3C8fTUyCPBAvT19WlPT4/9t6e+8eyuG269uTo7e8P09GRsrbNX/psX4rgat7V3RJu37vjPH/zXUx/p6+szvb29YU4kWPvBXP2zd30ghPAdhTvGx4bjKMq6xpr1lSU6AlqtVpJCsRRt2X71/m27rr2vaVuwNtYvmnsd+OF3q7/8S+//2kxSuR7lhqnyhITgEyMGkXSj2mrFQkj3GKME7xMfgtqu9Zvslu07/33z9p3v+eYTfzkKewzsW3KVonGu7s57e3YPnz71ydGRoc7y2XF8kgAkUl+mZZUdnEwjOGudk9ZCO6U16ya61m/8zDPf7v1TEVH27DE88ki4qKOzPQ8+vPm1U0MfPjs++mtT5clrKpXZNLsLq8tRGGNwUUQmm6OltXC0vX3N1zvXrv/i3q/+df9Sq6Wy3MPTT6u6P3/fR98yMTZycxxXtgWfFFeV+htbzmZzA/nWwgvvfMd7D+7e/a7Kcg5PLwvcK/f4/J4Lbgb/P3cIqmKDD9MdAAAAAElFTkSuQmCC')
 
 
@@ -1135,12 +1144,22 @@ def win_setup():
         pass
 
 
-def already_running(port):
+def running_state(port):
+    """Состояние уже запущенного Winch Control на этом порту (или None)."""
     try:
         with urllib.request.urlopen('http://127.0.0.1:%d/api/state' % port, timeout=1.0) as r:
-            return 'rev' in json.loads(r.read().decode('utf-8'))
+            d = json.loads(r.read().decode('utf-8'))
+            return d if 'rev' in d else None
     except Exception:
-        return False
+        return None
+
+
+def pause_exit(msg):
+    print(msg)
+    try:
+        input('Нажмите Enter, чтобы закрыть это окно...')
+    except Exception:
+        time.sleep(8)
 
 
 def main():
@@ -1152,11 +1171,30 @@ def main():
     ap.add_argument('--browser', action='store_true', help='открыть в браузере по умолчанию, а не отдельным окном')
     args = ap.parse_args()
     win_setup()
-    if already_running(args.port):          # вторая копия: просто открыть окно пульта
-        print('Winch Control уже запущен — открываю пульт.')
-        if not args.no_browser:
-            open_ui('http://127.0.0.1:%d/' % args.port, not args.browser)
-        return
+    other = running_state(args.port)
+    if other is not None:
+        if other.get('version') == VERSION:   # та же версия уже работает — просто открыть окно пульта
+            print('Winch Control %s уже запущен — открываю пульт.' % VERSION)
+            if not args.no_browser:
+                open_ui('http://127.0.0.1:%d/' % args.port, not args.browser)
+            return
+        print('Запущена другая версия Winch Control (%s) — закрываю её...' % other.get('version', '1.03 или старше'))
+        try:
+            req = urllib.request.Request('http://127.0.0.1:%d/api/quit' % args.port, data=b'{}',
+                                         headers={'Content-Type': 'application/json'})
+            urllib.request.urlopen(req, timeout=2).read()
+        except Exception:
+            pass
+        for _ in range(30):
+            time.sleep(0.2)
+            if running_state(args.port) is None:
+                break
+        if running_state(args.port) is not None:
+            pause_exit('\nНе удалось закрыть старую версию автоматически.\n'
+                       'Закройте окно консоли старой версии «Winch Control ...» (или завершите её в Диспетчере задач)\n'
+                       'и запустите WinchControl_v%s ещё раз.\n' % VERSION)
+            return
+        time.sleep(0.5)
 
     ENGINE = Engine()
     threading.Thread(target=ENGINE.run, daemon=True).start()
@@ -1172,6 +1210,8 @@ def main():
     if not srv:
         print('Не удалось открыть порт для пульта')
         sys.exit(1)
+    global SRV
+    SRV = srv
     port = srv.server_address[1]
     url = 'http://127.0.0.1:%d/' % port
     print('=' * 60)
@@ -1394,7 +1434,8 @@ const ROLE=[['safety','Safety (вкл/выкл мотора)'],['pos_hi','Поз
 let libEdit=null;
 
 async function loadShow(){show=await (await fetch('/api/show',{cache:'no-store'})).json();const valid=new Set(show.winches.map(w=>w.id));[...sel].forEach(i=>valid.has(i)||sel.delete(i));renderAll()}
-async function poll(){try{const r=await fetch('/api/state',{cache:'no-store'});st=await r.json();$('#off').style.display='none';if(st.rev!==rev){rev=st.rev;await loadShow()}live()}catch(e){$('#off').style.display='flex'}setTimeout(poll,90)}
+const UI_VERSION='{{VERSION}}';
+async function poll(){try{const r=await fetch('/api/state',{cache:'no-store'});st=await r.json();if(st.version&&st.version!==UI_VERSION&&!UI_VERSION.includes('{')){location.reload();return}$('#off').style.display='none';if(st.rev!==rev){rev=st.rev;await loadShow()}live()}catch(e){$('#off').style.display='flex'}setTimeout(poll,90)}
 
 function renderAll(){renderSelBar();renderStage();renderTabs();renderTab()}
 
