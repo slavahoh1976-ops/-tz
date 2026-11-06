@@ -1469,7 +1469,9 @@ header{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(
 #arm.on{background:var(--ok);color:#06210f;border-color:var(--ok)}
 #stop{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:800;letter-spacing:1px;padding:8px 18px}
 kbd{font-size:10px;opacity:.7;margin-left:5px;font-family:inherit}
-main{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:calc(100% - 57px)}
+main{display:grid;grid-template-columns:400px minmax(0,1fr);height:calc(100% - 57px)}
+main.pright{grid-template-columns:minmax(0,1fr) 400px}
+main:not(.pright) aside{order:-1;border-left:0;border-right:1px solid var(--ln)}
 #left{display:flex;flex-direction:column;min-width:0;min-height:0}
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--ln);background:var(--p1)}
 .t{color:var(--mu)}
@@ -1508,7 +1510,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:calc(100% - 5
 .move input[type=range]{flex:1;min-width:140px}
 output{font-variant-numeric:tabular-nums;min-width:38px;display:inline-block}
 aside{border-left:1px solid var(--ln);background:var(--p1);display:flex;flex-direction:column;min-height:0}
-.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--ln);padding:2px 4px 0}
+.tabs-wrap{display:flex;align-items:flex-start;border-bottom:1px solid var(--ln)}.tabs-wrap #pside{border:0;padding:9px 10px;color:var(--mu)}
+.tabs{flex:1;display:flex;flex-wrap:wrap;padding:2px 4px 0}
 .tabs button{flex:1 1 auto;border:0;border-radius:0;background:none;padding:9px 8px;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap}
 .tabs button.on{color:var(--tx);border-bottom-color:var(--ac)}
 #tab{flex:1;overflow:auto;padding:12px}
@@ -1572,7 +1575,7 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--p3);border:1px solid var(--ln);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10}
 #toast.show{opacity:1}#toast.err{border-color:var(--bad)}
 #off{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;font-size:16px;z-index:9;text-align:center;padding:20px}
-@media(max-width:900px){main{grid-template-columns:minmax(0,1fr);height:auto}#left{height:72vh}aside{border-left:0;min-height:60vh}header{flex-wrap:wrap}.pill{max-width:100%}}
+@media(max-width:900px){main,main.pright{grid-template-columns:minmax(0,1fr);height:auto}main:not(.pright) aside{order:0;border-right:0}#left{height:72vh}aside{border-left:0;min-height:60vh}header{flex-wrap:wrap}.pill{max-width:100%}}
 </style></head><body>
 <header>
   <div class="brand">⛓ Winch<b>Control</b> <small class="ver">v{{VERSION}}</small></div>
@@ -1595,7 +1598,7 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
       <label class="t">Переход <input type="number" id="fade" class="num" value="3" min="0" step="0.5"> с</label>
     </div>
   </section>
-  <aside><div class="tabs" id="tabs"></div><div id="tab"></div></aside>
+  <aside><div class="tabs-wrap"><div class="tabs" id="tabs"></div><button class="ghost" id="pside" title="Перенести панель на другую сторону">⇄</button></div><div id="tab"></div></aside>
 </main>
 <div id="toast"></div>
 <div id="sdlg" hidden><div class="box" id="sbox"></div></div>
@@ -1745,6 +1748,8 @@ function live(){
 }
 
 /* ---------- вкладки ---------- */
+(()=>{let r=false;try{r=localStorage.getItem('panelSide')==='right'}catch(e){}document.querySelector('main').classList.toggle('pright',r);
+  $('#pside').onclick=()=>{const m=document.querySelector('main');m.classList.toggle('pright');try{localStorage.setItem('panelSide',m.classList.contains('pright')?'right':'left')}catch(e){}setTimeout(fitStage,50)}})();
 function renderTabs(){$('#tabs').innerHTML=TABS.map(([k,n])=>`<button data-t="${k}" class="${tab===k?'on':''}">${n}</button>`).join('');$$('#tabs button').forEach(b=>b.onclick=()=>{if(tab==='lim'&&b.dataset.t!=='lim'){single=false;if(st&&st.teach.length)api('/api/teach',{on:false})}tab=b.dataset.t;renderTabs();renderTab()})}
 function renderTab(){({presets:tabPresets,fx:tabFx,shapes:tabShapes,seq:tabSeq,tc:tabTc,lim:tabLim,ch:tabCh,set:tabSet})[tab]();live()}
 function rng(o,k,label,min,max,step,unit){const v=O[o][k];return`<div class="rng"><span>${label}</span><input type="range" data-o="${o}" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}"><output>${fmtv(v,unit)}</output></div>`}
