@@ -1,0 +1,23 @@
+name: Winch Control — hide old releases
+
+on:
+  push:
+    branches: [winch-control]
+    paths: ['.github/workflows/winch-hide-releases.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hide:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make winch-v1.01..1.04 private drafts and remove their tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for v in 1.01 1.02 1.03 1.04; do
+            gh release edit "winch-v$v" --draft=true --repo "$GITHUB_REPOSITORY" && echo "winch-v$v -> draft" || echo "winch-v$v: skip"
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/winch-v$v" && echo "tag winch-v$v deleted" || echo "tag winch-v$v: none"
+          done

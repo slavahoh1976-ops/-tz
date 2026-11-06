@@ -3,6 +3,7 @@ name: Winch Control — Windows build
 on:
   push:
     branches: [winch-control]
+    paths: ['winch-control/**', '.github/workflows/winch-control-build.yml']
   workflow_dispatch:
 
 permissions:
