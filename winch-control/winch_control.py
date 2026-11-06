@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.09 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.10 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.09'
+VERSION = '1.10'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
 SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
@@ -1773,7 +1773,7 @@ function draw3d(){
   for(let z=gz0;z<=gz1;z++)line(P(gx0,0,z),P(gx1,0,z),z===0?'rgba(255,176,32,.16)':'rgba(255,255,255,.055)',1);
   const fr=P(GE.mx,0,gz1-0.4);if(fr){g.fillStyle='rgba(255,176,32,.45)';g.font='11px system-ui';g.textAlign='center';g.fillText('▼ зритель',fr[0],fr[1]);g.textAlign='left'}
   // человек 1.8 м для масштаба
-  const hz=GE.z1+1.6,hx=GE.x0-1.2,hd=P(hx,1.62,hz),ft=P(hx,0,hz);if(hd&&ft){const sc=(ft[1]-hd[1])/1.62;g.strokeStyle='rgba(138,148,163,.55)';g.lineWidth=Math.max(1,sc*0.09);g.beginPath();g.moveTo(ft[0]-sc*.18,ft[1]);g.lineTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0]+sc*.18,ft[1]);g.moveTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0],ft[1]-sc*1.42);g.moveTo(ft[0]-sc*.25,ft[1]-sc*1.05);g.lineTo(ft[0],ft[1]-sc*1.32);g.lineTo(ft[0]+sc*.25,ft[1]-sc*1.05);g.stroke();g.fillStyle='rgba(138,148,163,.55)';g.beginPath();g.arc(hd[0],hd[1]-sc*.02,sc*.13,0,7);g.fill();g.font='10px system-ui';g.fillText('1,8 м',ft[0]+sc*.3,ft[1]-sc*.9)}
+  const hz=GE.z1+1.6,hx=GE.x0-1.2,hd=P(hx,1.62,hz),ft=P(hx,0,hz);if(hd&&ft&&(ft[1]-hd[1])/1.62>3){const sc=(ft[1]-hd[1])/1.62;g.strokeStyle='rgba(138,148,163,.55)';g.lineWidth=Math.max(1,sc*0.09);g.beginPath();g.moveTo(ft[0]-sc*.18,ft[1]);g.lineTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0]+sc*.18,ft[1]);g.moveTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0],ft[1]-sc*1.42);g.moveTo(ft[0]-sc*.25,ft[1]-sc*1.05);g.lineTo(ft[0],ft[1]-sc*1.32);g.lineTo(ft[0]+sc*.25,ft[1]-sc*1.05);g.stroke();g.fillStyle='rgba(138,148,163,.55)';g.beginPath();g.arc(hd[0],hd[1]-sc*.02,sc*.13,0,7);g.fill();g.font='10px system-ui';g.fillText('1,8 м',ft[0]+sc*.3,ft[1]-sc*.9)}
   const items=[],k=0.3;
   for(const wv of show.winches){const t=st?.pos?.[wv.id]??0;v3disp[wv.id]=v3disp[wv.id]==null?t:v3disp[wv.id]+(t-v3disp[wv.id])*k}
   const hook=id=>(G[id]?G[id].y:C.H)-0.3-(v3disp[id]??0)/100*C.T;
@@ -1801,6 +1801,22 @@ function draw3d(){
       g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=1;const nc=Math.max(1,Math.round(Math.hypot(x2-x1,z2-z1)/0.5));for(let i=1;i<nc;i++){const t=i/nc;g.beginPath();g.moveTo(q[0][0]+(q[1][0]-q[0][0])*t,q[0][1]+(q[1][1]-q[0][1])*t);g.lineTo(q[3][0]+(q[2][0]-q[3][0])*t,q[3][1]+(q[2][1]-q[3][1])*t);g.stroke()}
       const mx=(q[0][0]+q[1][0]+q[2][0]+q[3][0])/4,my=(q[0][1]+q[1][1]+q[2][1]+q[3][1])/4,fs=Math.min(14,Math.max(8,0.24*F/zz));if(fs>8.5){g.fillStyle='rgba(10,12,16,.75)';g.font=`700 ${fs}px system-ui`;g.textAlign='center';g.fillText(ob.name,mx,my+fs/3);g.textAlign='left'}}});
     v3pick.push({ids:ob.members.slice(),poly:q,z:zz})});
+  // вид сверху — план: лебёдки кружками с номерами, экраны цветными полосами
+  if(cam.ortho&&cam.view==='t'){
+    show.objects.forEach((ob,oi)=>{const ms=ob.members.filter(m=>G[m]);if(!ms.length)return;const A=G[ms[0]],B=G[ms[ms.length-1]];let dx=B.x-A.x,dz=B.z-A.z;const L=Math.hypot(dx,dz);
+      if(L<1e-6){dx=1;dz=0}else{dx/=L;dz/=L}const pad=ms.length>1?0.25:0.35,th=0.16,nx=-dz*th,nz=dx*th,yy=ms.reduce((a,m)=>a+G[m].y,0)/ms.length;
+      const q=[P(A.x-dx*pad+nx,yy,A.z-dz*pad+nz),P(B.x+dx*pad+nx,yy,B.z+dz*pad+nz),P(B.x+dx*pad-nx,yy,B.z+dz*pad-nz),P(A.x-dx*pad-nx,yy,A.z-dz*pad-nz)];if(q.some(p=>!p))return;
+      const col=OC[oi%OC.length],sl=ob.members.some(m=>sel.has(m));
+      items.push({z:-2,f:()=>{g.beginPath();q.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();g.fillStyle=col+'cc';g.fill();g.strokeStyle=sl?'#fff':'rgba(0,0,0,.5)';g.lineWidth=sl?2.5:1;g.stroke();
+        const mx=(q[0][0]+q[2][0])/2,my=(q[0][1]+q[2][1])/2;g.font='600 11px system-ui';g.textAlign='center';g.fillStyle='rgba(231,234,239,.9)';const off=Math.hypot(q[0][0]-q[3][0],q[0][1]-q[3][1])/2+11;
+        const nl=Math.hypot(q[3][0]-q[0][0],q[3][1]-q[0][1])||1;g.fillText(ob.name,mx+(q[3][0]-q[0][0])/nl*off,my+(q[3][1]-q[0][1])/nl*off+4);g.textAlign='left'}});
+      v3pick.push({ids:ob.members.slice(),poly:q,z:-2})});
+    for(const wv of show.winches){const o=G[wv.id];if(!o)continue;const p=P(o.x,o.y,o.z);if(!p)continue;const r=Math.max(7,0.13*F/p[2]),sl=sel.has(wv.id),fxOn=!!st?.fxOf?.[wv.id],dep=v3disp[wv.id]??0;
+      items.push({z:-3,f:()=>{g.beginPath();g.arc(p[0],p[1],r,0,7);g.fillStyle=sl?'#ffb020':'#2b323c';g.fill();g.lineWidth=2;g.strokeStyle=fxOn?'#3dd6c6':(sl?'#fff':'#8a94a3');g.stroke();
+        g.beginPath();g.moveTo(p[0],p[1]);g.arc(p[0],p[1],r*0.55,-Math.PI/2,-Math.PI/2+2*Math.PI*dep/100);g.closePath();g.fillStyle=sl?'rgba(20,16,5,.45)':'rgba(255,176,32,.55)';g.fill();
+        g.font=`700 ${Math.max(9,Math.min(12,r*0.95))}px system-ui`;g.textAlign='center';g.fillStyle=sl?'#141005':'#e7eaef';g.fillText(wv.name,p[0],p[1]-r-4>0?p[1]+r+12:p[1]+4);g.textAlign='left'}});
+      v3pick.push({ids:[wv.id],x:p[0],y:p[1],r:r+3,z:-3})}
+  }
   items.sort((a,b)=>b.z-a.z).forEach(it=>it.f());
 }
 function v3hit(x,y){let best=null;for(const p of v3pick){let hit=false;if(p.poly){let ins=false;const q=p.poly;for(let i=0,j=3;i<4;j=i++){if(((q[i][1]>y)!==(q[j][1]>y))&&(x<(q[j][0]-q[i][0])*(y-q[i][1])/(q[j][1]-q[i][1])+q[i][0]))ins=!ins}hit=ins}else hit=Math.hypot(x-p.x,y-p.y)<=p.r;
