@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: windows-latest
     env:
-      VER: "1.04"
+      VER: "1.05"
       PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
@@ -70,9 +70,16 @@ jobs:
           name: WinchControl_v${{ env.VER }}_Windows
           path: WinchControl_v${{ env.VER }}_Windows.zip
 
-      - name: Release
+      - name: Remove old draft with the same version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "winch-v$env:VER" --yes --repo "${{ github.repository }}" 2>$null; exit 0
+
+      - name: Private draft release (not public)
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           tag_name: winch-v${{ env.VER }}
           name: Winch Control ${{ env.VER }}
           target_commitish: ${{ github.sha }}

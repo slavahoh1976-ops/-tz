@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.04 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.05 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,9 +15,11 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.04'
+VERSION = '1.05'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
-SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')
+SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
+SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
+APP_FILE = os.path.join(BASE_DIR, 'winch_app.json')
 
 # Встроенная библиотека приборов. Роли каналов:
 #   safety  — вкл/выкл мотора (on/off)      pos_hi / pos_lo — позиция 16 бит (грубо / fine)
@@ -263,25 +265,61 @@ def example_show():
     return normalize(json.loads(EXAMPLE_SHOW))
 
 
-def load_show():
-    try:
-        with open(SHOW_FILE, 'r', encoding='utf-8') as f:
-            return normalize(json.load(f))
-    except FileNotFoundError:
-        return example_show()        # первый запуск — открываем пример, как в демо
-    except Exception as e:
-        print('! Не удалось прочитать', SHOW_FILE, e)
-        return default_show()
+def load_show(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        return normalize(json.load(f))
 
 
-def save_file(text):
-    tmp = SHOW_FILE + '.tmp'
+def save_file(path, text):
+    tmp = path + '.tmp'
     try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(tmp, 'w', encoding='utf-8') as f:
             f.write(text)
-        os.replace(tmp, SHOW_FILE)
+        os.replace(tmp, path)
+        return True
     except Exception as e:
         print('! Не удалось сохранить шоу:', e)
+        return False
+
+
+def show_text(show):
+    return json.dumps(show, ensure_ascii=False, indent=1)
+
+
+def safe_name(name):
+    n = ''.join(ch for ch in str(name or '') if ch not in '<>:"/\\|?*\r\n\t').strip().strip('.')
+    return n[:60] or 'Шоу'
+
+
+def show_path(name):
+    return os.path.join(SHOWS_DIR, safe_name(name) + '.json')
+
+
+def unique_path(name):
+    base, i = safe_name(name), 1
+    p = show_path(base)
+    while os.path.exists(p):
+        i += 1
+        p = show_path('%s (%d)' % (base, i))
+    return p
+
+
+def show_name(path):
+    return os.path.splitext(os.path.basename(path))[0]
+
+
+def app_load():
+    try:
+        with open(APP_FILE, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+            return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def app_save(cfg):
+    save_file(APP_FILE, json.dumps(cfg, ensure_ascii=False, indent=1))
 
 
 def artdmx(seq, uni, data):
@@ -309,7 +347,7 @@ def local_ips():
 class Engine:
     def __init__(self):
         self.lock = threading.RLock()
-        self.show = load_show()
+        self.show, self.show_path = self.startup_show()
         self.rev = 1
         self.rt, self.fx, self.fx_next, self.seq = {}, {}, 1, None
         self.master, self.armed, self.last_preset = 1.0, False, None
@@ -323,6 +361,170 @@ class Engine:
         self.rx_sock, self.rx_port = None, None
         self.teach = set()          # лебёдки в режиме настройки пределов (пределы временно не действуют)
         self.sync()
+
+    # ---------- файлы шоу ----------
+    def startup_show(self):
+        os.makedirs(SHOWS_DIR, exist_ok=True)
+        cfg = app_load()
+        p = cfg.get('current')
+        if p and os.path.exists(p):
+            try:
+                return load_show(p), p
+            except Exception as e:
+                print('! Не удалось открыть', p, e)
+        if os.path.exists(SHOW_FILE):                     # перенос шоу из версий до 1.05
+            try:
+                sh = load_show(SHOW_FILE)
+                p = unique_path('Моё шоу')
+                save_file(p, show_text(sh))
+                os.replace(SHOW_FILE, SHOW_FILE + '.old')
+                self.remember(p)
+                return sh, p
+            except Exception as e:
+                print('! Не удалось перенести', SHOW_FILE, e)
+        p = show_path('Пример')
+        sh = load_show(p) if os.path.exists(p) else example_show()
+        save_file(p, show_text(sh))
+        self.remember(p)
+        return sh, p
+
+    def remember(self, path):
+        cfg = app_load()
+        rec = [x for x in cfg.get('recent', []) if isinstance(x, str) and os.path.normcase(x) != os.path.normcase(path)]
+        cfg['recent'] = [path] + rec[:9]
+        cfg['current'] = path
+        app_save(cfg)
+
+    def flush(self):
+        save_file(self.show_path, show_text(self.show))
+        self.dirty = False
+
+    def switch(self, sh, path, now):
+        """Открыть другое шоу. Моторы выключаются, чтобы лебёдки не поехали к позициям нового шоу."""
+        self.flush()
+        self.armed = False
+        self.show, self.show_path = sh, path
+        self.rt, self.fx, self.seq, self.teach = {}, {}, None, set()
+        self.tc['prev'], self.last_preset = None, None
+        self.sync()
+        self.flush()
+        self.remember(path)
+        self.changed()
+
+    def resolve(self, ref):
+        ref = str(ref or '')
+        p = ref if os.path.isabs(ref) else os.path.join(SHOWS_DIR, ref if ref.endswith('.json') else ref + '.json')
+        if not os.path.exists(p):
+            raise ValueError('Файл шоу не найден')
+        return p
+
+    def shows_info(self):
+        with self.lock:
+            cur = self.show_path
+        items = []
+        try:
+            for fn in os.listdir(SHOWS_DIR):
+                if not fn.lower().endswith('.json'):
+                    continue
+                p = os.path.join(SHOWS_DIR, fn)
+                try:
+                    with open(p, 'r', encoding='utf-8') as f:
+                        d = json.load(f)
+                    meta = {'winches': len(d.get('winches') or []), 'objects': len(d.get('objects') or []),
+                            'presets': len(d.get('presets') or [])}
+                except Exception:
+                    meta = {'winches': 0, 'objects': 0, 'presets': 0, 'broken': True}
+                items.append(dict(meta, name=show_name(p), file=fn, path=p, mtime=os.path.getmtime(p),
+                                  current=os.path.normcase(p) == os.path.normcase(cur)))
+        except Exception:
+            pass
+        items.sort(key=lambda x: -x['mtime'])
+        rec = [{'name': show_name(p), 'path': p, 'exists': os.path.exists(p),
+                'current': os.path.normcase(p) == os.path.normcase(cur)} for p in app_load().get('recent', []) if isinstance(p, str)]
+        return {'current': {'name': show_name(cur), 'path': cur}, 'dir': SHOWS_DIR, 'list': items, 'recent': rec}
+
+    def api_show_new(self, b, now):
+        p = unique_path(b.get('name') or 'Новое шоу')
+        sh = default_show()
+        if b.get('keep_rig', True):
+            for k in ('artnet', 'device', 'library', 'layout', 'winches', 'groups', 'objects'):
+                sh[k] = json.loads(json.dumps(self.show[k]))
+        sh = normalize(sh)
+        save_file(p, show_text(sh))
+        self.switch(sh, p, now)
+        return {'name': show_name(p)}
+
+    def api_show_open(self, b, now):
+        p = self.resolve(b.get('path') or b.get('file'))
+        if os.path.normcase(p) == os.path.normcase(self.show_path):
+            return {'name': show_name(p)}
+        try:
+            sh = load_show(p)
+        except Exception:
+            raise ValueError('Файл не читается — это не шоу Winch Control?')
+        self.switch(sh, p, now)
+        return {'name': show_name(p)}
+
+    def api_show_save(self, b, now):
+        self.flush()
+        return {'name': show_name(self.show_path)}
+
+    def api_show_saveas(self, b, now):
+        p = unique_path(b.get('name') or show_name(self.show_path))
+        self.flush()
+        self.show_path = p
+        self.flush()
+        self.remember(p)
+        self.changed()
+        return {'name': show_name(p)}
+
+    def api_show_rename(self, b, now):
+        p = self.resolve(b.get('path') or b.get('file'))
+        q = show_path(b.get('name'))
+        if os.path.normcase(p) == os.path.normcase(q):
+            return {}
+        if os.path.exists(q):
+            raise ValueError('Шоу с таким названием уже есть')
+        if os.path.normcase(p) == os.path.normcase(self.show_path):
+            self.flush()
+        os.replace(p, q)
+        if os.path.normcase(p) == os.path.normcase(self.show_path):
+            self.show_path = q
+        cfg = app_load()
+        cfg['recent'] = [q if os.path.normcase(x) == os.path.normcase(p) else x for x in cfg.get('recent', [])]
+        cfg['current'] = self.show_path
+        app_save(cfg)
+        self.changed()
+        return {'name': show_name(q)}
+
+    def api_show_delete(self, b, now):
+        p = self.resolve(b.get('path') or b.get('file'))
+        if os.path.normcase(p) == os.path.normcase(self.show_path):
+            raise ValueError('Нельзя удалить открытое шоу — сначала откройте другое')
+        trash = os.path.join(SHOWS_DIR, 'Удалённые')
+        os.makedirs(trash, exist_ok=True)
+        os.replace(p, os.path.join(trash, '%s %s.json' % (show_name(p), time.strftime('%Y-%m-%d %H-%M-%S'))))
+        cfg = app_load()
+        cfg['recent'] = [x for x in cfg.get('recent', []) if os.path.normcase(x) != os.path.normcase(p)]
+        app_save(cfg)
+
+    def api_show_import(self, b, now):
+        data = b.get('data')
+        if not isinstance(data, dict) or not isinstance(data.get('winches'), list):
+            raise ValueError('Это не файл шоу Winch Control')
+        sh = normalize(data)
+        p = unique_path(b.get('name') or 'Импорт')
+        save_file(p, show_text(sh))
+        self.switch(sh, p, now)
+        return {'name': show_name(p)}
+
+    def api_show_folder(self, b, now):
+        if sys.platform == 'win32':
+            os.startfile(SHOWS_DIR)
+        elif sys.platform == 'darwin':
+            subprocess.Popen(['open', SHOWS_DIR])
+        else:
+            raise ValueError('Папка шоу: ' + SHOWS_DIR)
 
     # ---------- helpers ----------
     def changed(self):
@@ -793,7 +995,11 @@ class Engine:
         threading.Thread(target=stop, daemon=True).start()
 
     def api_example(self, b, now):
-        self.api_show(json.loads(EXAMPLE_SHOW), now)
+        p = unique_path('Пример')
+        sh = example_show()
+        save_file(p, show_text(sh))
+        self.switch(sh, p, now)
+        return {'name': show_name(p)}
 
     def api_show(self, b, now):
         self.show = normalize(b)
@@ -977,14 +1183,14 @@ class Engine:
                     unis = self.tick(t, dt)
                     a = dict(self.show['artnet'])
                     if self.dirty and t - self.saved_at > 1.0:
-                        snap = json.dumps(self.show, ensure_ascii=False, indent=1)
+                        snap = (self.show_path, show_text(self.show))
                         self.dirty, self.saved_at = False, t
             except Exception:
                 traceback.print_exc()
                 time.sleep(0.2)
                 continue
             if snap:
-                save_file(snap)
+                save_file(*snap)
             err = ''
             if a['enabled']:
                 s = self.get_sock(a['bind'], t)
@@ -1024,7 +1230,7 @@ class Engine:
                    'fps': c['fps'] if c['source'] == 'internal' else T['rx_fps'],
                    'err': T['err'] if c['source'] == 'artnet' else '', 'last': T['last'], 'run': T['run']}
             return {
-                'version': VERSION, 'rev': self.rev, 'armed': self.armed, 'master': self.master,
+                'version': VERSION, 'show': show_name(self.show_path), 'rev': self.rev, 'armed': self.armed, 'master': self.master,
                 'pos': {w: round(r['pos'], 2) for w, r in self.rt.items()},
                 'spd': {w: round(r['speed']) for w, r in self.rt.items()},
                 'out': {w: r['out'] for w, r in self.rt.items()},
@@ -1041,8 +1247,8 @@ class Engine:
         time.sleep(0.35)
         self.running = False
         with self.lock:
-            snap = json.dumps(self.show, ensure_ascii=False, indent=1)
-        save_file(snap)
+            snap = (self.show_path, show_text(self.show))
+        save_file(*snap)
 
 
 ENGINE = None
@@ -1074,6 +1280,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, FAVICON, 'image/png')
         if path == '/api/state':
             return self.send(200, ENGINE.state())
+        if path == '/api/shows':
+            return self.send(200, ENGINE.shows_info())
         if path == '/api/show':
             with ENGINE.lock:
                 data = dict(ENGINE.show)
@@ -1219,7 +1427,7 @@ def main():
     if args.lan:
         for ip in ENGINE.ifaces:
             print('  С планшета/телефона:  http://%s:%d/' % (ip, port))
-    print('  Шоу сохраняется в:', SHOW_FILE)
+    print('  Папка шоу:', SHOWS_DIR)
     print('  Закройте это окно (или Ctrl+C), чтобы выйти. Моторы при выходе выключатся.')
     print('  Окно пульта закрыли случайно? Запустите программу ещё раз.')
     print('=' * 60)
@@ -1354,6 +1562,13 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
 #dlg[hidden]{display:none}
 .dlgbox{background:var(--p2);border:1px solid var(--ln);border-radius:10px;padding:16px;width:min(400px,100%);white-space:pre-line;font-size:14px}
 .dlgbox input{width:100%;margin-top:12px}
+#showbtn{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#showbtn b{font-weight:600}
+#sdlg{position:fixed;inset:0;background:#000a;display:flex;align-items:flex-start;justify-content:center;z-index:25;padding:64px 16px 16px}
+#sdlg[hidden]{display:none}
+#sdlg .box{background:var(--p1);border:1px solid var(--ln);border-radius:12px;width:min(620px,100%);max-height:calc(100vh - 90px);overflow:auto;padding:16px;box-shadow:0 20px 60px #000a}
+.sh-it{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--ln);border-radius:8px;margin-bottom:5px;background:var(--p2);cursor:pointer}
+.sh-it:hover{border-color:#4a5462}.sh-it.cur{border-color:var(--ac);cursor:default}.sh-it b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.sh-it .hint{white-space:nowrap}.sh-it button{padding:3px 8px}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--p3);border:1px solid var(--ln);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10}
 #toast.show{opacity:1}#toast.err{border-color:var(--bad)}
 #off{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;font-size:16px;z-index:9;text-align:center;padding:20px}
@@ -1362,6 +1577,7 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
 <header>
   <div class="brand">⛓ Winch<b>Control</b> <small class="ver">v{{VERSION}}</small></div>
   <div id="net" class="pill">…</div><div id="tcpill" class="pill" hidden></div>
+  <button id="showbtn" class="ghost" title="Шоу: новое, открыть, сохранить (Ctrl+O, Ctrl+S)">📁 <b id="showname">…</b> ▾</button>
   <div class="sp"></div>
   <label class="master" title="Общий множитель скорости всех лебёдок">Скорость <input type="range" id="master" min="0" max="100" value="100"><output id="masterv">100%</output></label>
   <button id="arm" title="Канал Safety: включить/выключить моторы">МОТОРЫ ВЫКЛ</button>
@@ -1382,6 +1598,7 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
   <aside><div class="tabs" id="tabs"></div><div id="tab"></div></aside>
 </main>
 <div id="toast"></div>
+<div id="sdlg" hidden><div class="box" id="sbox"></div></div>
 <div id="dlg" hidden><div class="dlgbox" role="dialog" aria-modal="true"><div id="dlgmsg"></div><input id="dlgin"><div class="row" style="justify-content:flex-end;margin:14px 0 0"><button id="dlgno">Отмена</button><button class="pri" id="dlgok">OK</button></div></div></div>
 <div id="off">Нет связи с программой.<br>Запустите winch_control.py и обновите страницу.</div>
 <script>
@@ -1514,6 +1731,7 @@ $('#master').oninput=e=>{$('#masterv').textContent=e.target.value+'%';sendMaster
 /* ---------- live ---------- */
 function live(){
   if(!show||!st)return;
+  const sn=$('#showname');if(sn&&sn.textContent!==st.show){sn.textContent=st.show||'—';document.title=(st.show?st.show+' — ':'')+'Winch Control '+UI_VERSION}
   const a=st.stats,net=$('#net');
   if(!show.artnet.enabled){net.className='pill';net.textContent='Art-Net: отправка выключена'}
   else if(a.error){net.className='pill bad';net.textContent='Art-Net: '+a.error}
@@ -1901,8 +2119,8 @@ function tabSet(){
   ${show.objects.map((o,i)=>`<tr data-i="${i}"><td><input data-f="name" value="${esc(o.name)}" style="width:110px;border-left:4px solid ${OC[i%OC.length]}"></td><td><input data-f="members" value="${esc(o.members.map(m=>show.winches.find(w=>w.id===m)?.name??m).join(', '))}"></td><td><button class="ghost" data-a="del" style="padding:2px 6px">✕</button></td></tr>`).join('')}
   </tbody></table></div><div class="row" style="margin-top:8px"><button class="pri" id="osave">Сохранить экраны</button></div>`:'<p class="hint">Пока нет экранов. Выделите лебёдки экрана на сцене и нажмите «⛓ Связать», или соберите все по схеме.</p>'}
   <h4>Файл шоу</h4>
-  <div class="row"><button id="fexp">⬇ Экспорт</button><button id="fimp">⬆ Импорт</button><button id="fexample" title="10 экранов на 23 лебёдках, группы, пресеты, шоу и события таймкода — как в демо">Загрузить пример</button><button id="freset">Новое шоу</button><input type="file" id="ffile" accept=".json,application/json" hidden></div>
-  <p class="hint">Всё сохраняется автоматически в winch_show.json рядом с программой. При первом запуске открывается пример — замените патч на свой или нажмите «Новое шоу».</p>`;
+  <div class="row"><button id="fmenu" class="pri">📁 Шоу: новое, открыть, сохранить…</button></div>
+  <p class="hint">Каждое шоу — отдельный файл в папке Shows рядом с программой. Открытое шоу сохраняется автоматически.</p>`;
   $('#asave').onclick=()=>saveCfg({artnet:{ip:$('#aip').value,bind:$('#abind').value,port:+$('#aport').value,fps:+$('#afps').value,enabled:$('#aen').checked}}).then(r=>r.ok&&toast('Art-Net сохранён'));
   $('#dsave').onclick=()=>saveCfg({device:{reset_time:+$('#drt').value,speed:+$('#dspd').value}}).then(r=>r.ok&&toast('Сохранено'));
   bindLib();
@@ -1919,15 +2137,60 @@ function tabSet(){
   const byName=t=>{const w=show.winches.find(w=>w.name===t)||show.winches.find(w=>String(w.id)===t);return w?w.id:null};
   if($('#osave'))$('#osave').onclick=()=>{const objs=$$('#otab tbody tr').map(tr=>{const o=show.objects[+tr.dataset.i];return{...o,name:tr.querySelector('[data-f=name]').value,members:tr.querySelector('[data-f=members]').value.split(/[,;\s]+/).filter(Boolean).map(byName).filter(x=>x!=null)}});saveCfg({objects:objs}).then(r=>r.ok&&toast('Экраны сохранены'))};
   $$('#otab [data-a=del]').forEach(b=>b.onclick=()=>{const i=+b.closest('tr').dataset.i;saveCfg({objects:show.objects.filter((_,j)=>j!==i)})});
-  $('#fexp').onclick=()=>{const o={...show};delete o._fixtures;const b=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='winch_show.json';l.click()};
-  $('#fimp').onclick=()=>$('#ffile').click();
-  $('#ffile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const r=await api('/api/show',JSON.parse(await f.text()));if(r.ok)toast('Шоу загружено')}catch(x){toast('Файл не читается',true)}};
-  $('#fexample').onclick=async()=>{if(await ask('Загрузить пример шоу (10 экранов на 23 лебёдках, пресеты, группы, шоу)?\nТекущее шоу будет заменено — сначала сделайте экспорт, если оно нужно.'))api('/api/example').then(r=>r.ok&&toast('Пример загружен'))};
-  $('#freset').onclick=async()=>{if(await ask('Начать новое шоу? Пресеты, группы и шоу будут удалены (сделайте экспорт).'))api('/api/show',{})};
+  $('#fmenu').onclick=()=>openShows();
 }
+
+/* ---------- меню «Шоу» ---------- */
+let shNew=false;
+const fdate=t=>{const d=new Date(t*1000),p=n=>String(n).padStart(2,'0');return`${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`};
+function closeShows(){$('#sdlg').hidden=true;shNew=false}
+async function openShows(){$('#sdlg').hidden=false;await renderShows()}
+async function renderShows(){
+  let I;try{I=await (await fetch('/api/shows',{cache:'no-store'})).json()}catch(e){return toast('Нет связи с программой',true)}
+  const b=$('#sbox');
+  b.innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:4px"><b style="font-size:15px">Шоу: ${esc(I.current.name)}</b><button class="ghost" id="sclose">✕</button></div>
+  <div class="hint" style="margin-bottom:12px;word-break:break-all">${esc(I.current.path)} · сохраняется автоматически</div>
+  <div class="row"><button class="pri" id="snew">+ Новое</button><button id="sopenf">Открыть файл…</button><button id="ssave">Сохранить <kbd>Ctrl+S</kbd></button><button id="ssaveas">Сохранить как…</button><button id="sfolder" title="Открыть папку Shows">Папка</button></div>
+  ${shNew?`<div class="tcbox" style="text-align:left;margin-top:6px"><div class="row"><input id="snname" placeholder="Название нового шоу" value="Новое шоу"></div>
+    <label class="chk" style="margin-bottom:8px"><input type="checkbox" id="snkeep" checked> взять патч, экраны, группы и Art-Net из текущего шоу (пресеты и шоу — пустые)</label>
+    <div class="row" style="justify-content:flex-end;margin:0"><button id="sncancel">Отмена</button><button class="pri" id="sncreate">Создать</button></div>
+    <p class="hint" style="margin:6px 0 0">Текущее шоу «${esc(I.current.name)}» останется сохранённым — его можно открыть из списка.</p></div>`:''}
+  <h4>Последние</h4>
+  <div>${I.recent.filter(r=>r.exists).slice(0,6).map(r=>`<div class="sh-it${r.current?' cur':''}" data-path="${esc(r.path)}"><b>${esc(r.name)}</b>${r.current?'<span class="hint">открыто</span>':''}</div>`).join('')||'<p class="hint">Пока пусто.</p>'}</div>
+  <h4>Все шоу в папке<span class="sp"></span><span class="hint" style="text-transform:none;letter-spacing:0">${I.list.length}</span></h4>
+  <div>${I.list.map(f=>`<div class="sh-it${f.current?' cur':''}" data-path="${esc(f.path)}"><b>${esc(f.name)}</b><span class="hint">${f.broken?'<span class="warn">повреждён</span>':`${f.winches} лб · ${f.objects} экр · ${f.presets} пр`} · ${fdate(f.mtime)}</span><button class="ghost" data-a="ren" title="Переименовать">✎</button>${f.current?'<button class="ghost" data-a="dup" title="Сохранить копию">⧉</button>':''}${f.current?'':'<button class="ghost" data-a="del" title="Удалить (в папку «Удалённые»)">✕</button>'}</div>`).join('')}</div>
+  <h4>Ещё</h4>
+  <div class="row"><button id="sexport" title="Скачать файл текущего шоу">⬇ Экспорт .json</button><button id="sexample" title="10 экранов на 23 лебёдках, группы, пресеты, шоу — как в демо">Открыть пример</button><input type="file" id="sfile" accept=".json,application/json" hidden></div>`;
+  const done=(r,msg)=>{if(r&&r.ok){toast(msg);closeShows()}};
+  $('#sclose').onclick=closeShows;
+  $('#snew').onclick=()=>{shNew=!shNew;renderShows().then(()=>{const n=$('#snname');if(n){n.focus();n.select()}})};
+  if($('#sncreate')){$('#sncancel').onclick=()=>{shNew=false;renderShows()};
+    const create=async()=>{const r=await api('/api/show_new',{name:$('#snname').value,keep_rig:$('#snkeep').checked});done(r,'Новое шоу: '+(r.name||''))};
+    $('#sncreate').onclick=create;$('#snname').onkeydown=e=>{if(e.key==='Enter')create()}}
+  $('#ssave').onclick=async()=>{const r=await api('/api/show_save');if(r.ok)toast('Сохранено: '+r.name)};
+  $('#ssaveas').onclick=async()=>{const n=await askText('Сохранить текущее шоу под новым названием (откроется копия):',I.current.name+' копия');if(n===null)return;const r=await api('/api/show_saveas',{name:n});done(r,'Сохранено как «'+(r.name||'')+'»')};
+  $('#sfolder').onclick=async()=>{const r=await api('/api/show_folder');if(r.ok)toast('Открыта папка Shows')};
+  $('#sopenf').onclick=()=>$('#sfile').click();
+  $('#sfile').onchange=async e=>{const f=e.target.files[0];if(!f)return;let d;try{d=JSON.parse(await f.text())}catch(x){return toast('Файл не читается',true)}
+    const r=await api('/api/show_import',{name:f.name.replace(/\.json$/i,''),data:d});done(r,'Открыто: '+(r.name||''))};
+  $('#sexport').onclick=()=>{const o={...show};delete o._fixtures;const bl=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const l=document.createElement('a');l.href=URL.createObjectURL(bl);l.download=I.current.name+'.json';l.click()};
+  $('#sexample').onclick=async()=>{const r=await api('/api/example');done(r,'Открыт пример: '+(r.name||''))};
+  $$('#sbox .sh-it').forEach(it=>{const path=it.dataset.path;
+    it.onclick=async e=>{if(e.target.closest('button')||it.classList.contains('cur'))return;if(st&&st.armed&&!await ask('Моторы включены. При открытии другого шоу они выключатся.\nОткрыть?'))return;
+      const r=await api('/api/show_open',{path});done(r,'Открыто: '+(r.name||''))};
+    it.querySelectorAll('[data-a]').forEach(bt=>bt.onclick=async()=>{const a=bt.dataset.a,name=it.querySelector('b').textContent;
+      if(a==='ren'){const n=await askText('Новое название шоу:',name);if(n===null||n===name)return;const r=await api('/api/show_rename',{path,name:n});if(r.ok){toast('Переименовано');renderShows()}}
+      else if(a==='del'){if(!await ask('Удалить шоу «'+name+'»?\nФайл переместится в папку Shows/Удалённые.'))return;const r=await api('/api/show_delete',{path});if(r.ok){toast('Удалено');renderShows()}}
+      else if(a==='dup'){const n=await askText('Название копии:',name+' копия');if(n===null)return;const r=await api('/api/show_saveas',{name:n});done(r,'Копия: '+(r.name||''))}})});
+}
+$('#showbtn').onclick=()=>openShows();
+$('#sdlg').onclick=e=>{if(e.target.id==='sdlg')closeShows()};
 
 /* ---------- клавиши ---------- */
 document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.code==='KeyS'){e.preventDefault();api('/api/show_save').then(r=>r.ok&&toast('Сохранено: '+r.name));return}
+  if((e.ctrlKey||e.metaKey)&&e.code==='KeyO'){e.preventDefault();openShows();return}
+  if(e.key==='Escape'&&!$('#sdlg').hidden){closeShows();return}
   if(e.target.matches('input:not([type=range]):not([type=checkbox]),select,textarea'))return;
   if(tab==='lim'&&(e.code==='ArrowUp'||e.code==='ArrowDown')){e.preventDefault();if(!e.repeat)jogStart(e.code==='ArrowUp'?-1:1,e.shiftKey);return}
   if(e.code==='Space'){e.preventDefault();$('#stop').click()}
