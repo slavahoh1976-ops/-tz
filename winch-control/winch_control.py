@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.03 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.04 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.03'
+VERSION = '1.04'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')
 
@@ -255,12 +255,20 @@ def normalize(s):
     return s
 
 
+# Пример шоу (как в веб-демо): 10 экранов на 23 лебёдках EastSun ES-L32, группы, пресеты, шоу, события TC.
+EXAMPLE_SHOW = r'''{"version":1,"artnet":{"ip":"255.255.255.255","port":6454,"fps":40,"enabled":true,"bind":""},"device":{"reset_time":2,"speed":60},"library":[],"layout":{"cols":23},"winches":[{"id":1,"name":"1","fixture":"eastsun-es-l32-5ch","universe":0,"address":1,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":2,"name":"2","fixture":"eastsun-es-l32-5ch","universe":0,"address":6,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":3,"name":"3","fixture":"eastsun-es-l32-5ch","universe":0,"address":11,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":4,"name":"4","fixture":"eastsun-es-l32-5ch","universe":0,"address":16,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":5,"name":"5","fixture":"eastsun-es-l32-5ch","universe":0,"address":21,"invert":false,"min":0,"max":82,"home":0,"enabled":true},{"id":6,"name":"6","fixture":"eastsun-es-l32-5ch","universe":0,"address":26,"invert":false,"min":0,"max":82,"home":0,"enabled":true},{"id":7,"name":"7","fixture":"eastsun-es-l32-5ch","universe":0,"address":31,"invert":false,"min":0,"max":82,"home":0,"enabled":true},{"id":8,"name":"8","fixture":"eastsun-es-l32-5ch","universe":0,"address":36,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":9,"name":"9","fixture":"eastsun-es-l32-5ch","universe":0,"address":41,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":10,"name":"10","fixture":"eastsun-es-l32-5ch","universe":0,"address":46,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":11,"name":"11","fixture":"eastsun-es-l32-5ch","universe":0,"address":51,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":12,"name":"12","fixture":"eastsun-es-l32-5ch","universe":0,"address":56,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":13,"name":"13","fixture":"eastsun-es-l32-5ch","universe":0,"address":61,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":14,"name":"14","fixture":"eastsun-es-l32-5ch","universe":0,"address":66,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":15,"name":"15","fixture":"eastsun-es-l32-5ch","universe":0,"address":71,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":16,"name":"16","fixture":"eastsun-es-l32-5ch","universe":0,"address":76,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":17,"name":"17","fixture":"eastsun-es-l32-5ch","universe":0,"address":81,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":18,"name":"18","fixture":"eastsun-es-l32-5ch","universe":0,"address":86,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":19,"name":"19","fixture":"eastsun-es-l32-5ch","universe":0,"address":91,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":20,"name":"20","fixture":"eastsun-es-l32-5ch","universe":0,"address":96,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":21,"name":"21","fixture":"eastsun-es-l32-5ch","universe":0,"address":101,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":22,"name":"22","fixture":"eastsun-es-l32-5ch","universe":0,"address":106,"invert":false,"min":0,"max":100,"home":0,"enabled":true},{"id":23,"name":"23","fixture":"eastsun-es-l32-5ch","universe":0,"address":111,"invert":false,"min":0,"max":100,"home":0,"enabled":true}],"objects":[{"id":"o1","name":"Экран 1","members":[1,2]},{"id":"o2","name":"Экран 2","members":[3,4,5]},{"id":"o3","name":"Экран 3","members":[6,7]},{"id":"o4","name":"Экран 4","members":[8,9]},{"id":"o5","name":"Экран 5","members":[10,11,12]},{"id":"o6","name":"Экран 6","members":[13,14]},{"id":"o7","name":"Экран 7","members":[15,16]},{"id":"o8","name":"Экран 8","members":[17,18,19]},{"id":"o9","name":"Экран 9","members":[20,21]},{"id":"o10","name":"Экран 10","members":[22,23]}],"groups":[{"id":"g1","name":"Левые экраны","members":[1,2,3,4,5,6,7,8,9,10,11,12]},{"id":"g2","name":"Правые экраны","members":[13,14,15,16,17,18,19,20,21,22,23]},{"id":"g3","name":"Центр","members":[8,9,10,11,12,13,14,15,16]}],"presets":[{"id":"p1","name":"Все вверх","fade":4,"pos":{"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,"17":0,"18":0,"19":0,"20":0,"21":0,"22":0,"23":0},"speed":{"1":60,"2":60,"3":60,"4":60,"5":60,"6":60,"7":60,"8":60,"9":60,"10":60,"11":60,"12":60,"13":60,"14":60,"15":60,"16":60,"17":60,"18":60,"19":60,"20":60,"21":60,"22":60,"23":60}},{"id":"p2","name":"Середина","fade":5,"pos":{"1":50,"2":50,"3":50,"4":50,"5":50,"6":50,"7":50,"8":50,"9":50,"10":50,"11":50,"12":50,"13":50,"14":50,"15":50,"16":50,"17":50,"18":50,"19":50,"20":50,"21":50,"22":50,"23":50},"speed":{"1":60,"2":60,"3":60,"4":60,"5":60,"6":60,"7":60,"8":60,"9":60,"10":60,"11":60,"12":60,"13":60,"14":60,"15":60,"16":60,"17":60,"18":60,"19":60,"20":60,"21":60,"22":60,"23":60}},{"id":"p3","name":"V-образ","fade":6,"pos":{"1":10,"2":10,"3":27.78,"4":27.78,"5":27.78,"6":45.56,"7":45.56,"8":63.33,"9":63.33,"10":81.11,"11":81.11,"12":81.11,"13":81.11,"14":81.11,"15":63.33,"16":63.33,"17":45.56,"18":45.56,"19":45.56,"20":27.78,"21":27.78,"22":10,"23":10},"speed":{"1":70,"2":70,"3":70,"4":70,"5":70,"6":70,"7":70,"8":70,"9":70,"10":70,"11":70,"12":70,"13":70,"14":70,"15":70,"16":70,"17":70,"18":70,"19":70,"20":70,"21":70,"22":70,"23":70}},{"id":"p4","name":"Λ-купол","fade":6,"pos":{"1":90,"2":90,"3":72.22,"4":72.22,"5":72.22,"6":54.44,"7":54.44,"8":36.67,"9":36.67,"10":18.89,"11":18.89,"12":18.89,"13":18.89,"14":18.89,"15":36.67,"16":36.67,"17":54.44,"18":54.44,"19":54.44,"20":72.22,"21":72.22,"22":90,"23":90},"speed":{"1":70,"2":70,"3":70,"4":70,"5":70,"6":70,"7":70,"8":70,"9":70,"10":70,"11":70,"12":70,"13":70,"14":70,"15":70,"16":70,"17":70,"18":70,"19":70,"20":70,"21":70,"22":70,"23":70}},{"id":"p5","name":"Наклон","fade":5,"pos":{"1":15,"2":15,"3":22.78,"4":22.78,"5":22.78,"6":30.56,"7":30.56,"8":38.33,"9":38.33,"10":46.11,"11":46.11,"12":46.11,"13":53.89,"14":53.89,"15":61.67,"16":61.67,"17":69.44,"18":69.44,"19":69.44,"20":77.22,"21":77.22,"22":85,"23":85},"speed":{"1":50,"2":50,"3":50,"4":50,"5":50,"6":50,"7":50,"8":50,"9":50,"10":50,"11":50,"12":50,"13":50,"14":50,"15":50,"16":50,"17":50,"18":50,"19":50,"20":50,"21":50,"22":50,"23":50}},{"id":"p6","name":"Шахматы","fade":3,"pos":{"1":25,"2":25,"3":75,"4":75,"5":75,"6":25,"7":25,"8":75,"9":75,"10":25,"11":25,"12":25,"13":75,"14":75,"15":25,"16":25,"17":75,"18":75,"19":75,"20":25,"21":25,"22":75,"23":75},"speed":{"1":80,"2":80,"3":80,"4":80,"5":80,"6":80,"7":80,"8":80,"9":80,"10":80,"11":80,"12":80,"13":80,"14":80,"15":80,"16":80,"17":80,"18":80,"19":80,"20":80,"21":80,"22":80,"23":80}},{"id":"p7","name":"Волна по экранам","fade":3,"pos":{"1":40,"2":40,"3":40,"4":40,"5":40,"6":40,"7":40,"8":40,"9":40,"10":40,"11":40,"12":40,"13":40,"14":40,"15":40,"16":40,"17":40,"18":40,"19":40,"20":40,"21":40,"22":40,"23":40},"speed":{"1":70,"2":70,"3":70,"4":70,"5":70,"6":70,"7":70,"8":70,"9":70,"10":70,"11":70,"12":70,"13":70,"14":70,"15":70,"16":70,"17":70,"18":70,"19":70,"20":70,"21":70,"22":70,"23":70},"fx":[{"params":{"type":"wave","lo":8,"hi":88,"period":6,"spread":1,"width":0.15,"order":"index","reverse":false,"fadein":3,"linked":true},"members":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}]},{"id":"p8","name":"Капля + хаос","fade":3,"pos":{"1":40,"2":40,"3":40,"4":40,"5":40,"6":40,"7":40,"8":40,"9":40,"10":40,"11":40,"12":40,"13":40,"14":40,"15":40,"16":40,"17":40,"18":40,"19":40,"20":40,"21":40,"22":40,"23":40},"speed":{"1":70,"2":70,"3":70,"4":70,"5":70,"6":70,"7":70,"8":70,"9":70,"10":70,"11":70,"12":70,"13":70,"14":70,"15":70,"16":70,"17":70,"18":70,"19":70,"20":70,"21":70,"22":70,"23":70},"fx":[{"params":{"type":"chase","lo":5,"hi":90,"period":4,"spread":1,"width":0.25,"order":"index","reverse":false,"fadein":3,"linked":true},"members":[1,2,3,4,5,6,7,8,9,10,11,12]},{"params":{"type":"random","lo":20,"hi":80,"period":3,"spread":1,"width":0.15,"order":"index","reverse":false,"fadein":3,"linked":true},"members":[13,14,15,16,17,18,19,20,21,22,23]}]}],"sequences":[{"id":"s1","name":"Открытие","loop":true,"cues":[{"preset":"p2","fade":5,"hold":2},{"preset":"p3","fade":6,"hold":2},{"preset":"p4","fade":6,"hold":2},{"preset":"p6","fade":3,"hold":null}]}],"timecode":{"enabled":false,"source":"artnet","port":6454,"offset":0,"fps":25,"chase":true,"events":[{"id":"e1","t":0,"action":"preset","ref":"p2","fade":4},{"id":"e2","t":6,"action":"fx","ref":"","fade":null,"params":{"type":"wave","lo":8,"hi":88,"period":5,"spread":1,"width":0.15,"order":"index","reverse":false,"fadein":2,"linked":true},"members":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]},{"id":"e3","t":18,"action":"preset","ref":"p3","fade":5},{"id":"e4","t":26,"action":"fx","ref":"","fade":null,"params":{"type":"chase","lo":5,"hi":90,"period":4,"spread":1,"width":0.2,"order":"index","reverse":false,"fadein":2,"linked":true},"members":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]},{"id":"e5","t":38,"action":"preset","ref":"p4","fade":5},{"id":"e6","t":46,"action":"home","ref":"","fade":6}]}}'''
+
+
+def example_show():
+    return normalize(json.loads(EXAMPLE_SHOW))
+
+
 def load_show():
     try:
         with open(SHOW_FILE, 'r', encoding='utf-8') as f:
             return normalize(json.load(f))
     except FileNotFoundError:
-        return default_show()
+        return example_show()        # первый запуск — открываем пример, как в демо
     except Exception as e:
         print('! Не удалось прочитать', SHOW_FILE, e)
         return default_show()
@@ -775,6 +783,9 @@ class Engine:
         self.show = normalize(self.show)
         self.sync()
         self.changed()
+
+    def api_example(self, b, now):
+        self.api_show(json.loads(EXAMPLE_SHOW), now)
 
     def api_show(self, b, now):
         self.show = normalize(b)
@@ -1849,8 +1860,8 @@ function tabSet(){
   ${show.objects.map((o,i)=>`<tr data-i="${i}"><td><input data-f="name" value="${esc(o.name)}" style="width:110px;border-left:4px solid ${OC[i%OC.length]}"></td><td><input data-f="members" value="${esc(o.members.map(m=>show.winches.find(w=>w.id===m)?.name??m).join(', '))}"></td><td><button class="ghost" data-a="del" style="padding:2px 6px">✕</button></td></tr>`).join('')}
   </tbody></table></div><div class="row" style="margin-top:8px"><button class="pri" id="osave">Сохранить экраны</button></div>`:'<p class="hint">Пока нет экранов. Выделите лебёдки экрана на сцене и нажмите «⛓ Связать», или соберите все по схеме.</p>'}
   <h4>Файл шоу</h4>
-  <div class="row"><button id="fexp">⬇ Экспорт</button><button id="fimp">⬆ Импорт</button><button id="freset">Новое шоу</button><input type="file" id="ffile" accept=".json,application/json" hidden></div>
-  <p class="hint">Всё сохраняется автоматически в winch_show.json рядом с программой.</p>`;
+  <div class="row"><button id="fexp">⬇ Экспорт</button><button id="fimp">⬆ Импорт</button><button id="fexample" title="10 экранов на 23 лебёдках, группы, пресеты, шоу и события таймкода — как в демо">Загрузить пример</button><button id="freset">Новое шоу</button><input type="file" id="ffile" accept=".json,application/json" hidden></div>
+  <p class="hint">Всё сохраняется автоматически в winch_show.json рядом с программой. При первом запуске открывается пример — замените патч на свой или нажмите «Новое шоу».</p>`;
   $('#asave').onclick=()=>saveCfg({artnet:{ip:$('#aip').value,bind:$('#abind').value,port:+$('#aport').value,fps:+$('#afps').value,enabled:$('#aen').checked}}).then(r=>r.ok&&toast('Art-Net сохранён'));
   $('#dsave').onclick=()=>saveCfg({device:{reset_time:+$('#drt').value,speed:+$('#dspd').value}}).then(r=>r.ok&&toast('Сохранено'));
   bindLib();
@@ -1870,6 +1881,7 @@ function tabSet(){
   $('#fexp').onclick=()=>{const o={...show};delete o._fixtures;const b=new Blob([JSON.stringify(o,null,1)],{type:'application/json'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='winch_show.json';l.click()};
   $('#fimp').onclick=()=>$('#ffile').click();
   $('#ffile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const r=await api('/api/show',JSON.parse(await f.text()));if(r.ok)toast('Шоу загружено')}catch(x){toast('Файл не читается',true)}};
+  $('#fexample').onclick=async()=>{if(await ask('Загрузить пример шоу (10 экранов на 23 лебёдках, пресеты, группы, шоу)?\nТекущее шоу будет заменено — сначала сделайте экспорт, если оно нужно.'))api('/api/example').then(r=>r.ok&&toast('Пример загружен'))};
   $('#freset').onclick=async()=>{if(await ask('Начать новое шоу? Пресеты, группы и шоу будут удалены (сделайте экспорт).'))api('/api/show',{})};
 }
 
