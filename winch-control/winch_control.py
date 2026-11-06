@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.02 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.03 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.02'
+VERSION = '1.03'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')
 
@@ -43,7 +43,8 @@ BUILTIN_FIXTURES = [
 BUILTIN_IDS = {f['id'] for f in BUILTIN_FIXTURES}
 DEFAULT_FIXTURE = 'eastsun-es-l32-5ch'
 ROLES = ('safety', 'pos_hi', 'pos_lo', 'pos8', 'speed', 'reset', 'fixed')
-FX_TYPES = ('wave', 'breathe', 'chase', 'pingpong', 'standing', 'random')
+FX_TYPES = ('wave', 'breathe', 'chase', 'pingpong', 'standing', 'random', 'cascade', 'fill', 'bounce', 'pulse',
+            'morph', 'seesaw', 'mirror', 'ripple', 'flow', 'alternate')
 ORDERS = ('index', 'x', 'y', 'radial')
 SHAPES = ('flat', 'line', 'v', 'a', 'sine', 'arc', 'checker', 'random')
 TC_ACTIONS = ('preset', 'seq', 'seq_stop', 'fx', 'fx_stop', 'stop', 'home')
@@ -396,7 +397,7 @@ class Engine:
 
     def fx_coords(self, f):
         p = f['params']
-        _, f['u'], f['uc'], f['unit'], _ = self.coords(f['members'], p['order'], p['reverse'], p['linked'])
+        _, f['u'], f['uc'], f['unit'], f['rk'] = self.coords(f['members'], p['order'], p['reverse'], p['linked'])
 
     def detach(self, m):
         r = self.rt[m]
@@ -586,14 +587,14 @@ class Engine:
 
     def api_fx_start(self, b, now):
         p = self.fxp(b.get('params'))
-        ms, u, uc, unit, _ = self.coords(self.ids(b.get('ids')), p['order'], p['reverse'], p['linked'])
+        ms, u, uc, unit, rk = self.coords(self.ids(b.get('ids')), p['order'], p['reverse'], p['linked'])
         if not ms:
             raise ValueError('Выделите лебёдки')
         for m in ms:
             self.detach(m)
         fid = self.fx_next
         self.fx_next += 1
-        self.fx[fid] = {'id': fid, 'params': p, 'members': ms, 'u': u, 'uc': uc, 'unit': unit, 't0': now, 'ph': 0.0,
+        self.fx[fid] = {'id': fid, 'params': p, 'members': ms, 'u': u, 'uc': uc, 'unit': unit, 'rk': rk, 't0': now, 'ph': 0.0,
                         'start': {m: self.rt[m]['pos'] for m in ms}, 'rnd': {}}
         for m in ms:
             self.rt[m]['fx'], self.rt[m]['fade'] = fid, None
@@ -805,6 +806,31 @@ class Engine:
             x = frac(ph - f['uc'].get(m, 0.0))
             d, w = min(x, 1 - x), p['width']
             v = 0.5 + 0.5 * math.cos(math.pi * d / w) if d < w else 0.0
+        elif t == 'cascade':     # домино: по очереди вниз, по очереди вверх
+            x = frac(ph)
+            v = ease((x - u * 0.35) / 0.15) - ease((x - 0.5 - u * 0.35) / 0.15)
+        elif t == 'fill':        # наполнение: по очереди вниз, все вместе вверх
+            x = frac(ph)
+            v = ease((x - u * 0.55) / 0.15) * (1 - ease((x - 0.8) / 0.2))
+        elif t == 'bounce':      # мячики: отскок от верхней точки
+            v = abs(math.sin(math.pi * (ph - u * sp)))
+        elif t == 'pulse':       # пульс: быстро вниз, плавно вверх
+            x = frac(ph - u * sp)
+            v = ease(x / 0.18) if x < 0.18 else 1 - ease((x - 0.18) / 0.82)
+        elif t == 'morph':       # V <-> Λ
+            v = 0.5 + 0.5 * math.cos(2 * math.pi * ph) * (1 - 2 * abs(2 * u - 1))
+        elif t == 'seesaw':      # качели: линия качается вокруг центра
+            v = 0.5 + 0.5 * math.sin(2 * math.pi * ph) * (2 * u - 1)
+        elif t == 'mirror':      # волна из центра к краям
+            mm = abs(2 * u - 1)
+            v = 0.5 - 0.5 * math.cos(2 * math.pi * (ph - mm * sp))
+        elif t == 'ripple':      # затухающая рябь от центра
+            mm = abs(2 * u - 1)
+            v = 0.5 - 0.5 * (1 - 0.75 * mm) * math.cos(2 * math.pi * (ph - mm * sp))
+        elif t == 'flow':        # течение: две волны с разной частотой
+            v = 0.5 + 0.25 * math.sin(2 * math.pi * (ph + u * 1.7)) + 0.25 * math.sin(2 * math.pi * (ph * 1.618 - u * 2.3 + 0.3))
+        elif t == 'alternate':   # чёт/нечёт навстречу
+            v = 0.5 - 0.5 * math.cos(2 * math.pi * ph + math.pi * (f.get('rk', {}).get(m, 0) % 2))
         else:  # random
             key = f.get('unit', {}).get(m, m)
             s = f['rnd'].get(key)
@@ -1161,7 +1187,10 @@ INDEX_HTML = r'''<!doctype html>
 <title>Winch Control {{VERSION}}</title><link rel="icon" href="/favicon.png">
 <style>
 :root{--bg:#0c0e11;--p1:#13161b;--p2:#1a1e25;--p3:#232932;--ln:#2b323c;--tx:#e7eaef;--mu:#8a94a3;--ac:#ffb020;--ac2:#3dd6c6;--ok:#33d17a;--bad:#ff4d4f}
-*{box-sizing:border-box}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#3a424e transparent}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#323943;border-radius:6px;border:2px solid var(--bg)}::-webkit-scrollbar-thumb:hover{background:#4a5462}
+::-webkit-scrollbar-corner{background:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 button{font:inherit;color:var(--tx);background:var(--p3);border:1px solid var(--ln);border-radius:7px;padding:6px 10px;cursor:pointer}
 button:hover{border-color:#4a5462}
@@ -1186,11 +1215,11 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:calc(100% - 5
 .bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--ln);background:var(--p1)}
 .t{color:var(--mu)}
 .chip{border-radius:20px;padding:4px 10px;background:var(--p2)}.chip .x{opacity:.45;margin-left:7px}.chip .x:hover{opacity:1;color:var(--bad)}
-#stage{flex:1;min-height:0;overflow:auto;padding:14px;display:grid;gap:10px 6px;align-content:start}
-.cell{display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;border-radius:8px;padding:5px 0;background:var(--p1);border:1px solid transparent}
+#stage{flex:1;min-height:0;overflow:auto;padding:12px;display:grid;gap:10px 4px;align-content:start;justify-content:start}
+.cell{display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;border-radius:6px;padding:4px 0;min-width:0;background:var(--p1);border:1px solid transparent}
 .cell.sel{border-color:var(--ac);background:#211b0e}
 .cell.off{opacity:.4}
-.lbl{font-weight:600;font-size:12px;cursor:pointer;padding:2px 6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbl{font-weight:600;font-size:12px;cursor:pointer;padding:2px 1px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .track{position:relative;width:100%;height:var(--th,200px);cursor:ns-resize;touch-action:none;margin:8px 0 10px}
 .track::before{content:"";position:absolute;left:14%;right:14%;top:-3px;height:3px;background:#3a424e;border-radius:2px}
 .lim{position:absolute;left:28%;right:28%;background:repeating-linear-gradient(45deg,#4a1f22 0 4px,transparent 4px 8px)}
@@ -1199,8 +1228,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:calc(100% - 5
 .cell.fx .ball{background:radial-gradient(circle at 35% 30%,#fff,#8ff3ea 30%,#13a395 80%);box-shadow:0 0 14px #3dd6c655}
 .cell.fx .cable{background:var(--ac2)}
 .cell.obj .ball{left:12%;right:12%;width:auto;height:12px;border-radius:3px;transform:translateY(-50%);background:var(--oc);box-shadow:0 2px 10px #0008}
-.cell.obj:not(.ol) .ball{left:-5px;border-top-left-radius:0;border-bottom-left-radius:0}
-.cell.obj:not(.or) .ball{right:-5px;border-top-right-radius:0;border-bottom-right-radius:0}
+.cell.obj:not(.ol) .ball{left:-4px;border-top-left-radius:0;border-bottom-left-radius:0}
+.cell.obj:not(.or) .ball{right:-4px;border-top-right-radius:0;border-bottom-right-radius:0}
 .cell.obj.fx .ball{background:var(--oc)}
 .jog{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
 .jog button{padding:14px 0;font-size:18px;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -1211,13 +1240,17 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:calc(100% - 5
 .lnum{width:16px;color:var(--mu);font-variant-numeric:tabular-nums}
 .lpar{padding-left:22px}.lpar fieldset{border:0;padding:0;margin:0;display:flex;gap:5px;align-items:center;flex-wrap:wrap}.lpar button{padding:3px 8px}
 .otag{font-size:10px;font-weight:600;color:var(--oc,var(--mu));height:13px;white-space:nowrap;align-self:flex-start;padding-left:3px;overflow:visible;position:relative;z-index:2}
-.val{font-size:11px;color:var(--mu);font-variant-numeric:tabular-nums}
+.val{font-size:11px;color:var(--mu);font-variant-numeric:tabular-nums;white-space:nowrap}
+#stage.narrow .lbl{font-size:10px}#stage.narrow .val{font-size:9px;letter-spacing:-.3px}#stage.narrow .otag{font-size:9px}
+#stage.narrow .cell:not(.obj) .ball{width:13px;height:13px}
+.tglon{border-color:var(--ac)!important;color:var(--ac)!important}
+.zoom{display:inline-flex;align-items:center;gap:6px;margin-left:auto}.zoom input[type=range]{width:110px}.zoom input.num{width:52px}
 .move{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--ln);background:var(--p1)}
 .move input[type=range]{flex:1;min-width:140px}
 output{font-variant-numeric:tabular-nums;min-width:38px;display:inline-block}
 aside{border-left:1px solid var(--ln);background:var(--p1);display:flex;flex-direction:column;min-height:0}
-.tabs{display:flex;border-bottom:1px solid var(--ln);overflow-x:auto}
-.tabs button{border:0;border-radius:0;background:none;padding:12px 10px;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--ln);padding:2px 4px 0}
+.tabs button{flex:1 1 auto;border:0;border-radius:0;background:none;padding:9px 8px;color:var(--mu);border-bottom:2px solid transparent;white-space:nowrap}
 .tabs button.on{color:var(--tx);border-bottom-color:var(--ac)}
 #tab{flex:1;overflow:auto;padding:12px}
 h4{margin:16px 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--mu);display:flex;align-items:center;gap:8px}
@@ -1233,8 +1266,10 @@ h4:first-child{margin-top:0}h4 .sp{flex:1}
 .pgo small{color:var(--mu)}.pgo .fxb{color:var(--ac2)}.pgo .tcb{color:#8b9dff;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px}
 .pk{position:absolute;right:8px;top:7px;color:var(--mu);font-size:11px}
 .pact{display:flex;gap:3px;padding:0 4px 4px}.pact button{padding:2px 0;font-size:11px;flex:1;background:var(--p1)}
-.fxgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.fxcard{text-align:left;padding:8px 9px;background:var(--p2)}
+.fxgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fxcard{text-align:left;padding:7px 7px 5px;background:var(--p2);display:flex;flex-direction:column;gap:4px;min-width:0}
+.fxcard b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fxprev{width:100%;height:32px;display:block}
 .fxcard.on{border-color:var(--ac2);background:#0e2422}
 .fxcard small{display:block;color:var(--mu);font-size:11px;margin-top:2px}
 .rng{display:grid;grid-template-columns:118px 1fr 64px;align-items:center;gap:8px;margin:7px 0}
@@ -1304,7 +1339,26 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 let show=null,st=null,rev=-1,sel=new Set(),tab='presets',editFx=null,curSeq=null,fxSig='',cells={},mposDrag=false;
 const TABS=[['presets','Пресеты'],['fx','Эффекты'],['shapes','Формы'],['seq','Шоу'],['tc','Таймкод'],['lim','Пределы'],['ch','Каналы'],['set','Настройки']];
-const FX=[{t:'wave',n:'Волна',d:'Синус бежит по ряду'},{t:'breathe',n:'Дыхание',d:'Все вместе вверх-вниз'},{t:'chase',n:'Бегущая капля',d:'Опускается и бежит по ряду'},{t:'pingpong',n:'Маятник',d:'Равномерно туда-обратно'},{t:'standing',n:'Стоячая волна',d:'Узлы стоят, пучности качаются'},{t:'random',n:'Хаос',d:'Случайные плавные движения'}];
+const FX=[{t:'wave',n:'Волна',d:'Синус бежит по ряду'},{t:'breathe',n:'Дыхание',d:'Все вместе вверх-вниз'},{t:'chase',n:'Бегущая капля',d:'Одна опускается и бежит по ряду'},
+ {t:'pingpong',n:'Маятник',d:'Равномерно туда-обратно со сдвигом'},{t:'standing',n:'Стоячая волна',d:'Узлы стоят, пучности качаются'},{t:'random',n:'Хаос',d:'Случайные плавные движения'},
+ {t:'cascade',n:'Домино',d:'По очереди вниз, затем по очереди вверх'},{t:'fill',n:'Наполнение',d:'По очереди вниз, все вместе вверх'},{t:'bounce',n:'Мячики',d:'Отскок от верхней точки со сдвигом'},
+ {t:'pulse',n:'Пульс',d:'Резко вниз, плавно вверх — как удар сердца'},{t:'morph',n:'V ↔ Λ',d:'Фигура переливается из V в Λ и обратно'},{t:'seesaw',n:'Качели',d:'Ряд качается как наклонная линия вокруг центра'},
+ {t:'mirror',n:'Из центра',d:'Волна расходится от центра к краям (реверс — к центру)'},{t:'ripple',n:'Рябь',d:'Затухающая волна от центра, края почти стоят'},{t:'flow',n:'Течение',d:'Плавное органичное движение из двух волн'},
+ {t:'alternate',n:'Чёт / нечёт',d:'Соседние лебёдки или экраны идут навстречу'}];
+const NOSPREAD=['breathe','random','morph','seesaw','alternate','flow','cascade','fill'];
+function fxV(t,ph,u,i,sp,w){const fr=x=>x-Math.floor(x),E=k=>{k=Math.min(1,Math.max(0,k));return .5-.5*Math.cos(Math.PI*k)},P=Math.PI,m=Math.abs(2*u-1);
+  switch(t){case'wave':return .5-.5*Math.cos(2*P*(ph-u*sp));case'breathe':return .5-.5*Math.cos(2*P*ph);case'pingpong':return E(1-Math.abs(2*fr(ph-u*sp)-1));
+  case'standing':return .5-.5*Math.cos(2*P*ph)*Math.cos(2*P*u*Math.max(sp,.25));case'chase':{const x=fr(ph-u*8/9),d=Math.min(x,1-x);return d<w?.5+.5*Math.cos(P*d/w):0}
+  case'random':return .5+.3*Math.sin(2*P*(ph*0.7+i*1.37))+.2*Math.sin(2*P*(ph*1.3+i*2.11));case'cascade':{const x=fr(ph);return E((x-u*.35)/.15)-E((x-.5-u*.35)/.15)}
+  case'fill':{const x=fr(ph);return E((x-u*.55)/.15)*(1-E((x-.8)/.2))}case'bounce':return Math.abs(Math.sin(P*(ph-u*sp)));
+  case'pulse':{const x=fr(ph-u*sp);return x<.18?E(x/.18):1-E((x-.18)/.82)}case'morph':return .5+.5*Math.cos(2*P*ph)*(1-2*m);case'seesaw':return .5+.5*Math.sin(2*P*ph)*(2*u-1);
+  case'mirror':return .5-.5*Math.cos(2*P*(ph-m*sp));case'ripple':return .5-.5*(1-.75*m)*Math.cos(2*P*(ph-m*sp));case'flow':return .5+.25*Math.sin(2*P*(ph+u*1.7))+.25*Math.sin(2*P*(ph*1.618-u*2.3+.3));
+  case'alternate':return .5-.5*Math.cos(2*P*ph+P*(i%2))}return 0}
+function fxAnim(){if(tab==='fx'){const ph=performance.now()/1000/3.2,cs=$$('#tab canvas.fxprev');
+  cs.forEach(c=>{const g=c.getContext('2d'),W=c.width,H=c.height,n=9,on=c.closest('.fxcard').classList.contains('on');g.clearRect(0,0,W,H);g.fillStyle='#3a424e';g.fillRect(6,2,W-12,4);
+    for(let i=0;i<n;i++){const u=i/(n-1),x=12+i*(W-24)/(n-1),v=Math.min(1,Math.max(0,fxV(c.dataset.t,ph,u,i,1,.18))),y=10+v*(H-20);g.fillStyle='#7d8796';g.fillRect(x-1,6,2,y-6);g.fillStyle=on?'#3dd6c6':'#ffb020';g.beginPath();g.arc(x,y,5,0,7);g.fill()}})}
+  requestAnimationFrame(fxAnim)}
+requestAnimationFrame(fxAnim);
 const FXN=Object.fromEntries(FX.map(f=>[f.t,f.n]));
 const SH=[['flat','Ровно'],['line','Наклон'],['v','V'],['a','Λ'],['sine','Синус'],['arc','Дуга'],['checker','Шахматы'],['random','Случайно']];
 const ORD=[['index','По порядку'],['x','По столбцам (X)'],['y','По рядам (Y)'],['radial','От центра']];
@@ -1348,7 +1402,8 @@ function markSel(){if(tab==='lim'&&st&&st.teach.length)api('/api/teach',{on:true
 function renderSelBar(){
   $('#selbar').innerHTML=`<span class="t">Выбор:</span><button data-s="all">Все <kbd>Ctrl+A</kbd></button><button data-s="none">Нет</button><button data-s="inv">Инверт</button><button data-s="odd">Нечёт</button><button data-s="even">Чёт</button>
   <span class="t" style="margin-left:10px">Группы:</span>${show.groups.map(g=>`<button class="chip" data-g="${g.id}" title="Shift — добавить к выделению">${esc(g.name)}<span class="x" data-del="${g.id}">✕</span></button>`).join('')}<button class="ghost" id="gadd">+ группа из выделенных</button>
-  <span class="t" style="margin-left:10px">Экраны:</span><button class="ghost" id="olink" title="Связать выделенные лебёдки в один объект — экран будет двигаться целиком">⛓ Связать</button><button class="ghost" id="ounlink" title="Убрать связь у выделенных">Разъединить</button>`;
+  <span class="t" style="margin-left:10px">Экраны:</span><button class="ghost" id="olink" title="Связать выделенные лебёдки в один объект — экран будет двигаться целиком">⛓ Связать</button><button class="ghost" id="ounlink" title="Убрать связь у выделенных">Разъединить</button>
+  <span class="zoom"><span class="t">В ряд</span><input type="number" class="num" id="cols" min="1" max="64" value="${show.layout.cols}" title="Сколько лебёдок в одном ряду сцены (как висят физически)"><span class="t">Ширина</span><input type="range" id="cwz" min="22" max="120" step="1" title="Ширина ячейки лебёдки"><button class="ghost" id="cwauto" title="Подобрать ширину под окно">Авто</button></span>`;
   $$('#selbar [data-s]').forEach(b=>b.onclick=()=>{const all=show.winches.map(w=>w.id),s=b.dataset.s;
     if(s==='all')setSel(all);else if(s==='none')setSel([]);else if(s==='inv')setSel(all.filter(i=>!sel.has(i)));
     else setSel(all.filter((_,i)=>(i%2===0)===(s==='odd')))});
@@ -1358,13 +1413,16 @@ function renderSelBar(){
   $('#olink').onclick=()=>{if(sel.size<2)return toast('Выделите 2–3 лебёдки одного экрана',true);const objs=show.objects.map(o=>({...o,members:o.members.filter(m=>!sel.has(m))})).filter(o=>o.members.length);
     objs.push({id:'o'+Date.now().toString(36),name:'Экран '+(objs.length+1),members:ids()});saveCfg({objects:objs}).then(r=>r.ok&&toast('Связано: '+sel.size+' лебёдки'))};
   $('#ounlink').onclick=()=>{if(!sel.size)return toast('Выделите экран',true);saveCfg({objects:show.objects.filter(o=>!o.members.some(m=>sel.has(m)))})};
+  $('#cwz').oninput=e=>{cwPref=e.target.value;try{localStorage.setItem('cellW',cwPref)}catch(x){}fitStage()};
+  $('#cwauto').onclick=()=>{cwPref='auto';try{localStorage.setItem('cellW','auto')}catch(x){}fitStage()};
+  $('#cols').onchange=e=>{const c=clamp(+e.target.value|0,1,64);saveCfg({layout:{...show.layout,cols:c}})};
   $('#gadd').onclick=async()=>{if(!sel.size)return toast('Сначала выделите лебёдки',true);const n=await askText('Название группы','Группа '+(show.groups.length+1));if(n)saveCfg({groups:[...show.groups,{id:'g'+Date.now(),name:n,members:ids()}]})};
 }
 
 /* ---------- сцена ---------- */
 function renderStage(){
   const s=$('#stage'),n=show.winches.length,cols=Math.max(1,Math.min(show.layout.cols,n));
-  s.style.gridTemplateColumns=`repeat(${cols},minmax(30px,1fr))`;
+  s.style.gridTemplateColumns=`repeat(${cols},var(--cw,44px))`;
   s.innerHTML=show.winches.map((w,i)=>{const oi=objInfo(w,i);return`<div class="cell${w.enabled?'':' off'}${oi.cls}" data-id="${w.id}"${oi.sty}><div class="lbl" title="Клик — выделить/снять. Адрес ${w.universe}.${w.address}">${esc(w.name)}</div><div class="track">${w.min>0?`<div class="lim" style="top:0;height:${w.min}%"></div>`:''}${w.max<100?`<div class="lim" style="top:${w.max}%;bottom:0"></div>`:''}<div class="cable"></div><div class="ball"></div></div><div class="val">–</div>${show.objects.length?`<div class="otag">${oi.tag}</div>`:''}</div>`}).join('')||'<p class="hint">Нет лебёдок — добавьте их в «Настройки → Патч».</p>';
   cells={};$$('#stage .cell').forEach(el=>{const id=+el.dataset.id;cells[id]={el,ball:el.querySelector('.ball'),cable:el.querySelector('.cable'),val:el.querySelector('.val')};
     el.querySelector('.lbl').onclick=()=>{const on=!sel.has(id);expand([id]).forEach(i=>on?sel.add(i):sel.delete(i));markSel()};
@@ -1373,7 +1431,11 @@ function renderStage(){
   s.onpointerdown=e=>{if(e.target===s)setSel([])};
   fitStage();markSel();
 }
-function fitStage(){if(!show)return;const s=$('#stage'),n=show.winches.length||1,cols=Math.min(show.layout.cols,n),rows=Math.ceil(n/cols);s.style.setProperty('--th',clamp((s.clientHeight-28)/rows-70,70,380)+'px')}
+let cwPref=(()=>{try{return localStorage.getItem('cellW')||'auto'}catch(e){return'auto'}})();
+function fitStage(){if(!show)return;const s=$('#stage'),n=show.winches.length||1,cols=Math.min(show.layout.cols,n),rows=Math.ceil(n/cols);
+  const auto=clamp(Math.floor((s.clientWidth-24-(cols-1)*4)/cols),24,64),cw=cwPref==='auto'?auto:+cwPref;
+  s.style.setProperty('--cw',cw+'px');s.classList.toggle('narrow',cw<36);s.style.setProperty('--th',clamp((s.clientHeight-28)/rows-70,70,380)+'px');
+  const z=$('#cwz');if(z&&document.activeElement!==z)z.value=cw;const za=$('#cwauto');if(za)za.classList.toggle('tglon',cwPref==='auto')}
 new ResizeObserver(()=>fitStage()).observe($('#stage'));
 const sendMove=throttle(t=>api('/api/move',{abs:t,fade:0}),45);
 function startDrag(e,id,tr){
@@ -1450,10 +1512,11 @@ function tabPresets(){
 const pushFx=throttle(()=>{if(editFx&&st&&st.fx.some(f=>f.id===editFx))api('/api/fx/update',{id:editFx,params:O.fxp})},80);
 function tabFx(){
   const el=$('#tab'),p=O.fxp;
-  el.innerHTML=`<h4>Групповое движение</h4><div class="fxgrid">${FX.map(f=>`<button class="fxcard${p.type===f.t?' on':''}" data-t="${f.t}"><b>${f.n}</b><small>${f.d}</small></button>`).join('')}</div>
+  el.innerHTML=`<h4>Групповое движение<span class="sp"></span><span class="hint" style="text-transform:none;letter-spacing:0">${FX.length} эффектов</span></h4><div class="fxgrid">${FX.map(f=>`<button class="fxcard${p.type===f.t?' on':''}" data-t="${f.t}" title="${esc(f.d)}"><b>${f.n}</b><canvas class="fxprev" data-t="${f.t}" width="216" height="64"></canvas></button>`).join('')}</div>
+  <p class="hint" style="margin:8px 0 0">${esc(FX.find(f=>f.t===p.type)?.d||'')}</p>
   <h4>Параметры</h4>
   ${rng('fxp','lo','Верхняя точка',0,100,1,'%')}${rng('fxp','hi','Нижняя точка',0,100,1,'%')}${rng('fxp','period','Период цикла',0.5,60,0.5,' с')}${rng('fxp','rate','Скорость эффекта',10,400,5,'%')}<div class="hint" id="fcyc" style="margin:-2px 0 6px 126px"></div>
-  ${p.type==='breathe'||p.type==='random'?'':rng('fxp','spread','Сдвиг фазы',0,4,0.05,'×')}
+  ${NOSPREAD.includes(p.type)?'':rng('fxp','spread',['mirror','ripple'].includes(p.type)?'Волн до края':'Сдвиг фазы',0,4,0.05,'×')}
   ${p.type==='chase'?rng('fxp','width','Ширина капли',0.03,0.5,0.01,''):''}
   ${rng('fxp','mspeed','Скорость моторов',0,100,1,'%')}
   ${rng('fxp','fadein','Плавный вход',0,20,0.5,' с')}
