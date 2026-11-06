@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.01 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.02 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.01'
+VERSION = '1.02'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')
 
@@ -453,7 +453,7 @@ class Engine:
 
     def fxp(self, p, base=None):
         b = dict(base or {'type': 'wave', 'lo': 0, 'hi': 100, 'period': 8, 'spread': 1, 'width': 0.15,
-                          'order': 'index', 'reverse': False, 'fadein': 3, 'linked': True})
+                          'order': 'index', 'reverse': False, 'fadein': 3, 'linked': True, 'rate': 100, 'mspeed': 0})
         if isinstance(p, dict):
             b.update(p)
         return {'type': b['type'] if b['type'] in FX_TYPES else 'wave',
@@ -461,7 +461,9 @@ class Engine:
                 'period': clamp(fnum(b['period'], 8), 0.3, 600), 'spread': clamp(fnum(b['spread'], 1), 0, 10),
                 'width': clamp(fnum(b['width'], 0.15), 0.02, 0.5),
                 'order': b['order'] if b['order'] in ORDERS else 'index', 'reverse': bool(b['reverse']),
-                'fadein': clamp(fnum(b['fadein'], 3), 0, 60), 'linked': b.get('linked', True) is not False}
+                'fadein': clamp(fnum(b['fadein'], 3), 0, 60), 'linked': b.get('linked', True) is not False,
+                'rate': clamp(fnum(b.get('rate'), 100), 10, 400),        # скорость эффекта, %
+                'mspeed': clamp(fnum(b.get('mspeed'), 0), 0, 100)}       # скорость моторов, % (0 = не менять)
 
     def stop_fx(self, fid):
         f = self.fx.pop(fid, None)
@@ -595,6 +597,8 @@ class Engine:
                         'start': {m: self.rt[m]['pos'] for m in ms}, 'rnd': {}}
         for m in ms:
             self.rt[m]['fx'], self.rt[m]['fade'] = fid, None
+            if p['mspeed'] > 0:
+                self.rt[m]['speed'] = p['mspeed']
         return {'id': fid}
 
     def api_fx_update(self, b, now):
@@ -602,6 +606,9 @@ class Engine:
         if not f:
             raise ValueError('Эффект уже остановлен')
         f['params'] = self.fxp(b.get('params'), f['params'])
+        if f['params']['mspeed'] > 0:
+            for m in f['members']:
+                self.rt[m]['speed'] = f['params']['mspeed']
         self.fx_coords(f)
 
     def api_fx_stop(self, b, now):
@@ -803,7 +810,7 @@ class Engine:
             s = f['rnd'].get(key)
             if s is None or now - s['t0'] >= s['dur']:
                 a = s['b'] if s else random.random()
-                s = {'a': a, 'b': random.random(), 't0': now, 'dur': p['period'] * (0.6 + 0.8 * random.random())}
+                s = {'a': a, 'b': random.random(), 't0': now, 'dur': p['period'] * 100.0 / p['rate'] * (0.6 + 0.8 * random.random())}
                 f['rnd'][key] = s
             v = s['a'] + (s['b'] - s['a']) * ease((now - s['t0']) / s['dur'])
         pos = p['lo'] + (p['hi'] - p['lo']) * v
@@ -827,7 +834,7 @@ class Engine:
                 if cue['hold'] is not None and now - self.seq['t0'] >= cue['fade'] + cue['hold']:
                     self.advance(1, now)
         for f in self.fx.values():
-            f['ph'] += dt / f['params']['period']
+            f['ph'] += dt * f['params']['rate'] / 100.0 / f['params']['period']
         fixmap = {f['id']: f for f in BUILTIN_FIXTURES}
         fixmap.update({f['id']: f for f in sh['library']})
         # пределы: у экрана (объекта) — самый строгий предел из его лебёдок, чтобы экран не перекашивало
@@ -1230,7 +1237,7 @@ h4:first-child{margin-top:0}h4 .sp{flex:1}
 .fxcard{text-align:left;padding:8px 9px;background:var(--p2)}
 .fxcard.on{border-color:var(--ac2);background:#0e2422}
 .fxcard small{display:block;color:var(--mu);font-size:11px;margin-top:2px}
-.rng{display:grid;grid-template-columns:118px 1fr 52px;align-items:center;gap:8px;margin:7px 0}
+.rng{display:grid;grid-template-columns:118px 1fr 64px;align-items:center;gap:8px;margin:7px 0}
 .rng span{color:var(--mu)}.rng output{text-align:right}
 .list .it{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--ln);border-radius:7px;margin-bottom:5px;background:var(--p2)}
 .list .it.on{border-color:var(--ac2)}.list .it b{flex:1;font-weight:600}.list .it button{padding:3px 8px}
@@ -1301,7 +1308,7 @@ const FX=[{t:'wave',n:'Волна',d:'Синус бежит по ряду'},{t:'
 const FXN=Object.fromEntries(FX.map(f=>[f.t,f.n]));
 const SH=[['flat','Ровно'],['line','Наклон'],['v','V'],['a','Λ'],['sine','Синус'],['arc','Дуга'],['checker','Шахматы'],['random','Случайно']];
 const ORD=[['index','По порядку'],['x','По столбцам (X)'],['y','По рядам (Y)'],['radial','От центра']];
-const O={fxp:{type:'wave',lo:0,hi:100,period:8,spread:1,width:.15,order:'index',reverse:false,fadein:3,linked:true},shp:{lo:0,hi:100,order:'index',reverse:false,fade:4,linked:true},chp:{spd:60}};
+const O={fxp:{type:'wave',lo:0,hi:100,period:8,spread:1,width:.15,order:'index',reverse:false,fadein:3,linked:true,rate:100,mspeed:0},shp:{lo:0,hi:100,order:'index',reverse:false,fade:4,linked:true},chp:{spd:60}};
 
 function dlg(msg,def){return new Promise(res=>{const d=$('#dlg'),inp=$('#dlgin'),txt=def!==undefined;$('#dlgmsg').textContent=msg;inp.hidden=!txt;inp.value=txt?def:'';d.hidden=false;
   setTimeout(()=>{if(txt){inp.focus();inp.select()}else $('#dlgok').focus()},0);
@@ -1445,9 +1452,10 @@ function tabFx(){
   const el=$('#tab'),p=O.fxp;
   el.innerHTML=`<h4>Групповое движение</h4><div class="fxgrid">${FX.map(f=>`<button class="fxcard${p.type===f.t?' on':''}" data-t="${f.t}"><b>${f.n}</b><small>${f.d}</small></button>`).join('')}</div>
   <h4>Параметры</h4>
-  ${rng('fxp','lo','Верхняя точка',0,100,1,'%')}${rng('fxp','hi','Нижняя точка',0,100,1,'%')}${rng('fxp','period','Период',0.5,60,0.5,' с')}
+  ${rng('fxp','lo','Верхняя точка',0,100,1,'%')}${rng('fxp','hi','Нижняя точка',0,100,1,'%')}${rng('fxp','period','Период цикла',0.5,60,0.5,' с')}${rng('fxp','rate','Скорость эффекта',10,400,5,'%')}<div class="hint" id="fcyc" style="margin:-2px 0 6px 126px"></div>
   ${p.type==='breathe'||p.type==='random'?'':rng('fxp','spread','Сдвиг фазы',0,4,0.05,'×')}
   ${p.type==='chase'?rng('fxp','width','Ширина капли',0.03,0.5,0.01,''):''}
+  ${rng('fxp','mspeed','Скорость моторов',0,100,1,'%')}
   ${rng('fxp','fadein','Плавный вход',0,20,0.5,' с')}
   <div class="row">${ordSel('ford',p.order)}<label class="chk"><input type="checkbox" id="frev"${p.reverse?' checked':''}> реверс</label></div>
   ${show.objects.length?`<div class="row"><label class="chk"><input type="checkbox" id="flink"${p.linked!==false?' checked':''}> экраны движутся целиком (${show.objects.length} шт.)</label></div>`:''}
@@ -1455,7 +1463,9 @@ function tabFx(){
   <div class="hint" id="fedit"></div>
   <h4>Работают сейчас<span class="sp"></span><button class="ghost" id="fstopall" style="padding:2px 8px">■ Стоп все</button></h4><div class="list" id="flist"></div>`;
   fxSig='';
-  bindRng(el,()=>pushFx());
+  const fxInfo=()=>{const c=O.fxp.period*100/O.fxp.rate;$('#fcyc').textContent='Один цикл ≈ '+(c<10?c.toFixed(1):Math.round(c))+' с';
+    const mo=$('#tab input[data-k=mspeed]')?.closest('.rng')?.querySelector('output');if(mo&&!+O.fxp.mspeed)mo.textContent='как есть'};
+  bindRng(el,()=>{fxInfo();pushFx()});fxInfo();
   $$('.fxcard',el).forEach(b=>b.onclick=()=>{p.type=b.dataset.t;renderTab();pushFx()});
   $('#ford').onchange=e=>{p.order=e.target.value;pushFx()};
   $('#frev').onchange=e=>{p.reverse=e.target.checked;pushFx()};
