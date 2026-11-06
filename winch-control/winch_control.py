@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.06 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.07 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.06'
+VERSION = '1.07'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
 SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
@@ -75,7 +75,8 @@ def fnum(v, d=0.0):
 
 def mk_winch(i, u, a):
     return {'id': i, 'name': str(i), 'universe': u, 'address': a, 'invert': False,
-            'min': 0.0, 'max': 100.0, 'home': 0.0, 'enabled': True, 'fixture': DEFAULT_FIXTURE}
+            'min': 0.0, 'max': 100.0, 'home': 0.0, 'enabled': True, 'fixture': DEFAULT_FIXTURE,
+            'px': None, 'pz': None}   # px/pz — положение точки подвеса в метрах (None = по сетке)
 
 
 def default_show():
@@ -185,6 +186,8 @@ def normalize(s):
             mn, mx = mx, mn
         x['min'], x['max'] = mn, mx
         x['home'] = clamp(fnum(x['home']), 0, 100)
+        for k in ('px', 'pz'):
+            x[k] = None if x.get(k) in (None, '') else round(clamp(fnum(x[k]), -1000, 1000), 3)
         ws.append({k: x[k] for k in mk_winch(0, 0, 1)})
     s['winches'] = ws
 
@@ -587,7 +590,16 @@ class Engine:
         grp = {}
         for m in ms:
             grp.setdefault(unit[m], []).append(m)
-        info = {k: (sum(idx[m] % cols for m in g) / len(g), sum(idx[m] // cols for m in g) / len(g),
+        v3 = self.show['layout'].get('v3d') or {}
+        S, R = v3.get('step', 1.0), v3.get('row', 2.0)
+        wm = {w['id']: w for w in self.show['winches']}
+
+        def xy(m):    # реальное положение в пространстве (м) или по сетке сцены
+            w = wm[m]
+            if w.get('px') is not None and w.get('pz') is not None:
+                return w['px'], w['pz']
+            return (idx[m] % cols) * S, (idx[m] // cols) * R
+        info = {k: (sum(xy(m)[0] for m in g) / len(g), sum(xy(m)[1] for m in g) / len(g),
                     min(idx[m] for m in g)) for k, g in grp.items()}
         keys = sorted(info, key=lambda k: info[k][2])
         rank = {k: i for i, k in enumerate(keys)}
@@ -1051,11 +1063,11 @@ class Engine:
             v = 0.5 + 0.5 * math.cos(2 * math.pi * ph) * (1 - 2 * abs(2 * u - 1))
         elif t == 'seesaw':      # качели: линия качается вокруг центра
             v = 0.5 + 0.5 * math.sin(2 * math.pi * ph) * (2 * u - 1)
-        elif t == 'mirror':      # волна из центра к краям
-            mm = abs(2 * u - 1)
+        elif t == 'mirror':      # волна из центра к краям (при «От центра» — по расстоянию в пространстве)
+            mm = u if p['order'] == 'radial' else abs(2 * u - 1)
             v = 0.5 - 0.5 * math.cos(2 * math.pi * (ph - mm * sp))
         elif t == 'ripple':      # затухающая рябь от центра
-            mm = abs(2 * u - 1)
+            mm = u if p['order'] == 'radial' else abs(2 * u - 1)
             v = 0.5 - 0.5 * (1 - 0.75 * mm) * math.cos(2 * math.pi * (ph - mm * sp))
         elif t == 'flow':        # течение: две волны с разной частотой
             v = 0.5 + 0.25 * math.sin(2 * math.pi * (ph + u * 1.7)) + 0.25 * math.sin(2 * math.pi * (ph * 1.618 - u * 2.3 + 0.3))
@@ -1490,6 +1502,8 @@ main:not(.pright) aside{order:-1;border-left:0;border-right:1px solid var(--ln)}
 .v3ui{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .v3ui button{padding:4px 9px;font-size:12px;background:#1a1e25cc;backdrop-filter:blur(4px)}
 .v3help{position:absolute;left:10px;bottom:8px;color:var(--mu);font-size:11px;pointer-events:none}
+.v3arr{position:absolute;right:10px;top:10px;width:330px;max-width:calc(100% - 20px);background:var(--p1);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px #0008}
+.v3arr[hidden]{display:none}.v3arr button{padding:4px 8px;font-size:12px}.v3arr input.num{width:62px}
 .v3set{position:absolute;left:10px;top:44px;background:var(--p1);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:auto 70px;gap:6px 10px;align-items:center;box-shadow:0 10px 30px #0008}
 .v3set[hidden]{display:none}.v3set span{color:var(--mu);font-size:12px}.v3set input{width:70px}
 .seg{display:inline-flex;border:1px solid var(--ln);border-radius:7px;overflow:hidden}.seg button{border:0;border-radius:0;padding:5px 11px;background:var(--p2);color:var(--mu)}
@@ -1609,7 +1623,8 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
     <div class="bar" id="selbar"></div>
     <div id="stage"></div>
     <div id="stage3d" hidden><canvas id="c3d"></canvas>
-      <div class="v3ui"><button data-v="q">3/4</button><button data-v="f">Спереди</button><button data-v="s">Сбоку</button><button data-v="t">Сверху</button><button data-v="fit" title="Показать всё">⤢</button><button id="v3cfg" title="Размеры сцены в метрах">⚙ Размеры</button></div>
+      <div class="v3ui"><button data-v="q">3/4</button><button data-v="f">Спереди</button><button data-v="s">Сбоку</button><button data-v="t">Сверху</button><button data-v="fit" title="Показать всё">⤢</button><button id="v3arrbtn" title="Расставить экраны и лебёдки в пространстве">✥ Расставить</button><button id="v3cfg" title="Размеры сцены в метрах">⚙ Размеры</button></div>
+      <div class="v3arr" id="v3arr" hidden></div>
       <div class="v3set" id="v3set" hidden>
         <span>Высота фермы, м</span><input type="number" id="v3h" min="1" max="60" step="0.5">
         <span>Ход лебёдки, м</span><input type="number" id="v3t" min="0.5" max="60" step="0.5">
@@ -1661,7 +1676,7 @@ function fxAnim(){if(tab==='fx'){const ph=performance.now()/1000/3.2,cs=$$('#tab
 requestAnimationFrame(fxAnim);
 const FXN=Object.fromEntries(FX.map(f=>[f.t,f.n]));
 const SH=[['flat','Ровно'],['line','Наклон'],['v','V'],['a','Λ'],['sine','Синус'],['arc','Дуга'],['checker','Шахматы'],['random','Случайно']];
-const ORD=[['index','По порядку'],['x','По столбцам (X)'],['y','По рядам (Y)'],['radial','От центра']];
+const ORD=[['index','По порядку'],['x','Слева направо (X)'],['y','Спереди назад (глубина)'],['radial','От центра']];
 const O={fxp:{type:'wave',lo:0,hi:100,period:8,spread:1,width:.15,order:'index',reverse:false,fadein:3,linked:true,rate:100,mspeed:0},shp:{lo:0,hi:100,order:'index',reverse:false,fade:4,linked:true},chp:{spd:60}};
 
 function dlg(msg,def){return new Promise(res=>{const d=$('#dlg'),inp=$('#dlgin'),txt=def!==undefined;$('#dlgmsg').textContent=msg;inp.hidden=!txt;inp.value=txt?def:'';d.hidden=false;
@@ -1699,50 +1714,56 @@ function objInfo(w,i){const o=objOf(w.id);if(!o)return{cls:'',sty:'',tag:''};con
 
 /* ---------- 3D-вид (Canvas, без внешних библиотек) ---------- */
 let view3d=(()=>{try{return localStorage.getItem('view3d')==='1'}catch(e){return false}})();
-const cam={yaw:-0.62,pitch:0.3,dist:0,tx:0,ty:0,tz:0,fitted:false};let v3disp={},v3pick=[],v3drag=null;
-function setView(on,quiet){view3d=!!on;try{localStorage.setItem('view3d',view3d?'1':'0')}catch(e){}
+const cam={yaw:-0.62,pitch:0.32,dist:0,tx:0,ty:0,tz:0,fitted:false};let v3disp={},v3pick=[],v3drag=null,V3=null,v3arr=false,v3over={},v3fr=0;
+function setView(on){view3d=!!on;try{localStorage.setItem('view3d',view3d?'1':'0')}catch(e){}
   $('#stage').hidden=view3d;$('#stage3d').hidden=!view3d;const a=$('#v2dbtn'),b=$('#v3dbtn');if(a){a.classList.toggle('on',!view3d);b.classList.toggle('on',view3d)}
-  $$('#selbar .zoom .t, #cols, #cwz, #cwauto').forEach(x=>{if(x.id==='cwz'||x.id==='cwauto'||(x.classList.contains('t')&&x.textContent==='Ширина'))x.style.display=view3d?'none':''});
-  if(view3d){cam.fitted=false;requestAnimationFrame(v3loop)}else fitStage()}
+  $$('#selbar .zoom .t, #cwz, #cwauto').forEach(x=>{if(x.id==='cwz'||x.id==='cwauto'||(x.classList.contains('t')&&x.textContent==='Ширина'))x.style.display=view3d?'none':''});
+  if(view3d){cam.fitted=false;renderArr();requestAnimationFrame(v3loop)}else fitStage()}
 function v3cfg(){const v=show.layout.v3d||{};return{H:+v.height||8,T:+v.travel||6,S:+v.step||1,R:+v.row||2,P:+v.panel||1.5}}
-function v3geo(C){const n=show.winches.length,cols=Math.max(1,Math.min(show.layout.cols,n||1)),rows=Math.ceil((n||1)/cols),G={};
-  show.winches.forEach((w,i)=>{const c=i%cols,r=Math.floor(i/cols);G[w.id]={x:(c-(cols-1)/2)*C.S,z:(r-(rows-1)/2)*C.R,row:r}});
-  return{G,cols,rows,w:(cols-1)*C.S,d:(rows-1)*C.R}}
-function v3view(v){if(v==='f'){cam.yaw=0;cam.pitch=0.06}else if(v==='s'){cam.yaw=Math.PI/2;cam.pitch=0.12}else if(v==='t'){cam.yaw=0;cam.pitch=1.45}else if(v==='q'){cam.yaw=-0.62;cam.pitch=0.3}else cam.fitted=false}
-function v3loop(){if(!view3d)return;try{draw3d()}catch(e){console.error(e)}requestAnimationFrame(v3loop)}
+function v3geo(C){const n=show.winches.length,cols=Math.max(1,Math.min(show.layout.cols,n||1)),rows=Math.ceil((n||1)/cols),G={};let spatial=false;
+  show.winches.forEach((w,i)=>{const c=i%cols,r=Math.floor(i/cols);let x=(c-(cols-1)/2)*C.S,z=(r-(rows-1)/2)*C.R;
+    if(w.px!=null&&w.pz!=null){x=w.px;z=w.pz;spatial=true}const o=v3over[w.id];if(o){x=o.x;z=o.z;spatial=true}G[w.id]={x,z,row:r}});
+  const xs=Object.values(G).map(o=>o.x),zs=Object.values(G).map(o=>o.z),x0=Math.min(...xs,0),x1=Math.max(...xs,0),z0=Math.min(...zs,0),z1=Math.max(...zs,0);
+  return{G,spatial,x0,x1,z0,z1,w:x1-x0,d:z1-z0,mx:(x0+x1)/2,mz:(z0+z1)/2}}
+function v3view(v){if(v==='f'){cam.yaw=0;cam.pitch=0.06}else if(v==='s'){cam.yaw=Math.PI/2;cam.pitch=0.12}else if(v==='t'){cam.yaw=0;cam.pitch=1.5}else if(v==='q'){cam.yaw=-0.62;cam.pitch=0.32}else cam.fitted=false}
+function v3loop(){if(!view3d)return;try{draw3d()}catch(e){console.error(e)}if(v3arr&&++v3fr%12===0)liveArr();requestAnimationFrame(v3loop)}
 function draw3d(){
   const c=$('#c3d');if(!c||!show)return;const W=c.clientWidth,Hh=c.clientHeight,dpr=window.devicePixelRatio||1;if(!W||!Hh)return;
   if(c.width!==Math.round(W*dpr)||c.height!==Math.round(Hh*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(Hh*dpr)}
   const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,Hh);
-  const C=v3cfg(),{G,rows,w,d}=v3geo(C);
-  if(!cam.fitted){cam.tx=0;cam.tz=0;cam.ty=C.H-C.T*0.55;cam.dist=Math.max(w*1.25+2,C.H*1.6,d*1.8,7);cam.fitted=true}
+  const C=v3cfg(),GE=v3geo(C),G=GE.G;
+  if(!cam.fitted){cam.tx=GE.mx;cam.tz=GE.mz;cam.ty=C.H-C.T*0.55;cam.dist=Math.max(GE.w*1.25+2,C.H*1.6,GE.d*1.8,7);cam.fitted=true}
   const cp=Math.cos(cam.pitch),ex=cam.tx+cam.dist*cp*Math.sin(cam.yaw),ey=cam.ty+cam.dist*Math.sin(cam.pitch),ez=cam.tz+cam.dist*cp*Math.cos(cam.yaw);
   let fx=cam.tx-ex,fy=cam.ty-ey,fz=cam.tz-ez;const fl=Math.hypot(fx,fy,fz);fx/=fl;fy/=fl;fz/=fl;
-  let rx=fz*0-fy*0,ry=0,rz=0;rx=-fz;rz=fx;const rl=Math.hypot(rx,rz)||1;rx/=rl;rz/=rl;
+  let rx=-fz,rz=fx;const rl=Math.hypot(rx,rz)||1;rx/=rl;rz/=rl;const ry=0;
   const ux=ry*fz-rz*fy,uy=rz*fx-rx*fz,uz=rx*fy-ry*fx,F=Math.min(W,Hh*1.6)*0.9,cx=W/2,cy=Hh/2;
-  const P=(x,y,z)=>{const dx=x-ex,dy=y-ey,dz=z-ez,zz=dx*fx+dy*fy+dz*fz;if(zz<0.05)return null;return[cx+(dx*rx+dy*ry+dz*rz)*F/zz,cy-(dx*ux+dy*uy+dz*uz)*F/zz,zz]};
-  const line=(a,b,col,lw)=>{if(!a||!b)return;g.strokeStyle=col;g.lineWidth=lw;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()};
-  // пол и сетка 1 м
-  const gx0=Math.floor(-w/2-3),gx1=Math.ceil(w/2+3),gz0=Math.floor(-d/2-3),gz1=Math.ceil(d/2+5);
+  V3={ex,ey,ez,fx,fy,fz,rx,rz,ux,uy,uz,F,cx,cy,C,G};
+  const P=(x,y,z)=>{const dx=x-ex,dy=y-ey,dz=z-ez,zz=dx*fx+dy*fy+dz*fz;if(zz<0.05)return null;return[cx+(dx*rx+dz*rz)*F/zz,cy-(dx*ux+dy*uy+dz*uz)*F/zz,zz]};
+  const line=(a,b,col,lw,dash)=>{if(!a||!b)return;g.strokeStyle=col;g.lineWidth=lw;if(dash)g.setLineDash(dash);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();if(dash)g.setLineDash([])};
+  // пол, сетка 1 м
+  const gx0=Math.floor(GE.x0-3),gx1=Math.ceil(GE.x1+3),gz0=Math.floor(GE.z0-3),gz1=Math.ceil(GE.z1+5);
   for(let x=gx0;x<=gx1;x++)line(P(x,0,gz0),P(x,0,gz1),x===0?'rgba(255,176,32,.16)':'rgba(255,255,255,.055)',1);
-  for(let z=gz0;z<=gz1;z++)line(P(gx0,0,z),P(gx1,0,z),'rgba(255,255,255,.055)',1);
-  // человек 1.8 м для масштаба (перед сценой)
-  const hz=d/2+1.6,hx=-w/2-1.2,hd=P(hx,1.62,hz),ft=P(hx,0,hz);if(hd&&ft){const sc=(ft[1]-hd[1])/1.62;g.strokeStyle='rgba(138,148,163,.55)';g.lineWidth=Math.max(1,sc*0.09);g.beginPath();g.moveTo(ft[0]-sc*.18,ft[1]);g.lineTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0]+sc*.18,ft[1]);g.moveTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0],ft[1]-sc*1.42);g.moveTo(ft[0]-sc*.25,ft[1]-sc*1.05);g.lineTo(ft[0],ft[1]-sc*1.32);g.lineTo(ft[0]+sc*.25,ft[1]-sc*1.05);g.stroke();g.fillStyle='rgba(138,148,163,.55)';g.beginPath();g.arc(hd[0],hd[1]-sc*.02,sc*.13,0,7);g.fill();g.font='10px system-ui';g.fillText('1,8 м',ft[0]+sc*.3,ft[1]-sc*.9)}
+  for(let z=gz0;z<=gz1;z++)line(P(gx0,0,z),P(gx1,0,z),z===0?'rgba(255,176,32,.16)':'rgba(255,255,255,.055)',1);
+  const fr=P(GE.mx,0,gz1-0.4);if(fr){g.fillStyle='rgba(255,176,32,.45)';g.font='11px system-ui';g.textAlign='center';g.fillText('▼ зритель',fr[0],fr[1]);g.textAlign='left'}
+  // человек 1.8 м для масштаба
+  const hz=GE.z1+1.6,hx=GE.x0-1.2,hd=P(hx,1.62,hz),ft=P(hx,0,hz);if(hd&&ft){const sc=(ft[1]-hd[1])/1.62;g.strokeStyle='rgba(138,148,163,.55)';g.lineWidth=Math.max(1,sc*0.09);g.beginPath();g.moveTo(ft[0]-sc*.18,ft[1]);g.lineTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0]+sc*.18,ft[1]);g.moveTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0],ft[1]-sc*1.42);g.moveTo(ft[0]-sc*.25,ft[1]-sc*1.05);g.lineTo(ft[0],ft[1]-sc*1.32);g.lineTo(ft[0]+sc*.25,ft[1]-sc*1.05);g.stroke();g.fillStyle='rgba(138,148,163,.55)';g.beginPath();g.arc(hd[0],hd[1]-sc*.02,sc*.13,0,7);g.fill();g.font='10px system-ui';g.fillText('1,8 м',ft[0]+sc*.3,ft[1]-sc*.9)}
   const items=[],k=0.3;
   for(const wv of show.winches){const t=st?.pos?.[wv.id]??0;v3disp[wv.id]=v3disp[wv.id]==null?t:v3disp[wv.id]+(t-v3disp[wv.id])*k}
   const hook=id=>C.H-0.3-(v3disp[id]??0)/100*C.T;
-  // фермы по рядам
-  const rowsZ=[...new Set(Object.values(G).map(o=>o.z))];
-  rowsZ.forEach(z=>{const a=P(-w/2-0.6,C.H,z),b=P(w/2+0.6,C.H,z);if(a&&b)items.push({z:(a[2]+b[2])/2+0.5,f:()=>{const lw=Math.max(2,0.16*F/((a[2]+b[2])/2));line(a,b,'#3d4652',lw);line(a,b,'#5a6574',Math.max(1,lw*0.35))}})});
+  // потолок: фермы по рядам (сетка) или контур подвеса (свободная расстановка)
+  if(!GE.spatial){[...new Set(Object.values(G).map(o=>o.z))].forEach(z=>{const a=P(GE.x0-0.6,C.H,z),b=P(GE.x1+0.6,C.H,z);if(a&&b)items.push({z:(a[2]+b[2])/2+0.5,f:()=>{const lw=Math.max(2,0.16*F/((a[2]+b[2])/2));line(a,b,'#3d4652',lw);line(a,b,'#5a6574',Math.max(1,lw*0.35))}})})}
+  else{const q=[[GE.x0-0.6,GE.z0-0.6],[GE.x1+0.6,GE.z0-0.6],[GE.x1+0.6,GE.z1+0.6],[GE.x0-0.6,GE.z1+0.6]].map(([x,z])=>P(x,C.H,z));
+    for(let i=0;i<4;i++){const a=q[i],b=q[(i+1)%4];if(a&&b)items.push({z:(a[2]+b[2])/2+1,f:()=>line(a,b,'rgba(90,101,116,.55)',Math.max(1.5,0.08*F/((a[2]+b[2])/2)))})}}
   const inObj={};show.objects.forEach((o,oi)=>o.members.forEach(m=>inObj[m]=oi));
   v3pick=[];
   for(const wv of show.winches){const o=G[wv.id];if(!o)continue;const top=P(o.x,C.H,o.z),hk=P(o.x,hook(wv.id),o.z);if(!top||!hk)continue;const fxOn=!!st?.fxOf?.[wv.id],sl=sel.has(wv.id);
+    if(v3arr){const fl0=P(o.x,0,o.z);if(fl0)items.push({z:fl0[2]+0.2,f:()=>{line(hk,fl0,sl?'rgba(255,176,32,.5)':'rgba(255,255,255,.12)',1,[3,4]);g.fillStyle=sl?'#ffb020':'rgba(255,255,255,.35)';g.beginPath();g.arc(fl0[0],fl0[1],sl?4:2.5,0,7);g.fill();
+      if(sl){g.font='10px system-ui';g.fillText(`x ${o.x.toFixed(2)}  z ${o.z.toFixed(2)}`,fl0[0]+6,fl0[1]+12)}}})}
     items.push({z:(top[2]+hk[2])/2,f:()=>{line(top,hk,fxOn?'rgba(61,214,198,.9)':'rgba(170,180,195,.75)',Math.max(1,0.012*F/hk[2]));const b=Math.max(2.5,0.09*F/top[2]);g.fillStyle=sl?'#ffb020':'#8a94a3';g.fillRect(top[0]-b,top[1]-b*0.6,b*2,b*1.2)}});
     if(inObj[wv.id]==null){const r=Math.max(3,0.17*F/hk[2]);items.push({z:hk[2]-0.01,f:()=>{const gr=g.createRadialGradient(hk[0]-r*.35,hk[1]-r*.35,r*.1,hk[0],hk[1],r);gr.addColorStop(0,'#fff');gr.addColorStop(.35,fxOn?'#8ff3ea':'#ffcf6a');gr.addColorStop(1,fxOn?'#13a395':'#d98a00');g.fillStyle=gr;g.beginPath();g.arc(hk[0],hk[1],r,0,7);g.fill();if(sl){g.strokeStyle='#fff';g.lineWidth=2;g.stroke()}}});
-      v3pick.push({ids:[wv.id],x:hk[0],y:hk[1],r:Math.max(10,r+4),z:hk[2]})}
+      v3pick.push({ids:[wv.id],x:hk[0],y:hk[1],r:Math.max(10,r+4),z:hk[2]},{ids:[wv.id],x:top[0],y:top[1],r:9,z:top[2]})}
     if(F/hk[2]>16){const lb=P(o.x,C.H+0.25,o.z);if(lb)items.push({z:lb[2]-1,f:()=>{g.fillStyle=sl?'#ffb020':'rgba(231,234,239,.8)';g.font=`600 ${Math.min(13,Math.max(9,0.22*F/lb[2]))}px system-ui`;g.textAlign='center';g.fillText(wv.name,lb[0],lb[1]);g.textAlign='left'}})}}
-  // экраны
-  show.objects.forEach((ob,oi)=>{const ms=ob.members.filter(m=>G[m]).sort((a,b)=>G[a].x-G[b].x||G[a].z-G[b].z);if(!ms.length)return;
+  show.objects.forEach((ob,oi)=>{const ms=ob.members.filter(m=>G[m]);if(!ms.length)return;
     const A=G[ms[0]],B=G[ms[ms.length-1]],pad=ms.length>1?0.18*C.S:0.4,dx=B.x-A.x,dz=B.z-A.z,L=Math.hypot(dx,dz)||1,ux_=ms.length>1?dx/L:1,uz_=ms.length>1?dz/L:0;
     const y1=hook(ms[0]),y2=hook(ms[ms.length-1]),x1=A.x-ux_*pad,z1=A.z-uz_*pad,x2=B.x+ux_*pad,z2=B.z+uz_*pad;
     const q=[P(x1,y1,z1),P(x2,y2,z2),P(x2,y2-C.P,z2),P(x1,y1-C.P,z1)];if(q.some(p=>!p))return;
@@ -1750,7 +1771,6 @@ function draw3d(){
     items.push({z:zz,f:()=>{g.beginPath();q.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();
       const gr=g.createLinearGradient(q[0][0],q[0][1],q[3][0],q[3][1]);gr.addColorStop(0,col);gr.addColorStop(1,col+'99');g.fillStyle=gr;g.shadowColor=col;g.shadowBlur=fxOn?18:8;g.fill();g.shadowBlur=0;
       g.strokeStyle=sl?'#ffffff':'rgba(0,0,0,.45)';g.lineWidth=sl?2.5:1.5;g.stroke();
-      // сетка кабинетов
       g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=1;const nc=Math.max(1,Math.round(Math.hypot(x2-x1,z2-z1)/0.5));for(let i=1;i<nc;i++){const t=i/nc;g.beginPath();g.moveTo(q[0][0]+(q[1][0]-q[0][0])*t,q[0][1]+(q[1][1]-q[0][1])*t);g.lineTo(q[3][0]+(q[2][0]-q[3][0])*t,q[3][1]+(q[2][1]-q[3][1])*t);g.stroke()}
       const mx=(q[0][0]+q[1][0]+q[2][0]+q[3][0])/4,my=(q[0][1]+q[1][1]+q[2][1]+q[3][1])/4,fs=Math.min(14,Math.max(8,0.24*F/zz));if(fs>8.5){g.fillStyle='rgba(10,12,16,.75)';g.font=`700 ${fs}px system-ui`;g.textAlign='center';g.fillText(ob.name,mx,my+fs/3);g.textAlign='left'}}});
     v3pick.push({ids:ob.members.slice(),poly:q,z:zz})});
@@ -1758,17 +1778,55 @@ function draw3d(){
 }
 function v3hit(x,y){let best=null;for(const p of v3pick){let hit=false;if(p.poly){let ins=false;const q=p.poly;for(let i=0,j=3;i<4;j=i++){if(((q[i][1]>y)!==(q[j][1]>y))&&(x<(q[j][0]-q[i][0])*(y-q[i][1])/(q[j][1]-q[i][1])+q[i][0]))ins=!ins}hit=ins}else hit=Math.hypot(x-p.x,y-p.y)<=p.r;
   if(hit&&(!best||p.z<best.z))best=p}return best}
+function v3ray(sx,sy,py){const V=V3;if(!V)return null;const a=(sx-V.cx)/V.F,b=-(sy-V.cy)/V.F,dx=V.fx+a*V.rx+b*V.ux,dy=V.fy+b*V.uy,dz=V.fz+a*V.rz+b*V.uz;if(Math.abs(dy)<1e-6)return null;const t=(py-V.ey)/dy;if(t<=0)return null;return{x:V.ex+dx*t,z:V.ez+dz*t}}
+/* расстановка в пространстве */
+function arrUnits(onlySel){const out=[],seen=new Set();show.winches.forEach(w=>{if(seen.has(w.id)||(onlySel&&!sel.has(w.id)))return;const o=single?null:objOf(w.id);
+  if(o){o.members.forEach(m=>seen.add(m));out.push({ids:o.members.slice(),name:o.name})}else{seen.add(w.id);out.push({ids:[w.id],name:'Лебёдка '+w.name})}});return out}
+function unitPose(u,G){const ps=u.ids.map(i=>G[i]).filter(Boolean),cx=ps.reduce((a,p)=>a+p.x,0)/ps.length,cz=ps.reduce((a,p)=>a+p.z,0)/ps.length;
+  const A=ps[0],B=ps[ps.length-1],ang=ps.length>1?Math.atan2(B.z-A.z,B.x-A.x)*180/Math.PI:0;return{cx,cz,ang}}
+function placeUnit(u,cx,cz,ang,S,out){const a=ang*Math.PI/180,n=u.ids.length;u.ids.forEach((id,k)=>{const o=(k-(n-1)/2)*S;out[id]={x:+(cx+Math.cos(a)*o).toFixed(3),z:+(cz+Math.sin(a)*o).toFixed(3)}})}
+function saveSpatial(pos,msg,refit){saveCfg({winches:show.winches.map(w=>pos[w.id]===undefined?w:pos[w.id]===null?{...w,px:null,pz:null}:{...w,px:pos[w.id].x,pz:pos[w.id].z})}).then(r=>{if(r.ok){v3over={};if(msg)toast(msg);if(refit)setTimeout(()=>{cam.fitted=false},250)}})}
+function arrLayout(kind){const C=v3cfg(),onlySel=sel.size>0,U=arrUnits(onlySel);if(!U.length)return;const p=+$('#arrp').value||0,gap=0.6,wid=u=>(u.ids.length-1)*C.S+0.8,out={};
+  const tot=U.reduce((a,u)=>a+wid(u),0)+gap*(U.length-1);
+  if(kind==='grid'){U.forEach(u=>u.ids.forEach(i=>out[i]=null));return saveSpatial(out,'Возвращено по сетке',true)}
+  if(kind==='line'){let x=-tot/2;U.forEach(u=>{const w=wid(u);placeUnit(u,x+w/2,0,0,C.S,out);x+=w+gap})}
+  else if(kind==='arc'){const R=p>0?p:Math.max(3,tot/(2*Math.PI/3));let s0=-tot/2;U.forEach(u=>{const w=wid(u),th=(s0+w/2)/R;placeUnit(u,R*Math.sin(th),R*(1-Math.cos(th)),th*180/Math.PI,C.S,out);s0+=w+gap})}
+  else if(kind==='circle'){const R=p>0?p:Math.max(2,(tot+gap)/(2*Math.PI));U.forEach((u,i)=>{const th=2*Math.PI*i/U.length;placeUnit(u,R*Math.sin(th),R*Math.cos(th),-th*180/Math.PI,C.S,out)})}
+  else if(kind==='rows'){const dz=p>0?p:2,h=Math.ceil(U.length/2);[U.slice(0,h),U.slice(h)].forEach((row,ri)=>{const t=row.reduce((a,u)=>a+wid(u),0)+gap*(row.length-1);let x=-t/2+(ri?wid(row[0]||{ids:[1]})/2:0);row.forEach(u=>{const w=wid(u);placeUnit(u,x+w/2,ri?dz/2:-dz/2,0,C.S,out);x+=w+gap})})}
+  else if(kind==='scatter'){const A=p>0?p:Math.max(4,tot*0.6);U.forEach(u=>placeUnit(u,(Math.random()-.5)*A,(Math.random()-.5)*A*0.6,(Math.random()-.5)*80,C.S,out))}
+  if(onlySel){const G=v3geo(C).G,cx0=U.reduce((a,u)=>a+unitPose(u,G).cx,0)/U.length,cz0=U.reduce((a,u)=>a+unitPose(u,G).cz,0)/U.length;Object.values(out).forEach(o=>{o.x=+(o.x+cx0).toFixed(3);o.z=+(o.z+cz0).toFixed(3)})}
+  saveSpatial(out,(onlySel?'Выделенные':'Все')+' расставлены',true)}
+function renderArr(){const p=$('#v3arr');if(!p)return;p.hidden=!(view3d&&v3arr);$('#v3arrbtn')?.classList.toggle('tglon',v3arr);if(p.hidden)return;
+  const U=arrUnits(true),one=U.length===1?U[0]:null;
+  p.innerHTML=`<b>Расстановка в пространстве</b>
+  <div class="hint">Тяните экран или лебёдку по полу мышью (шаг 5 см, с Alt — без шага). Клик — выделить.</div>
+  ${one?`<div class="t" style="margin-top:8px">${esc(one.name)}</div><div class="row" style="margin:6px 0"><span class="t">X</span><input type="number" step="0.05" id="arrx" class="num"><span class="t">Z</span><input type="number" step="0.05" id="arrz" class="num">${one.ids.length>1?'<span class="t">Угол°</span><input type="number" step="5" id="arra" class="num">':''}<button id="arrok">OK</button></div>`
+   :`<div class="t" style="margin:8px 0 4px">${U.length?'Выделено объектов: '+U.length:'Ничего не выделено — раскладка применится ко всем'}</div>`}
+  <div class="row" style="margin:6px 0 4px;gap:4px"><button data-l="line">Линия</button><button data-l="arc">Дуга</button><button data-l="circle">Круг</button><button data-l="rows">2 ряда</button><button data-l="scatter">Разброс</button><button data-l="grid" title="Вернуть положение по сетке сцены">По сетке</button></div>
+  <div class="row" style="margin:0"><span class="t">Радиус / расстояние, м</span><input type="number" id="arrp" class="num" min="0" step="0.5" placeholder="авто"></div>`;
+  $$('#v3arr [data-l]').forEach(b=>b.onclick=()=>arrLayout(b.dataset.l));
+  if(one){liveArr(true);$('#arrok').onclick=()=>{const C=v3cfg(),out={};placeUnit(one,+$('#arrx').value||0,+$('#arrz').value||0,one.ids.length>1?(+$('#arra').value||0):0,C.S,out);saveSpatial(out,'Положение сохранено')};
+    $$('#v3arr input.num').forEach(i=>i.onkeydown=e=>{if(e.key==='Enter')$('#arrok').click()})}}
+function liveArr(force){const U=arrUnits(true);if(U.length!==1||!V3)return;const x=$('#arrx');if(!x)return;if(!force&&$('#v3arr').contains(document.activeElement))return;
+  const ps=unitPose(U[0],V3.G);x.value=ps.cx.toFixed(2);$('#arrz').value=ps.cz.toFixed(2);const a=$('#arra');if(a)a.value=Math.round(ps.ang)}
 (()=>{const c=$('#c3d');
-  c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);v3drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,pan:e.button===2||e.shiftKey};c.classList.add('drag')};
+  c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);v3drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,pan:e.button===2||e.shiftKey};c.classList.add('drag');
+    if(v3arr&&!v3drag.pan&&V3){const r=c.getBoundingClientRect(),h=v3hit(e.clientX-r.left,e.clientY-r.top);if(h){const idsx=single?h.ids:expand(h.ids);if(!idsx.every(i=>sel.has(i))){sel.clear();idsx.forEach(i=>sel.add(i));markSel()}
+      const p0=v3ray(e.clientX-r.left,e.clientY-r.top,V3.C.H);if(p0){const sp={};[...sel].forEach(i=>{if(V3.G[i])sp[i]={...V3.G[i]}});v3drag.move={p0,sp}}}}};
   c.onpointermove=e=>{if(!v3drag)return;const dx=e.clientX-v3drag.x,dy=e.clientY-v3drag.y;v3drag.x=e.clientX;v3drag.y=e.clientY;
+    if(v3drag.move){const r=c.getBoundingClientRect(),p=v3ray(e.clientX-r.left,e.clientY-r.top,V3.C.H);if(!p)return;let mx=p.x-v3drag.move.p0.x,mz=p.z-v3drag.move.p0.z;if(!e.altKey){mx=Math.round(mx/0.05)*0.05;mz=Math.round(mz/0.05)*0.05}
+      for(const i in v3drag.move.sp){const s0=v3drag.move.sp[i];v3over[i]={x:+(s0.x+mx).toFixed(3),z:+(s0.z+mz).toFixed(3)}}v3drag.moved=true;return}
     if(v3drag.pan){const s=cam.dist/Math.max(400,c.clientWidth)*1.3;cam.tx-=(Math.cos(cam.yaw)*dx)*s;cam.tz-=(-Math.sin(cam.yaw)*dx)*s;cam.ty+=dy*s}
-    else{cam.yaw-=dx*0.008;cam.pitch=clamp(cam.pitch+dy*0.006,-0.05,1.5)}};
-  c.onpointerup=e=>{c.classList.remove('drag');if(!v3drag)return;const moved=Math.hypot(e.clientX-v3drag.x0,e.clientY-v3drag.y0);v3drag=null;
+    else{cam.yaw-=dx*0.008;cam.pitch=clamp(cam.pitch+dy*0.006,-0.05,1.52)}};
+  c.onpointerup=e=>{c.classList.remove('drag');if(!v3drag)return;const d=v3drag;v3drag=null;
+    if(d.move&&d.moved){const out={};for(const i in v3over)out[i]=v3over[i];saveSpatial(out,'Перемещено');return}
+    const moved=Math.hypot(e.clientX-d.x0,e.clientY-d.y0);
     if(moved<4){const r=c.getBoundingClientRect(),h=v3hit(e.clientX-r.left,e.clientY-r.top),add=e.shiftKey||e.ctrlKey||e.metaKey;
       if(h){const ids=single?h.ids:expand(h.ids);if(add&&ids.every(i=>sel.has(i)))ids.forEach(i=>sel.delete(i));else{if(!add)sel.clear();ids.forEach(i=>sel.add(i))}markSel()}else if(!add)setSel([])}};
   c.oncontextmenu=e=>e.preventDefault();
   c.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.0012),1.5,400)},{passive:false});
   $$('.v3ui [data-v]').forEach(b=>b.onclick=()=>v3view(b.dataset.v));
+  $('#v3arrbtn').onclick=()=>{v3arr=!v3arr;if(v3arr){$('#v3set').hidden=true;if(cam.pitch<0.5)cam.pitch=0.75}renderArr()};
   $('#v3cfg').onclick=()=>{const p=$('#v3set'),C=v3cfg();p.hidden=!p.hidden;$('#v3h').value=C.H;$('#v3t').value=C.T;$('#v3s').value=C.S;$('#v3r').value=C.R;$('#v3p').value=C.P};
   $('#v3save').onclick=()=>{const v={height:+$('#v3h').value||8,travel:+$('#v3t').value||6,step:+$('#v3s').value||1,row:+$('#v3r').value||2,panel:+$('#v3p').value||1.5};
     saveCfg({layout:{...show.layout,v3d:v}}).then(r=>{if(r.ok){toast('Размеры сохранены');$('#v3set').hidden=true;cam.fitted=false}})};
@@ -1776,7 +1834,7 @@ function v3hit(x,y){let best=null;for(const p of v3pick){let hit=false;if(p.poly
 
 /* ---------- выбор ---------- */
 function setSel(arr,add){if(!add)sel.clear();arr.forEach(i=>sel.add(i));markSel()}
-function markSel(){if(tab==='lim'&&st&&st.teach.length)api('/api/teach',{on:true,ids:ids()});Object.entries(cells).forEach(([id,c])=>c.el.classList.toggle('sel',sel.has(+id)));$('#selc').textContent=sel.size;$$('.nsel').forEach(e=>e.textContent=sel.size);syncMpos(true);if(tab==='ch')renderTab()}
+function markSel(){if(view3d&&v3arr)setTimeout(renderArr,0);if(tab==='lim'&&st&&st.teach.length)api('/api/teach',{on:true,ids:ids()});Object.entries(cells).forEach(([id,c])=>c.el.classList.toggle('sel',sel.has(+id)));$('#selc').textContent=sel.size;$$('.nsel').forEach(e=>e.textContent=sel.size);syncMpos(true);if(tab==='ch')renderTab()}
 function renderSelBar(){
   $('#selbar').innerHTML=`<span class="t">Выбор:</span><button data-s="all">Все <kbd>Ctrl+A</kbd></button><button data-s="none">Нет</button><button data-s="inv">Инверт</button><button data-s="odd">Нечёт</button><button data-s="even">Чёт</button>
   <span class="t" style="margin-left:10px">Группы:</span>${show.groups.map(g=>`<button class="chip" data-g="${g.id}" title="Shift — добавить к выделению">${esc(g.name)}<span class="x" data-del="${g.id}">✕</span></button>`).join('')}<button class="ghost" id="gadd">+ группа из выделенных</button>
