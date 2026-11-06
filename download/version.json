@@ -1,13 +1,13 @@
 {
- "version": "2.0.100",
- "notes": "Выбор и цвет текста мышкой в масках, своё разрешение кабинета, перетаскивание карточек в ленте масок и полей, переназначение номеров экранов",
+ "version": "2.0.109",
+ "notes": "Порядок масок и полей в ТЗ перетаскиванием, имя файла маски и общего поля можно изменить, титульный лист ТЗ без подложки у последнего пункта",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "1b36c1e85e43301631b41326318f3560238dfa198d28dc70b93a98e538ec936d"
+  "sha256": "fd6653608cf8968c1f7a34c320e632ca1c4cb60e70afd9deead1ddff46fa0aa9"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "5e6146a4f446bf1d596aaf93361d9226f088b44e1acfb13a15978b2457d0bb84"
+  "sha256": "47c137afb8529b17bc6216d9157782c77bc5d5c33e6be6b363b41e0fae26c6c1"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
