@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.05 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.06 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.05'
+VERSION = '1.06'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
 SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
@@ -155,6 +155,11 @@ def normalize(s):
     dv['reset_time'] = clamp(fnum(dv['reset_time'], 2), 0.2, 10)
     dv['speed'] = clamp(fnum(dv['speed'], 60), 1, 100)
     s['layout']['cols'] = int(clamp(fnum(s['layout']['cols'], 8), 1, 64))
+    v3 = s['layout'].get('v3d')
+    if v3 is not None:
+        s['layout']['v3d'] = {k: clamp(fnum(v3.get(k) if isinstance(v3, dict) else None, dflt), lo, hi)
+                               for k, dflt, lo, hi in (('height', 8, 1, 60), ('travel', 6, 0.5, 60), ('step', 1, 0.2, 20),
+                                                        ('row', 2, 0.2, 30), ('panel', 1.5, 0.1, 20))}
 
     ws, seen = [], set()
     for w in s['winches']:
@@ -1477,6 +1482,18 @@ main:not(.pright) aside{order:-1;border-left:0;border-right:1px solid var(--ln)}
 .t{color:var(--mu)}
 .chip{border-radius:20px;padding:4px 10px;background:var(--p2)}.chip .x{opacity:.45;margin-left:7px}.chip .x:hover{opacity:1;color:var(--bad)}
 #stage{flex:1;min-height:0;overflow:auto;padding:12px;display:grid;gap:10px 4px;align-content:start;justify-content:start}
+#stage[hidden]{display:none}
+#stage3d{flex:1;min-height:0;position:relative;background:radial-gradient(ellipse at 50% 35%,#1a2029 0%,#0c0e11 70%)}
+#stage3d[hidden]{display:none}
+#c3d{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#c3d.drag{cursor:grabbing}
+.v3ui{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.v3ui button{padding:4px 9px;font-size:12px;background:#1a1e25cc;backdrop-filter:blur(4px)}
+.v3help{position:absolute;left:10px;bottom:8px;color:var(--mu);font-size:11px;pointer-events:none}
+.v3set{position:absolute;left:10px;top:44px;background:var(--p1);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:auto 70px;gap:6px 10px;align-items:center;box-shadow:0 10px 30px #0008}
+.v3set[hidden]{display:none}.v3set span{color:var(--mu);font-size:12px}.v3set input{width:70px}
+.seg{display:inline-flex;border:1px solid var(--ln);border-radius:7px;overflow:hidden}.seg button{border:0;border-radius:0;padding:5px 11px;background:var(--p2);color:var(--mu)}
+.seg button.on{background:var(--ac);color:#141005;font-weight:700}
 .cell{display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;border-radius:6px;padding:4px 0;min-width:0;background:var(--p1);border:1px solid transparent}
 .cell.sel{border-color:var(--ac);background:#211b0e}
 .cell.off{opacity:.4}
@@ -1591,6 +1608,18 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
   <section id="left">
     <div class="bar" id="selbar"></div>
     <div id="stage"></div>
+    <div id="stage3d" hidden><canvas id="c3d"></canvas>
+      <div class="v3ui"><button data-v="q">3/4</button><button data-v="f">Спереди</button><button data-v="s">Сбоку</button><button data-v="t">Сверху</button><button data-v="fit" title="Показать всё">⤢</button><button id="v3cfg" title="Размеры сцены в метрах">⚙ Размеры</button></div>
+      <div class="v3set" id="v3set" hidden>
+        <span>Высота фермы, м</span><input type="number" id="v3h" min="1" max="60" step="0.5">
+        <span>Ход лебёдки, м</span><input type="number" id="v3t" min="0.5" max="60" step="0.5">
+        <span>Шаг лебёдок, м</span><input type="number" id="v3s" min="0.2" max="20" step="0.1">
+        <span>Между рядами, м</span><input type="number" id="v3r" min="0.2" max="30" step="0.1">
+        <span>Высота экрана, м</span><input type="number" id="v3p" min="0.1" max="20" step="0.1">
+        <span></span><button class="pri" id="v3save">Сохранить</button>
+      </div>
+      <div class="v3help">Мышь — вращать · колесо — масштаб · правая кнопка / Shift — сдвиг · клик — выделить экран/лебёдку</div>
+    </div>
     <div class="move">
       <span class="t">Выделено: <b id="selc">0</b></span>
       <span class="t">Глубина</span><input type="range" id="mpos" min="0" max="100" step="0.1" value="0"><output id="mposv">0%</output>
@@ -1668,6 +1697,83 @@ function objInfo(w,i){const o=objOf(w.id);if(!o)return{cls:'',sty:'',tag:''};con
   const same=j=>j>=0&&j<n&&objOf(show.winches[j].id)===o,first=!(i%cols!==0&&same(i-1)),last=!((i+1)%cols!==0&&same(i+1));
   return{cls:' obj'+(first?' ol':'')+(last?' or':''),sty:` style="--oc:${OC[show.objects.indexOf(o)%OC.length]}"`,tag:first?esc(o.name):''}}
 
+/* ---------- 3D-вид (Canvas, без внешних библиотек) ---------- */
+let view3d=(()=>{try{return localStorage.getItem('view3d')==='1'}catch(e){return false}})();
+const cam={yaw:-0.62,pitch:0.3,dist:0,tx:0,ty:0,tz:0,fitted:false};let v3disp={},v3pick=[],v3drag=null;
+function setView(on,quiet){view3d=!!on;try{localStorage.setItem('view3d',view3d?'1':'0')}catch(e){}
+  $('#stage').hidden=view3d;$('#stage3d').hidden=!view3d;const a=$('#v2dbtn'),b=$('#v3dbtn');if(a){a.classList.toggle('on',!view3d);b.classList.toggle('on',view3d)}
+  $$('#selbar .zoom .t, #cols, #cwz, #cwauto').forEach(x=>{if(x.id==='cwz'||x.id==='cwauto'||(x.classList.contains('t')&&x.textContent==='Ширина'))x.style.display=view3d?'none':''});
+  if(view3d){cam.fitted=false;requestAnimationFrame(v3loop)}else fitStage()}
+function v3cfg(){const v=show.layout.v3d||{};return{H:+v.height||8,T:+v.travel||6,S:+v.step||1,R:+v.row||2,P:+v.panel||1.5}}
+function v3geo(C){const n=show.winches.length,cols=Math.max(1,Math.min(show.layout.cols,n||1)),rows=Math.ceil((n||1)/cols),G={};
+  show.winches.forEach((w,i)=>{const c=i%cols,r=Math.floor(i/cols);G[w.id]={x:(c-(cols-1)/2)*C.S,z:(r-(rows-1)/2)*C.R,row:r}});
+  return{G,cols,rows,w:(cols-1)*C.S,d:(rows-1)*C.R}}
+function v3view(v){if(v==='f'){cam.yaw=0;cam.pitch=0.06}else if(v==='s'){cam.yaw=Math.PI/2;cam.pitch=0.12}else if(v==='t'){cam.yaw=0;cam.pitch=1.45}else if(v==='q'){cam.yaw=-0.62;cam.pitch=0.3}else cam.fitted=false}
+function v3loop(){if(!view3d)return;try{draw3d()}catch(e){console.error(e)}requestAnimationFrame(v3loop)}
+function draw3d(){
+  const c=$('#c3d');if(!c||!show)return;const W=c.clientWidth,Hh=c.clientHeight,dpr=window.devicePixelRatio||1;if(!W||!Hh)return;
+  if(c.width!==Math.round(W*dpr)||c.height!==Math.round(Hh*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(Hh*dpr)}
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,Hh);
+  const C=v3cfg(),{G,rows,w,d}=v3geo(C);
+  if(!cam.fitted){cam.tx=0;cam.tz=0;cam.ty=C.H-C.T*0.55;cam.dist=Math.max(w*1.25+2,C.H*1.6,d*1.8,7);cam.fitted=true}
+  const cp=Math.cos(cam.pitch),ex=cam.tx+cam.dist*cp*Math.sin(cam.yaw),ey=cam.ty+cam.dist*Math.sin(cam.pitch),ez=cam.tz+cam.dist*cp*Math.cos(cam.yaw);
+  let fx=cam.tx-ex,fy=cam.ty-ey,fz=cam.tz-ez;const fl=Math.hypot(fx,fy,fz);fx/=fl;fy/=fl;fz/=fl;
+  let rx=fz*0-fy*0,ry=0,rz=0;rx=-fz;rz=fx;const rl=Math.hypot(rx,rz)||1;rx/=rl;rz/=rl;
+  const ux=ry*fz-rz*fy,uy=rz*fx-rx*fz,uz=rx*fy-ry*fx,F=Math.min(W,Hh*1.6)*0.9,cx=W/2,cy=Hh/2;
+  const P=(x,y,z)=>{const dx=x-ex,dy=y-ey,dz=z-ez,zz=dx*fx+dy*fy+dz*fz;if(zz<0.05)return null;return[cx+(dx*rx+dy*ry+dz*rz)*F/zz,cy-(dx*ux+dy*uy+dz*uz)*F/zz,zz]};
+  const line=(a,b,col,lw)=>{if(!a||!b)return;g.strokeStyle=col;g.lineWidth=lw;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()};
+  // пол и сетка 1 м
+  const gx0=Math.floor(-w/2-3),gx1=Math.ceil(w/2+3),gz0=Math.floor(-d/2-3),gz1=Math.ceil(d/2+5);
+  for(let x=gx0;x<=gx1;x++)line(P(x,0,gz0),P(x,0,gz1),x===0?'rgba(255,176,32,.16)':'rgba(255,255,255,.055)',1);
+  for(let z=gz0;z<=gz1;z++)line(P(gx0,0,z),P(gx1,0,z),'rgba(255,255,255,.055)',1);
+  // человек 1.8 м для масштаба (перед сценой)
+  const hz=d/2+1.6,hx=-w/2-1.2,hd=P(hx,1.62,hz),ft=P(hx,0,hz);if(hd&&ft){const sc=(ft[1]-hd[1])/1.62;g.strokeStyle='rgba(138,148,163,.55)';g.lineWidth=Math.max(1,sc*0.09);g.beginPath();g.moveTo(ft[0]-sc*.18,ft[1]);g.lineTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0]+sc*.18,ft[1]);g.moveTo(ft[0],ft[1]-sc*.85);g.lineTo(ft[0],ft[1]-sc*1.42);g.moveTo(ft[0]-sc*.25,ft[1]-sc*1.05);g.lineTo(ft[0],ft[1]-sc*1.32);g.lineTo(ft[0]+sc*.25,ft[1]-sc*1.05);g.stroke();g.fillStyle='rgba(138,148,163,.55)';g.beginPath();g.arc(hd[0],hd[1]-sc*.02,sc*.13,0,7);g.fill();g.font='10px system-ui';g.fillText('1,8 м',ft[0]+sc*.3,ft[1]-sc*.9)}
+  const items=[],k=0.3;
+  for(const wv of show.winches){const t=st?.pos?.[wv.id]??0;v3disp[wv.id]=v3disp[wv.id]==null?t:v3disp[wv.id]+(t-v3disp[wv.id])*k}
+  const hook=id=>C.H-0.3-(v3disp[id]??0)/100*C.T;
+  // фермы по рядам
+  const rowsZ=[...new Set(Object.values(G).map(o=>o.z))];
+  rowsZ.forEach(z=>{const a=P(-w/2-0.6,C.H,z),b=P(w/2+0.6,C.H,z);if(a&&b)items.push({z:(a[2]+b[2])/2+0.5,f:()=>{const lw=Math.max(2,0.16*F/((a[2]+b[2])/2));line(a,b,'#3d4652',lw);line(a,b,'#5a6574',Math.max(1,lw*0.35))}})});
+  const inObj={};show.objects.forEach((o,oi)=>o.members.forEach(m=>inObj[m]=oi));
+  v3pick=[];
+  for(const wv of show.winches){const o=G[wv.id];if(!o)continue;const top=P(o.x,C.H,o.z),hk=P(o.x,hook(wv.id),o.z);if(!top||!hk)continue;const fxOn=!!st?.fxOf?.[wv.id],sl=sel.has(wv.id);
+    items.push({z:(top[2]+hk[2])/2,f:()=>{line(top,hk,fxOn?'rgba(61,214,198,.9)':'rgba(170,180,195,.75)',Math.max(1,0.012*F/hk[2]));const b=Math.max(2.5,0.09*F/top[2]);g.fillStyle=sl?'#ffb020':'#8a94a3';g.fillRect(top[0]-b,top[1]-b*0.6,b*2,b*1.2)}});
+    if(inObj[wv.id]==null){const r=Math.max(3,0.17*F/hk[2]);items.push({z:hk[2]-0.01,f:()=>{const gr=g.createRadialGradient(hk[0]-r*.35,hk[1]-r*.35,r*.1,hk[0],hk[1],r);gr.addColorStop(0,'#fff');gr.addColorStop(.35,fxOn?'#8ff3ea':'#ffcf6a');gr.addColorStop(1,fxOn?'#13a395':'#d98a00');g.fillStyle=gr;g.beginPath();g.arc(hk[0],hk[1],r,0,7);g.fill();if(sl){g.strokeStyle='#fff';g.lineWidth=2;g.stroke()}}});
+      v3pick.push({ids:[wv.id],x:hk[0],y:hk[1],r:Math.max(10,r+4),z:hk[2]})}
+    if(F/hk[2]>16){const lb=P(o.x,C.H+0.25,o.z);if(lb)items.push({z:lb[2]-1,f:()=>{g.fillStyle=sl?'#ffb020':'rgba(231,234,239,.8)';g.font=`600 ${Math.min(13,Math.max(9,0.22*F/lb[2]))}px system-ui`;g.textAlign='center';g.fillText(wv.name,lb[0],lb[1]);g.textAlign='left'}})}}
+  // экраны
+  show.objects.forEach((ob,oi)=>{const ms=ob.members.filter(m=>G[m]).sort((a,b)=>G[a].x-G[b].x||G[a].z-G[b].z);if(!ms.length)return;
+    const A=G[ms[0]],B=G[ms[ms.length-1]],pad=ms.length>1?0.18*C.S:0.4,dx=B.x-A.x,dz=B.z-A.z,L=Math.hypot(dx,dz)||1,ux_=ms.length>1?dx/L:1,uz_=ms.length>1?dz/L:0;
+    const y1=hook(ms[0]),y2=hook(ms[ms.length-1]),x1=A.x-ux_*pad,z1=A.z-uz_*pad,x2=B.x+ux_*pad,z2=B.z+uz_*pad;
+    const q=[P(x1,y1,z1),P(x2,y2,z2),P(x2,y2-C.P,z2),P(x1,y1-C.P,z1)];if(q.some(p=>!p))return;
+    const zz=(q[0][2]+q[1][2]+q[2][2]+q[3][2])/4,col=OC[oi%OC.length],sl=ob.members.some(m=>sel.has(m)),fxOn=ob.members.some(m=>st?.fxOf?.[m]);
+    items.push({z:zz,f:()=>{g.beginPath();q.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.closePath();
+      const gr=g.createLinearGradient(q[0][0],q[0][1],q[3][0],q[3][1]);gr.addColorStop(0,col);gr.addColorStop(1,col+'99');g.fillStyle=gr;g.shadowColor=col;g.shadowBlur=fxOn?18:8;g.fill();g.shadowBlur=0;
+      g.strokeStyle=sl?'#ffffff':'rgba(0,0,0,.45)';g.lineWidth=sl?2.5:1.5;g.stroke();
+      // сетка кабинетов
+      g.strokeStyle='rgba(0,0,0,.18)';g.lineWidth=1;const nc=Math.max(1,Math.round(Math.hypot(x2-x1,z2-z1)/0.5));for(let i=1;i<nc;i++){const t=i/nc;g.beginPath();g.moveTo(q[0][0]+(q[1][0]-q[0][0])*t,q[0][1]+(q[1][1]-q[0][1])*t);g.lineTo(q[3][0]+(q[2][0]-q[3][0])*t,q[3][1]+(q[2][1]-q[3][1])*t);g.stroke()}
+      const mx=(q[0][0]+q[1][0]+q[2][0]+q[3][0])/4,my=(q[0][1]+q[1][1]+q[2][1]+q[3][1])/4,fs=Math.min(14,Math.max(8,0.24*F/zz));if(fs>8.5){g.fillStyle='rgba(10,12,16,.75)';g.font=`700 ${fs}px system-ui`;g.textAlign='center';g.fillText(ob.name,mx,my+fs/3);g.textAlign='left'}}});
+    v3pick.push({ids:ob.members.slice(),poly:q,z:zz})});
+  items.sort((a,b)=>b.z-a.z).forEach(it=>it.f());
+}
+function v3hit(x,y){let best=null;for(const p of v3pick){let hit=false;if(p.poly){let ins=false;const q=p.poly;for(let i=0,j=3;i<4;j=i++){if(((q[i][1]>y)!==(q[j][1]>y))&&(x<(q[j][0]-q[i][0])*(y-q[i][1])/(q[j][1]-q[i][1])+q[i][0]))ins=!ins}hit=ins}else hit=Math.hypot(x-p.x,y-p.y)<=p.r;
+  if(hit&&(!best||p.z<best.z))best=p}return best}
+(()=>{const c=$('#c3d');
+  c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);v3drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,pan:e.button===2||e.shiftKey};c.classList.add('drag')};
+  c.onpointermove=e=>{if(!v3drag)return;const dx=e.clientX-v3drag.x,dy=e.clientY-v3drag.y;v3drag.x=e.clientX;v3drag.y=e.clientY;
+    if(v3drag.pan){const s=cam.dist/Math.max(400,c.clientWidth)*1.3;cam.tx-=(Math.cos(cam.yaw)*dx)*s;cam.tz-=(-Math.sin(cam.yaw)*dx)*s;cam.ty+=dy*s}
+    else{cam.yaw-=dx*0.008;cam.pitch=clamp(cam.pitch+dy*0.006,-0.05,1.5)}};
+  c.onpointerup=e=>{c.classList.remove('drag');if(!v3drag)return;const moved=Math.hypot(e.clientX-v3drag.x0,e.clientY-v3drag.y0);v3drag=null;
+    if(moved<4){const r=c.getBoundingClientRect(),h=v3hit(e.clientX-r.left,e.clientY-r.top),add=e.shiftKey||e.ctrlKey||e.metaKey;
+      if(h){const ids=single?h.ids:expand(h.ids);if(add&&ids.every(i=>sel.has(i)))ids.forEach(i=>sel.delete(i));else{if(!add)sel.clear();ids.forEach(i=>sel.add(i))}markSel()}else if(!add)setSel([])}};
+  c.oncontextmenu=e=>e.preventDefault();
+  c.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.0012),1.5,400)},{passive:false});
+  $$('.v3ui [data-v]').forEach(b=>b.onclick=()=>v3view(b.dataset.v));
+  $('#v3cfg').onclick=()=>{const p=$('#v3set'),C=v3cfg();p.hidden=!p.hidden;$('#v3h').value=C.H;$('#v3t').value=C.T;$('#v3s').value=C.S;$('#v3r').value=C.R;$('#v3p').value=C.P};
+  $('#v3save').onclick=()=>{const v={height:+$('#v3h').value||8,travel:+$('#v3t').value||6,step:+$('#v3s').value||1,row:+$('#v3r').value||2,panel:+$('#v3p').value||1.5};
+    saveCfg({layout:{...show.layout,v3d:v}}).then(r=>{if(r.ok){toast('Размеры сохранены');$('#v3set').hidden=true;cam.fitted=false}})};
+})();
+
 /* ---------- выбор ---------- */
 function setSel(arr,add){if(!add)sel.clear();arr.forEach(i=>sel.add(i));markSel()}
 function markSel(){if(tab==='lim'&&st&&st.teach.length)api('/api/teach',{on:true,ids:ids()});Object.entries(cells).forEach(([id,c])=>c.el.classList.toggle('sel',sel.has(+id)));$('#selc').textContent=sel.size;$$('.nsel').forEach(e=>e.textContent=sel.size);syncMpos(true);if(tab==='ch')renderTab()}
@@ -1675,7 +1781,7 @@ function renderSelBar(){
   $('#selbar').innerHTML=`<span class="t">Выбор:</span><button data-s="all">Все <kbd>Ctrl+A</kbd></button><button data-s="none">Нет</button><button data-s="inv">Инверт</button><button data-s="odd">Нечёт</button><button data-s="even">Чёт</button>
   <span class="t" style="margin-left:10px">Группы:</span>${show.groups.map(g=>`<button class="chip" data-g="${g.id}" title="Shift — добавить к выделению">${esc(g.name)}<span class="x" data-del="${g.id}">✕</span></button>`).join('')}<button class="ghost" id="gadd">+ группа из выделенных</button>
   <span class="t" style="margin-left:10px">Экраны:</span><button class="ghost" id="olink" title="Связать выделенные лебёдки в один объект — экран будет двигаться целиком">⛓ Связать</button><button class="ghost" id="ounlink" title="Убрать связь у выделенных">Разъединить</button>
-  <span class="zoom"><span class="t">В ряд</span><input type="number" class="num" id="cols" min="1" max="64" value="${show.layout.cols}" title="Сколько лебёдок в одном ряду сцены (как висят физически)"><span class="t">Ширина</span><input type="range" id="cwz" min="22" max="120" step="1" title="Ширина ячейки лебёдки"><button class="ghost" id="cwauto" title="Подобрать ширину под окно">Авто</button></span>`;
+  <span class="zoom"><span class="seg"><button id="v2dbtn">2D</button><button id="v3dbtn">3D</button></span><span class="t">В ряд</span><input type="number" class="num" id="cols" min="1" max="64" value="${show.layout.cols}" title="Сколько лебёдок в одном ряду сцены (как висят физически)"><span class="t">Ширина</span><input type="range" id="cwz" min="22" max="120" step="1" title="Ширина ячейки лебёдки"><button class="ghost" id="cwauto" title="Подобрать ширину под окно">Авто</button></span>`;
   $$('#selbar [data-s]').forEach(b=>b.onclick=()=>{const all=show.winches.map(w=>w.id),s=b.dataset.s;
     if(s==='all')setSel(all);else if(s==='none')setSel([]);else if(s==='inv')setSel(all.filter(i=>!sel.has(i)));
     else setSel(all.filter((_,i)=>(i%2===0)===(s==='odd')))});
@@ -1685,6 +1791,7 @@ function renderSelBar(){
   $('#olink').onclick=()=>{if(sel.size<2)return toast('Выделите 2–3 лебёдки одного экрана',true);const objs=show.objects.map(o=>({...o,members:o.members.filter(m=>!sel.has(m))})).filter(o=>o.members.length);
     objs.push({id:'o'+Date.now().toString(36),name:'Экран '+(objs.length+1),members:ids()});saveCfg({objects:objs}).then(r=>r.ok&&toast('Связано: '+sel.size+' лебёдки'))};
   $('#ounlink').onclick=()=>{if(!sel.size)return toast('Выделите экран',true);saveCfg({objects:show.objects.filter(o=>!o.members.some(m=>sel.has(m)))})};
+  $('#v2dbtn').onclick=()=>setView(false);$('#v3dbtn').onclick=()=>setView(true);setView(view3d,true);
   $('#cwz').oninput=e=>{cwPref=e.target.value;try{localStorage.setItem('cellW',cwPref)}catch(x){}fitStage()};
   $('#cwauto').onclick=()=>{cwPref='auto';try{localStorage.setItem('cellW','auto')}catch(x){}fitStage()};
   $('#cols').onchange=e=>{const c=clamp(+e.target.value|0,1,64);saveCfg({layout:{...show.layout,cols:c}})};
