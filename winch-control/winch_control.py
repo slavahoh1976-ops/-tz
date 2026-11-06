@@ -1223,7 +1223,7 @@ h4:first-child{margin-top:0}h4 .sp{flex:1}
 .ptile{position:relative;background:var(--p2);border:1px solid var(--ln);border-radius:8px;padding:2px}
 .ptile.last{border-color:var(--ac)}
 .pgo{width:100%;text-align:left;padding:9px 10px;min-height:54px;display:flex;flex-direction:column;gap:3px;background:transparent;border:0}
-.pgo small{color:var(--mu)}.pgo .fxb{color:var(--ac2)}
+.pgo small{color:var(--mu)}.pgo .fxb{color:var(--ac2)}.pgo .tcb{color:#8b9dff;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px}
 .pk{position:absolute;right:8px;top:7px;color:var(--mu);font-size:11px}
 .pact{display:flex;gap:3px;padding:0 4px 4px}.pact button{padding:2px 0;font-size:11px;flex:1;background:var(--p1)}
 .fxgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -1420,12 +1420,18 @@ function tabPresets(){
   <div class="row"><input id="pname" placeholder="Название (необязательно)"><input id="pfade" type="number" class="num" value="3" min="0" step="0.5" title="Время перехода, с"><button class="pri" id="pstore">● Записать</button></div>
   <div class="row" style="gap:14px"><label class="chk"><input type="checkbox" id="ponly"> только выделенные (<span class="nsel">${sel.size}</span>)</label><label class="chk" title="Работающие эффекты запишутся в пресет и запустятся при его вызове"><input type="checkbox" id="pfx" checked> с эффектами</label></div>
   <h4>Пресеты <span class="sp"></span><span class="hint" style="text-transform:none;letter-spacing:0">клавиши 1–9</span></h4>
-  <div class="ptiles">${show.presets.map((p,i)=>`<div class="ptile" data-id="${p.id}"><span class="pk">${i<9?i+1:''}</span><button class="pgo"><b>${esc(p.name)}</b><small>${Object.keys(p.pos).length} лб · ${p.fade} с${p.fx&&p.fx.length?` · <span class="fxb">${p.fx.map(e=>FXN[e.params.type]||'эффект').join(', ')}</span>`:''}</small></button><div class="pact"><button data-a="upd" title="Перезаписать текущими позициями">↻</button><button data-a="ren" title="Переименовать">✎</button><button data-a="fade" title="Время перехода">⏱</button><button data-a="del" title="Удалить">✕</button></div></div>`).join('')}</div>
+  <div class="ptiles">${show.presets.map((p,i)=>`<div class="ptile" data-id="${p.id}"><span class="pk">${i<9?i+1:''}</span><button class="pgo"><b>${esc(p.name)}</b><small>${Object.keys(p.pos).length} лб · ${p.fade} с${p.fx&&p.fx.length?` · <span class="fxb">${p.fx.map(e=>FXN[e.params.type]||'эффект').join(', ')}</span>`:''}</small>${presetTCs(p.id).length?`<small class="tcb">TC ${presetTCs(p.id).map(t=>fmtTC(t,show.timecode.fps)).join(', ')}</small>`:''}</button><div class="pact"><button data-a="upd" title="Перезаписать текущими позициями">↻</button><button data-a="ren" title="Переименовать">✎</button><button data-a="fade" title="Время перехода">⏱</button><button data-a="tc" title="Запуск по таймкоду">TC</button><button data-a="del" title="Удалить">✕</button></div></div>`).join('')}</div>
   ${show.presets.length?'':'<p class="hint">Расставьте лебёдки (перетаскивайте шарики, двойной клик — сразу в точку) и нажмите «Записать».</p>'}`;
   $('#pstore').onclick=async()=>{const only=$('#ponly').checked;if(only&&!sel.size)return toast('Нет выделенных',true);const r=await api('/api/preset/store',{name:$('#pname').value,fade:+$('#pfade').value,ids:only?ids():null,fx:$('#pfx').checked});if(r.ok)toast('Пресет записан'+(st&&st.fx.length&&$('#pfx').checked?' вместе с эффектами':''))};
   $$('.ptile').forEach(t=>{const p=show.presets.find(x=>x.id===t.dataset.id);
     t.querySelector('.pgo').onclick=()=>api('/api/preset/recall',{id:p.id});
     t.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const a=b.dataset.a,list=show.presets.map(x=>({...x}));const q=list.find(x=>x.id===p.id);
+      if(a==='tc'){const fps=show.timecode.fps,cur=presetTCs(p.id).map(t=>fmtTC(t,fps)).join(', ');
+        const v=await askText('Запуск пресета «'+p.name+'» по таймкоду.\nВремя ЧЧ:ММ:СС:КК, несколько — через запятую. Пусто — убрать.\nТекущий TC: '+fmtTC(st?.tc?.t,fps),cur||fmtTC(st?.tc?.t??0,fps));if(v===null)return;
+        const ts=v.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).map(x=>parseTC(x,fps));if(ts.some(t=>t==null||t<0))return toast('Формат таймкода: ЧЧ:ММ:СС:КК',true);
+        const ev=show.timecode.events.filter(e=>!(e.action==='preset'&&e.ref===p.id)).concat(ts.map((t,i)=>({id:'e'+Date.now().toString(36)+i,t,action:'preset',ref:p.id,fade:null})));
+        const r=await saveCfg({timecode:{...show.timecode,events:ev}});if(!r.ok)return;
+        if(ts.length&&!show.timecode.enabled){if(await ask('Таймкод назначен. Включить «Запуск по таймкоду» сейчас?'))api('/api/tc_enable',{on:true})}else toast(ts.length?'Пресет запустится по TC':'TC у пресета убран');return}
       if(a==='upd'){if(await ask('Перезаписать «'+p.name+'» текущими позициями?'))api('/api/preset/store',{id:p.id,ids:Object.keys(p.pos).map(Number),fx:true});return}
       if(a==='ren'){const n=await askText('Название',p.name);if(!n)return;q.name=n}
       if(a==='fade'){const f=await askText('Время перехода, секунд',p.fade);if(f===null)return;q.fade=+f||0}
@@ -1520,6 +1526,7 @@ function liveSeq(){
 }
 
 /* Таймкод */
+const presetTCs=pid=>(show.timecode?.events||[]).filter(e=>e.action==='preset'&&e.ref===pid).map(e=>e.t);
 const TCA=[['preset','Пресет'],['seq','Запустить шоу'],['seq_stop','Остановить шоу'],['fx','Эффект'],['fx_stop','Стоп всех эффектов'],['stop','СТОП (замереть)'],['home','Домой']];
 const TCAN=Object.fromEntries(TCA);
 let tcForm={t:'00:00:00:00',action:'preset',ref:'',fade:''};
