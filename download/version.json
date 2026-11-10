@@ -1,13 +1,13 @@
 {
- "version": "2.0.142",
- "notes": "Два режима — LED/Маски и Волюметрик. Мэппинг выходов: размер слайса на выходе (числа и мышь), формулы в полях, вид Input+Output, зум и сдвиг. Волюметрик: координатная адресация для MADRIX, MAD-SHOW, TouchDesigner; масштаб окна коммутации и 3D-вида колесом/тачпадом. Экспорт после Проекта на всех страницах; наши стрелки во всех числовых полях; удаление доп. текста клавишей Delete; безопасные имена проекта и файлов.",
+ "version": "2.0.143",
+ "notes": "Исправлена ошибка на старых Mac (macOS Mojave): панель маски снова работает. Плюс всё из 2.0.142: два режима (LED/Маски и Волюметрик), мэппинг выходов с размером слайса и формулами, координатная адресация MADRIX/MAD-SHOW/TouchDesigner, масштаб окон волюметрика, экспорт после Проекта, удаление доп. текста клавишей Delete, безопасные имена файлов.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "f9536e7d46fdaff29bf828117cc92b20f4a03afb695aeda215ec74e2e3ee73cd"
+  "sha256": "95d0302a2c8ec432e0f047a91f328f0b2fc410af77ad420db868e4bebd2dd408"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "91fa3ed06d498085c4ec0f0fdec374e0e210870a5468b3f8570113feeec3e014"
+  "sha256": "e56a361502221878b862ec4294bf635fc044301213ef6e57ae830ab0d1e48eec"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
