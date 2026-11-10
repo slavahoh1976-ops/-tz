@@ -1778,8 +1778,10 @@ select.ssel-src { display: none !important; }
 .ssel-btn .ar { flex: none; color: var(--muted); }
 .ssel .sw, .paintrow .sw { flex: none; width: 22px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); }
 .ssel .sw.none { background: repeating-linear-gradient(45deg, #444 0 3px, #222 3px 6px); }
-.ssel-pop { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px); max-height: 340px; overflow: auto; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--raise); box-shadow: 0 10px 28px rgba(0,0,0,.45); }
-.ssel-it { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.ssel-pop { position: absolute; z-index: 40; left: 0; right: auto; top: calc(100% + 4px); min-width: 100%; width: max-content; max-width: min(360px, 88vw); max-height: 340px; overflow-y: auto; overflow-x: hidden; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--raise); box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.ssel-it { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 30px; padding: 5px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.ssel-it .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ssel-it .sw { align-self: center; }
 .ssel-it:hover { background: rgba(255,255,255,.07); }
 .ssel-it.on { background: rgba(25,197,181,.16); }
 /* 2.0.117: покраска кабинетов */
@@ -1865,7 +1867,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
       <label class="chk"><input type="checkbox" id="oLabels" checked> Рамки и названия слайсов на PNG</label>
       <div class="btns"><button class="x" id="oPNG">PNG текущего выхода</button><button class="b" id="oPNGAll">Все выходы (ZIP)</button></div>
     </div></details>
-    <details class="sec fsec fexp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
+    <details class="sec fsec fexp" id="fExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
       <div class="btns"><button class="x" id="fPNG">Сохранить PNG поля</button><button class="x" id="fTZgo">Формирование ТЗ →</button></div>
     </div></details>
     <!-- 2.0.116: экспорт ТЗ — сразу после «Проект» -->
@@ -1985,6 +1987,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 
     <details class="sec fsec" open><summary>ОБЩЕЕ ПОЛЕ</summary><div class="sec-body">
       <div class="ctl"><select id="fSel" class="grow" aria-label="Общее поле"></select><button class="b" id="fAdd">+ Поле</button><button class="b sq" id="fDelete" aria-label="Удалить поле">−</button></div>
+      <p class="hint" id="fEmpty">Полей пока нет. <button class="b" id="fAdd2">+ Поле</button></p>
+      <div id="fBody">
       <div class="btns"><button class="b" id="fRename">Переименовать</button></div>
       <div class="ctl ffile"><span class="ffile-lbl">Имя файла</span><span class="ffile-pre" id="fFilePre" title="Размер поля — подставляется сам">—</span><input type="text" id="fFile" class="grow" spellcheck="false" title="Имя файла поля после размера. Если стереть — снова номера масок поля (screen 1 / screens 1-2-3)" aria-label="Имя файла поля"></div>
       <p class="hint">Отметьте экраны этого поля и двигайте их на холсте. С магнитом края притягиваются друг к другу, а также к серединам краёв соседних масок и центр к центру — как в Resolume. Точное положение — в блоке «Положение маски». Alt — без магнита, стрелки — на 1 px (Shift — на 10 px), двойной клик — открыть экран. Надпись поля тоже двигается. Размер поля всегда чётный.</p>
@@ -2005,6 +2009,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
         <div class="row"><span class="lbl">Слой</span><div class="ctl fz"><button class="b sq" id="fZTop" title="На передний план — поверх всех масок" aria-label="На передний план">⤒</button><button class="b sq" id="fZUp" title="Выше на один слой" aria-label="Выше на один слой">↑</button><button class="b sq" id="fZDown" title="Ниже на один слой" aria-label="Ниже на один слой">↓</button><button class="b sq" id="fZBottom" title="На задний план — под всеми масками" aria-label="На задний план">⤓</button><span class="unit num" id="fZVal"></span></div></div>
       </div>
       <div class="info" id="fInfo"></div>
+      </div>
     </div></details>
 
     <details class="sec asec" open><summary>АВТОРЫ</summary><div class="sec-body">
@@ -2026,11 +2031,12 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
       <p class="hint">Отметьте, что войдёт в ТЗ. По умолчанию — общие поля целиком и маски, которые не стоят на полях. Маски из полей можно добавить галочкой. На холсте — предпросмотр слайдов.</p>
       <div class="row"><span class="lbl">Порядок</span><div class="ctl fz"><button class="b sq" id="tOrdTop" title="В начало ТЗ (Shift + ↑)" aria-label="В начало">⤒</button><button class="b sq" id="tOrdUp" title="Выше (↑)" aria-label="Выше">↑</button><button class="b sq" id="tOrdDown" title="Ниже (↓)" aria-label="Ниже">↓</button><button class="b sq" id="tOrdBottom" title="В конец ТЗ (Shift + ↓)" aria-label="В конец">⤓</button><span class="hint" style="margin:0 0 0 6px">выберите строку</span></div></div>
       <div class="flist" id="tList"></div>
-      <div class="row"><label for="tMaskPer">Масок на слайде</label><div class="ctl"><select id="tMaskPer">
+      <div class="row"><label for="tMaskPer">Масок на слайде</label><div class="ctl"><select id="tMaskWhich" class="grow" aria-label="Для какого слайда" title="Можно задать своё число масок для отдельного слайда"></select><select id="tMaskPer">
         <option value="0">Авто</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
         <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
       </select></div></div>
       <div class="row" id="tMaskGridRow"><label for="tMaskGrid">Расстановка</label><div class="ctl"><select id="tMaskGrid" class="grow"></select></div></div>
+      <div class="row"><span class="lbl"></span><div class="ctl"><label class="chk" title="Одинаковые по разрешению маски показываются одним размером, даже если они на разных слайдах"><input type="checkbox" id="tEvenSize" checked> одинаковые маски — одного размера</label></div></div>
       <div class="btns"><button class="b" id="tDefault">По умолчанию</button></div>
       <div class="tgroup">КАРТИНКИ (СЛАЙДЫ ПОСЛЕ ТРЕБОВАНИЙ)</div>
       <label class="chk"><input type="checkbox" id="tOverview" checked> Добавить картинки в ТЗ</label>
@@ -2398,8 +2404,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 <div class="help" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="help-card">
     <div class="help-head"><h2 id="helpTitle">Как пользоваться</h2><button class="b sq x2" id="helpClose" aria-label="Закрыть">✕</button></div>
-    <nav class="help-toc" aria-label="Разделы"><a href="#help-s1" data-h="help-s1">Где открыть</a><a href="#help-s2" data-h="help-s2">Вкладка «Маска»</a><a href="#help-s3" data-h="help-s3">Вкладка «Общее поле»</a><a href="#help-s4" data-h="help-s4">Вкладка «Формирование ТЗ»</a><a href="#help-s5" data-h="help-s5">Проект</a><a href="#help-s6" data-h="help-s6">Имена файлов</a><a href="#help-s7" data-h="help-s7">Клавиши и жесты</a><a href="#help-s8" data-h="help-s8">Авторы и связь</a></nav>
-    <div class="help-body" id="helpBody"><p>LED Pixel Mask Generator делает пиксельные маски LED-экранов (PNG в точном разрешении) и ТЗ для подрядчиков контента (PPTX + PDF). Инструкция написана по веб-версии 2.0.5 — в ней есть всё, включая общие поля и формирование ТЗ.</p>
+    <nav class="help-toc" aria-label="Разделы"><a href="#help-s1" data-h="help-s1">Где открыть</a><a href="#help-s2" data-h="help-s2">Вкладка «Маска»</a><a href="#help-sm" data-h="help-sm">Режимы LED / Волюметрик</a><a href="#help-sc" data-h="help-sc">Нарезка</a><a href="#help-s3" data-h="help-s3">Вкладка «Общее поле»</a><a href="#help-so" data-h="help-so">Мэппинг выходов</a><a href="#help-sv" data-h="help-sv">Волюметрик</a><a href="#help-s4" data-h="help-s4">Вкладка «Формирование ТЗ»</a><a href="#help-s5" data-h="help-s5">Проект</a><a href="#help-s6" data-h="help-s6">Имена файлов</a><a href="#help-s7" data-h="help-s7">Клавиши и жесты</a><a href="#help-s8" data-h="help-s8">Авторы и связь</a></nav>
+    <div class="help-body" id="helpBody"><p>LED Pixel Mask Generator делает пиксельные маски LED-экранов (PNG в точном разрешении) и ТЗ для подрядчиков контента (PPTX + PDF). Инструкция обновлена по веб-версии 2.0.146. Кроме масок и ТЗ в программе есть два режима (LED/Маски и Волюметрик), нарезка длинных экранов, мэппинг масок на выходы и генерация адресации для MADRIX, MAD-SHOW и TouchDesigner.</p>
 <h2 id="help-s1">Где открыть</h2>
 <table>
 <thead>
@@ -2531,6 +2537,18 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 <p>Формат номера (1,1 · 1-1 · 1 / 1 · C1-R1 · сквозной), угол, с которого начинается нумерация, и место номера в кабинете выбираются списками. Направляющие «Круг» и «Линии через центр» включаются по отдельности.</p>
 <h3>Сохранение PNG</h3>
 <p>«Сохранить PNG» — текущая маска в точном разрешении без потерь. «Все PNG (ZIP)» — все маски проекта одним архивом. Сетка между кабинетами — 2 px цвета RGB 64,64,64, внешняя рамка — 1 px белая.</p>
+<h2 id="help-sm">Режимы LED / Волюметрик</h2>
+<p>Вверху слева — переключатель <strong>LED / Маски</strong> и <strong>Волюметрик</strong>. В режиме «LED / Маски» доступны плоские экраны, нарезка, общее поле, мэппинг и ТЗ для Resolume / D3 / MP4. В режиме «Волюметрик» — только объёмные конструкции (раздел называется «Конструкция») и ТЗ для волюметрика. Список экранов показывает только экраны текущего режима; выбранный режим сохраняется в проекте.</p>
+
+<h2 id="help-sc">Нарезка</h2>
+<p>Для очень длинных или высоких экранов. Маску режут по кабинетам на части и складывают друг под другом (или рядом) — получается удобный кадр для контента и медиасервера. Нажмите «+ Нарезка», выберите маску и число частей (стрелками ▲▼ у каждой части можно задать свой размер в кабинетах). На каждой части подписано, какая это часть и где разрез, а в ТЗ под маской — пояснение для контентщиков. Пока нарезка не создана, настроек нет — только кнопка создания. Колесом и тачпадом окно масштабируется.</p>
+
+<h2 id="help-so">Мэппинг выходов</h2>
+<p>Раскладка готовых масок по выходам видеопроцессора, как Advanced Output в Resolume, но слайсы выделяются по кабинетам. Источник (вход) — общее поле, маска или нарезка. Вид по умолчанию «Input + Output» — вход и выход сразу. Протяните мышью по маске во входе — слайс прилипнет к краям кабинетов; на выходе двигайте слайсы и тяните за углы, чтобы менять их размер (прилипают к краям выхода и друг к другу; Alt — без привязки, Shift — без пропорций). Размер слайса на выходе можно задать и числами «Выход W × H», в том числе формулой — 192*6, 3840/2, (192+8)*4. Переключатель «Пропорции: сохранять / свободно». Экспорт — PNG каждого выхода.</p>
+
+<h2 id="help-sv">Волюметрик</h2>
+<p>Объёмные (3D) конструкции из пикселей: задаёте габариты, шаг, модули, смотрите схему коммутации и 3D-вид (оба окна масштабируются колесом и тачпадом). В ТЗ волюметрика в разделе «Экспорт» есть блок «Адресация» — генерация готовых сетапов с координатной адресацией каждого пикселя (IP, universe, каналы — как в коммутации) для <strong>MADRIX</strong> (патч и сетап .mpz, таблицы CSV), <strong>MAD-SHOW</strong> (.clen) и <strong>TouchDesigner</strong> (.vmtd). Отмеченные файлы кладутся в архив ТЗ, в папку «Адресация».</p>
+
 <h2 id="help-s3">Вкладка «Общее поле»</h2>
 <p>Общее поле собирает несколько экранов проекта в одну картинку и считает её ширину и высоту. Размер поля всегда чётный: если экраны дают нечётный габарит, поле дополняется на 1 px справа или снизу.</p>
 <ol>
@@ -2581,7 +2599,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 </tr>
 </tbody>
 </table>
-<p>Устройство ТЗ: первый слайд — требования из шаблона, дальше картинки и маски. «Масок на слайде»: «Авто» — горизонтальные до трёх на слайд столбиком, вертикальные до двух в ряд; или ровно от 1 до 10 на слайд. Для 2 и больше выбирается «Расстановка» — сколько по горизонтали и сколько по вертикали (например 2 × 3); «Авто» подбирает вариант, где маски крупнее всего. Над каждой маской вплотную подпись «разрешение | название | размер в метрах» (у проекции — «проекция», если метры не заданы). Свой текст, цвет и положение текста попадают и в PPTX, и в PDF. PDF — точная копия PPTX, ссылки в нём кликаются.</p>
+<p>Устройство ТЗ: первый слайд — требования из шаблона, дальше картинки и маски. «Масок на слайде»: «Авто» — горизонтальные до трёх на слайд столбиком, вертикальные до двух в ряд; или ровно от 1 до 10 на слайд. Число можно задать и для отдельного слайда: в списке рядом выберите «для слайда N» и укажите своё число — остальные слайды останутся как заданы «для всех слайдов». Для 2 и больше выбирается «Расстановка» — сколько по горизонтали и сколько по вертикали (например 2 × 3); «Авто» подбирает вариант, где маски крупнее всего. Галочка «Одинаковые маски — одного размера»: маски одинакового разрешения показываются одним размером, даже если они на разных слайдах. Пояснительный текст встаёт вплотную над маской. Над каждой маской вплотную подпись «разрешение | название | размер в метрах» (у проекции — «проекция», если метры не заданы). Свой текст, цвет и положение текста попадают и в PPTX, и в PDF. PDF — точная копия PPTX, ссылки в нём кликаются.</p>
 <h2 id="help-s5">Проект</h2>
 <p>Проект — это все экраны, общие поля и выбор для ТЗ сразу. Браузер запоминает его сам, но только на этом устройстве.</p>
 <ul>
@@ -3974,8 +3992,8 @@ if (typeof String !== "undefined" && !String.prototype.matchAll) {
 }
 const ICON_B64 = "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";
 const STANDALONE = true;
-const APP_VERSION = "2.0.144";
-const BUILD_STAMP = "10.11 18:59";
+const APP_VERSION = "2.0.148";
+const BUILD_STAMP = "10.11 22:30";
 const UPDATE_URL = "https://slavahoh1976-ops.github.io/-tz/download/version.json";
 const QS = new URLSearchParams(location.search);
 let PLATFORM = window.AndroidBridge ? "android" : window.LEDMASK_PLATFORM || QS.get("platform") || (window.pywebview ? "windows" : "web");
@@ -9522,7 +9540,51 @@ const labelPt = (text, wEmu) => {
   const tw = mctxRT.measureText(text || "").width;
   return Math.max(5, Math.min(10, 10 * (wEmu / PT) * 0.97 / Math.max(1, tw)));
 };
-function maskCellLayout(hz, n, j, w, h, B = BOX, info) {
+// 2.0.147: раскладка слайда со смешанной ориентацией — полосами: горизонтальные во всю ширину сверху,
+// вертикальные рядом под ними (ряд меняется при смене ориентации или при заполнении). Маски — максимально крупно.
+function mixedBandCells(dims, B = BOX) {
+  const rows = [];
+  for (let i = 0; i < dims.length; i++) {
+    const h0 = dims[i].w >= dims[i].h, lim = h0 ? 3 : 4, last = rows[rows.length - 1];
+    if (last && last.hz === h0 && last.a.length < lim) last.a.push(i);
+    else rows.push({ hz: h0, a: [i] });
+  }
+  // натуральная высота картинок в каждом ряду — по ширине поля
+  const info = rows.map((r) => {
+    const sumR = r.a.reduce((t, i) => t + dims[i].w / Math.max(1, dims[i].h), 0);
+    const hImg = (B.w - GAP * (r.a.length - 1)) / Math.max(1e-6, sumR);
+    return { hImg, band: LABEL_H + LABEL_GAP + hImg };
+  });
+  const totNat = info.reduce((t, r) => t + r.band, 0) + GAP * (rows.length - 1);
+  const avail = B.h, labels = rows.length * (LABEL_H + LABEL_GAP) + GAP * (rows.length - 1);
+  const f = totNat > avail ? (avail - labels) / Math.max(1, totNat - labels) : 1;
+  const bands = info.map((r) => ({ hImg: r.hImg * f, band: LABEL_H + LABEL_GAP + r.hImg * f }));
+  const totH = bands.reduce((t, r) => t + r.band, 0) + GAP * (rows.length - 1);
+  let y = B.y + Math.max(0, Math.floor((avail - totH) / 2));
+  const cells = [];
+  rows.forEach((r, ri) => {
+    const hImg = bands[ri].hImg;
+    const ws = r.a.map((i) => Math.round(dims[i].w * hImg / Math.max(1, dims[i].h)));
+    const rowW = ws.reduce((t, v) => t + v, 0) + GAP * (r.a.length - 1);
+    let x = B.x + Math.max(0, Math.floor((B.w - rowW) / 2));
+    r.a.forEach((i, k) => {
+      cells[i] = { label: [x, y, ws[k], LABEL_H], image: [x, y + LABEL_H + LABEL_GAP, ws[k], Math.round(hImg)] };
+      x += ws[k] + GAP;
+    });
+    y += bands[ri].band + GAP;
+  });
+  return cells;
+}
+function maskCellLayout(hz, n, j, w, h, B = BOX, info, topAlign, fixedScale) {
+  if (hz && typeof hz === "object" && hz.mixed) {
+    const cell = mixedBandCells(hz.mixed, B)[j] || { label: [B.x, B.y, 1, LABEL_H], image: [B.x, B.y, 1, 1] };
+    if (fixedScale > 0) {
+      // одинаковый размер — ужимаем до общего масштаба, но не больше ячейки; центрируем в ячейке
+      const [ix, iy, iw, ih] = cell.image, ew = Math.min(iw, Math.round(w * fixedScale)), eh = Math.min(ih, Math.round(h * fixedScale));
+      cell.image = [ix + Math.floor((iw - ew) / 2), iy, ew, eh];
+    }
+    return cell;
+  }
   if (info && info.length) {
     // 2.0.69: 3D волюметрика + «Информация» текстом справа от картинки
     const L0 = maskCellLayout(hz, n, j, 1, 1, B), [cx0, ly, cw] = L0.label, cell = L0.label, chT = L0.image[1] + L0.image[3] - ly;
@@ -9542,19 +9604,27 @@ function maskCellLayout(hz, n, j, w, h, B = BOX, info) {
   const cw = span ? B.w : Math.floor((B.w - GAP * (G.cols - 1)) / G.cols), chh = Math.floor((B.h - GAP * (G.rows - 1)) / G.rows);
   const cx0 = span ? B.x : B.x + j % G.cols * (cw + GAP), cy0 = B.y + Math.floor(j / G.cols) * (chh + GAP);
   const ih = Math.max(1, chh - LABEL_H - LABEL_GAP);
-  const sc = Math.min(cw / Math.max(1, w), ih / Math.max(1, h)), ew = Math.round(w * sc), eh = Math.round(h * sc);
-  const by = cy0 + Math.floor((chh - (LABEL_H + LABEL_GAP + eh)) / 2), ix = cx0 + Math.floor((cw - ew) / 2);
+  // 2.0.146: fixedScale — одинаковые по разрешению маски одного размера на разных слайдах; не больше, чем помещается в ячейку
+  const fit = Math.min(cw / Math.max(1, w), ih / Math.max(1, h)), sc = fixedScale > 0 ? Math.min(fixedScale, fit) : fit;
+  const ew = Math.round(w * sc), eh = Math.round(h * sc);
+  // 2.0.146: topAlign — при пояснительном тексте маска прижимается кверху ячейки, ближе к тексту
+  const by = topAlign ? cy0 : cy0 + Math.floor((chh - (LABEL_H + LABEL_GAP + eh)) / 2), ix = cx0 + Math.floor((cw - ew) / 2);
   return { label: [cx0, by, cw, LABEL_H], image: [ix, by + LABEL_H + LABEL_GAP, ew, eh] };
 }
 // 2.0.60: вид сверху, вид снизу и 3D волюметрика — вместе на одном листе (по 3), отдельно от масок
 const volExtra = (m) => /^v[cb3]:/.test(m.key || "");
+function autoGroupOne(masks, i) {
+  const hz = masks[i].w >= masks[i].h, ve = volExtra(masks[i]), lim = ve ? 3 : hz ? 3 : 2, g = [];
+  while (i < masks.length && g.length < lim && (ve ? volExtra(masks[i]) : masks[i].w >= masks[i].h === hz && !volExtra(masks[i]))) g.push(i++);
+  return { hz: ve && g.length === 3 ? { cols: 2, rows: 2, spanLast: true } : ve && g.length > 1 ? autoGrid(masks, g) : hz, g, next: i };
+}
 function groupMasks(masks) {
   const groups = [];
   let i = 0;
   while (i < masks.length) {
-    const hz = masks[i].w >= masks[i].h, ve = volExtra(masks[i]), lim = ve ? 3 : hz ? 3 : 2, g = [];
-    while (i < masks.length && g.length < lim && (ve ? volExtra(masks[i]) : masks[i].w >= masks[i].h === hz && !volExtra(masks[i]))) g.push(i++);
-    groups.push({ hz: ve && g.length === 3 ? { cols: 2, rows: 2, spanLast: true } : ve && g.length > 1 ? autoGrid(masks, g) : hz, g }); // коммутация и 3D — крупно
+    const grp = autoGroupOne(masks, i);
+    groups.push({ hz: grp.hz, g: grp.g });
+    i = grp.next;
   }
   return groups;
 }
@@ -9913,6 +9983,7 @@ async function buildPptx(tplB64, masks, overview, label) {
   let nextPresRel = maxId(/Id="rId(\d+)"/g, presRels, 1), nextSlideId = maxId(/<p:sldId\s+id="(\d+)"/g, pres, 256);
   const relsHead = rels2.slice(0, rels2.indexOf("<Relationships")), relsOpen = rels2.match(/<Relationships\b[^>]*>/)[0];
   const groups = maskGroups(masks).map((g) => ({ ...g, kind: "masks" }));
+  const emap = evenScaleMap(maskGroups(masks), masks);
   const imgs = overview || [];
   groups.unshift(...imgGroups(imgs).map(({ hz, g }) => ({ kind: "img", ims: g.map((j) => imgs[j]), hz, g: [] })));
   if (imgs.length && !/Extension="jpe?g"/i.test(types)) types = types.replace(/<Default\b/, '<Default Extension="jpeg" ContentType="image/jpeg"/><Default');
@@ -9935,7 +10006,7 @@ async function buildPptx(tplB64, masks, overview, label) {
     const items = groups[gi].kind === "img" ? groups[gi].ims.map((im) => ({ png: im.jpeg, w: im.w, h: im.h, label: im.caption || "", ext: "jpeg", key: imgKey(im) })) : g.map((mi) => masks[mi]);
     const NL = noteLayout(noteText(noteKey(items)), noteKey(items));
     items.forEach((m, j) => {
-      const lay = maskCellLayout(hz, items.length, j, m.w, m.h, NL.box, m.info), [cx0, cy0, cw] = lay.label;
+      const lay = maskCellLayout(hz, items.length, j, m.w, m.h, NL.box, m.info, !!NL.note, groups[gi].kind === "img" ? 0 : evenSc(emap, m)), [cx0, cy0, cw] = lay.label;
       if (lay.info) {
         // «Информация» волюметрика — обычный текст на слайде (можно править в PowerPoint)
         const [tx, ty, tw, th] = lay.info, fit = infoFit(m.info, tw, th), sz = Math.round(fit.pt * 100);
@@ -10151,7 +10222,7 @@ async function buildPdf(label, masks, overview_) {
     const nc = await notePdf(NL, xo, "N0");
     let content = full;
     for (let j = 0; j < ims.length; j++) {
-      const im = ims[j], lay = maskCellLayout(hz, ims.length, j, im.w, im.h, NL.box), [lx, ly, lw, lh] = toPdf(lay.label), [ix, iy, iw, ih] = toPdf(lay.image);
+      const im = ims[j], lay = maskCellLayout(hz, ims.length, j, im.w, im.h, NL.box, null, !!NL.note), [lx, ly, lw, lh] = toPdf(lay.label), [ix, iy, iw, ih] = toPdf(lay.image);
       const lab = await labelImage(im.caption || "", lw, lh);
       xo.push(["L" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(lab.w, " /Height ").concat(lab.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), lab.data)]);
       xo.push(["O" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(im.w, " /Height ").concat(im.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode"), im.jpeg)]);
@@ -10159,12 +10230,13 @@ async function buildPdf(label, masks, overview_) {
     }
     page(xo, content + nc);
   }
+  const emapPdf = evenScaleMap(maskGroups(masks), masks);
   for (const { hz, g } of maskGroups(masks)) {
     const xo = [["BG", bg2]], NL = noteLayout(noteText(noteKey(g.map((i) => masks[i]))), noteKey(g.map((i) => masks[i])));
     let content = full;
     const nc = await notePdf(NL, xo, "N0");
     for (let j = 0; j < g.length; j++) {
-      const m = masks[g[j]], lay = maskCellLayout(hz, g.length, j, m.w, m.h, NL.box, m.info);
+      const m = masks[g[j]], lay = maskCellLayout(hz, g.length, j, m.w, m.h, NL.box, m.info, !!NL.note, evenSc(emapPdf, m));
       if (lay.info) {
         const [tx, ty, tw, th] = toPdf(lay.info), inf = await infoImage(m.info, tw, th);
         xo.push(["I" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(inf.w, " /Height ").concat(inf.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), inf.data)]);
@@ -11014,7 +11086,7 @@ function freshField(k) {
   return { id: newUid(), name: k ? "Общее поле ".concat(k + 1) : "Общее поле", items: [], title: { on: true, x: 0, y: 0, size: 0, meters: false }, stack: false };
 }
 function freshFieldState() {
-  return { fields: [freshField(0)], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskGrid: "", req: {}, notes: {}, pos: {} } };
+  return { fields: [], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskPerS: {}, evenSize: true, maskGrid: "", req: {}, notes: {}, pos: {} } };
 }
 function loadFieldState(d, raw) {
   const seen = /* @__PURE__ */ new Set();
@@ -11070,7 +11142,7 @@ function loadFieldState(d, raw) {
     }
     return o;
   };
-  project.tz = { fields: boolMap(tz.fields), masks: boolMap(tz.masks), overview: tz.overview == null ? true : !!tz.overview, projZip: tz.projZip !== false, volMask: tz.volMask === true, volCom: tz.volCom !== false, vol3d: tz.vol3d !== false, volInfo: tz.volInfo !== false, adrMadrix: tz.adrMadrix === true, adrMadshow: tz.adrMadshow === true, adrTd: tz.adrTd === true, imgPer: Math.max(0, Math.min(3, pint(tz.imgPer, 0))), maskPer: Math.max(0, Math.min(10, pint(tz.maskPer, 0))), maskGrid: /^\d+x\d+$/.test(tz.maskGrid || "") ? tz.maskGrid : "", req: strMap(tz.req), notes: strMap(tz.notes), pos: posMap(tz.pos) };
+  project.tz = { fields: boolMap(tz.fields), masks: boolMap(tz.masks), overview: tz.overview == null ? true : !!tz.overview, projZip: tz.projZip !== false, volMask: tz.volMask === true, volCom: tz.volCom !== false, vol3d: tz.vol3d !== false, volInfo: tz.volInfo !== false, adrMadrix: tz.adrMadrix === true, adrMadshow: tz.adrMadshow === true, adrTd: tz.adrTd === true, imgPer: Math.max(0, Math.min(3, pint(tz.imgPer, 0))), maskPer: Math.max(0, Math.min(10, pint(tz.maskPer, 0))), maskPerS: (() => { const o = {}, src = tz.maskPerS && typeof tz.maskPerS === "object" ? tz.maskPerS : {}; for (const kk of Object.keys(src)) { const v = pint(src[kk], 0); if (/^\d+$/.test(kk) && v >= 1 && v <= 10) o[kk] = v; } return o; })(), evenSize: tz.evenSize !== false, maskGrid: /^\d+x\d+$/.test(tz.maskGrid || "") ? tz.maskGrid : "", req: strMap(tz.req), notes: strMap(tz.notes), pos: posMap(tz.pos) };
   // 2.0.114: порядок листов ТЗ и выбранный тип ТЗ — раньше при открытии сбрасывались
   if (Array.isArray(tz.order)) project.tz.order = tz.order.filter((k) => typeof k === "string" && /^[fmco]:/.test(k));
   project.tz.cuts = boolMap(tz.cuts);
@@ -11089,6 +11161,7 @@ const rotDims = (w, h, rot) => {
 };
 function fieldRects(f = CF()) {
   const out = [];
+  if (!f) return out;
   for (const it of f.items) {
     const i = project.screens.findIndex((s) => s.uid === it.uid);
     if (i < 0) continue;
@@ -11229,7 +11302,17 @@ function prepCanvas(wh) {
   return R;
 }
 function drawField() {
-  const f = CF(), rs = fieldRects(), b = fieldBBox(rs);
+  const f = CF();
+  if (!f) {
+    const R = prepCanvas([16, 9]);
+    pctx.fillStyle = "#8c9bab";
+    pctx.font = "15px ".concat(FONT);
+    pctx.textAlign = "center";
+    pctx.fillText("Нажмите «+ Поле», чтобы собрать несколько экранов в одно поле", R.width / 2, R.height / 2);
+    pctx.textAlign = "left";
+    return;
+  }
+  const rs = fieldRects(), b = fieldBBox(rs);
   const R = prepCanvas(b ? [b.w, b.h] : [16, 9]);
   if (!FV.fitted) fitField();
   const c = pctx;
@@ -11630,9 +11713,10 @@ function fieldChanged(full) {
 function refreshFieldPanel() {
   if (ui.page !== "field") return;
   scheduleFieldStrip();
-  const f = CF();
-  if (fld.sel && !f.items.some((it) => it.uid === fld.sel)) fld.sel = null;
-  // 2.0.79: выбор поля — списком, «+ Поле» и «−», как у масок
+  const has = project.fields.length > 0;
+  $("fBody").hidden = !has;
+  $("fExp").hidden = !has;
+  $("fEmpty").hidden = has;
   {
     const sel = $("fSel"), html = project.fields.map((q, k) => '<option value="'.concat(k, '">').concat(k + 1, ". ").concat(xmlEsc(q.name || "Поле " + (k + 1)), "</option>")).join("");
     if (sel.dataset.h !== html) {
@@ -11641,6 +11725,9 @@ function refreshFieldPanel() {
     }
     setVal(sel, String(project.fieldCur));
   }
+  if (!has) return;
+  const f = CF();
+  if (fld.sel && !f.items.some((it) => it.uid === fld.sel)) fld.sel = null;
   const list = $("fList");
   list.innerHTML = "";
   project.screens.forEach((st, i) => {
@@ -13542,6 +13629,7 @@ $("fSel").addEventListener("change", (e) => {
   refreshFieldPanel();
   requestDraw();
 });
+$("fAdd2").onclick = () => $("fAdd").click();
 $("fAdd").onclick = () => {
   project.fields.push(freshField(project.fields.length));
   project.fieldCur = project.fields.length - 1;
@@ -13792,7 +13880,49 @@ function groupPer(arr, per, grid2) {
   return out;
 }
 const imgGroups = (imgs) => groupPer(imgs, project.tz.imgPer | 0);
-const maskGroups = (masks) => groupPer(masks, project.tz.maskPer | 0, project.tz.maskGrid);
+// 2.0.146: своё число масок для отдельных слайдов (project.tz.maskPerS: {индекс слайда масок → число})
+function groupMasksPlan(masks) {
+  const per = project.tz.maskPer | 0, grid2 = project.tz.maskGrid, perS = project.tz.maskPerS || {};
+  if (!per && !Object.keys(perS).length) return groupMasks(masks);
+  const out = [];
+  let i = 0, s = 0;
+  while (i < masks.length) {
+    const cnt = perS[s] > 0 ? perS[s] : per;
+    if (cnt > 0) {
+      const g = [];
+      for (let j = i; j < Math.min(masks.length, i + cnt); j++) g.push(j);
+      const m = String(perS[s] > 0 ? "" : grid2 || "").match(/^(\d+)x(\d+)$/), fixed = m && +m[1] * +m[2] >= cnt ? { cols: +m[1], rows: +m[2] } : null;
+      const orient = new Set(g.map((j) => masks[j].w >= masks[j].h));
+      const anyVol = g.some((j) => volExtra(masks[j]));
+      const mixed = g.length > 1 && orient.size > 1 && !fixed && !anyVol;
+      out.push({ hz: mixed ? { mixed: g.map((j) => ({ w: masks[j].w, h: masks[j].h })) } : g.length === 1 ? true : fixed || autoGrid(masks, g), g });
+      i += g.length;
+    } else {
+      const grp = autoGroupOne(masks, i);
+      out.push({ hz: grp.hz, g: grp.g });
+      i = grp.next;
+    }
+    s++;
+  }
+  return out;
+}
+const maskGroups = (masks) => groupMasksPlan(masks);
+// 2.0.146: общий масштаб для одинаковых по разрешению масок (их размер совпадает на разных слайдах)
+function evenScaleMap(groups, items) {
+  const map = {};
+  if (project.tz.evenSize === false) return map;
+  for (const { hz, g } of groups) {
+    if (g.length && items[g[0]] && items[g[0]].info) continue;
+    g.forEach((mi, j) => {
+      const it = items[mi];
+      if (!it || it.info) return;
+      const lay = maskCellLayout(hz, g.length, j, it.w, it.h, BOX), sc = lay.image[2] / Math.max(1, it.w), key = it.w + "x" + it.h;
+      if (map[key] == null || sc < map[key]) map[key] = sc;
+    });
+  }
+  return map;
+}
+const evenSc = (map, it) => map && !it.info && project.tz.evenSize !== false ? map[it.w + "x" + it.h] || 0 : 0;
 function syncTzOrdBtns() {
   const keys = tzOrder().map((o) => o.k), i = keys.indexOf(ui.tzPick);
   $("tOrdTop").disabled = $("tOrdUp").disabled = i <= 0;
@@ -13873,12 +14003,27 @@ function refreshTZPanel() {
   const n = ui.images.length;
   const ns = imgGroups(ui.images).length;
   $("tImgPer").value = String(tz.imgPer | 0);
-  $("tMaskPer").value = String(tz.maskPer | 0);
+  // 2.0.146: «Масок на слайде» — для всех слайдов или для отдельного слайда масок
   {
+    const cnt = maskGroups(tzItems()).length;
+    if (ui.tzMaskWhich == null) ui.tzMaskWhich = "all";
+    if (ui.tzMaskWhich !== "all" && +ui.tzMaskWhich >= cnt) ui.tzMaskWhich = "all";
+    const wsel = $("tMaskWhich");
+    let opts = '<option value="all">для всех слайдов</option>';
+    for (let i2 = 0; i2 < cnt; i2++) opts += '<option value="'.concat(i2, '">для слайда ').concat(i2 + 1).concat(tz.maskPerS && tz.maskPerS[i2] ? " · " + tz.maskPerS[i2] : "", "</option>");
+    if (wsel.dataset.h !== opts) {
+      wsel.innerHTML = opts;
+      wsel.dataset.h = opts;
+    }
+    wsel.value = String(ui.tzMaskWhich);
+    const all = ui.tzMaskWhich === "all";
+    const cur = all ? tz.maskPer | 0 : (tz.maskPerS && tz.maskPerS[+ui.tzMaskWhich]) | 0;
+    $("tMaskPer").value = String(cur);
     const n2 = tz.maskPer | 0, gs = $("tMaskGrid");
-    $("tMaskGridRow").hidden = n2 < 2;
+    $("tMaskGridRow").hidden = !all || n2 < 2;
     gs.innerHTML = '<option value="">Авто — маски крупнее всего</option>' + gridOptions(n2).map((G) => '<option value="'.concat(G.cols, "x").concat(G.rows, '">').concat(G.cols, " по горизонтали × ").concat(G.rows, " по вертикали").concat(G.cols === 1 ? " (столбиком)" : G.rows === 1 ? " (в ряд)" : "", "</option>")).join("");
     gs.value = gridOptions(n2).some((G) => "".concat(G.cols, "x").concat(G.rows) === tz.maskGrid) ? tz.maskGrid : "";
+    $("tEvenSize").checked = tz.evenSize !== false;
   }
   $("tOvInfo").textContent = n ? tz.overview ? "Картинок: ".concat(n, " на ").concat(ns, " ").concat(ns === 1 ? "слайде" : "слайдах", " (").concat(ns === 1 ? "слайд 2" : "слайды 2–" + (ns + 1), "), порядок как в списке") : "Картинок: ".concat(n, " — галочка снята, слайды не добавятся") : "Картинок нет — слайды не добавятся.";
   syncTzTpl();
@@ -14515,9 +14660,25 @@ $("tSaveProj").onchange = (e) => {
 };
 $("tOvPick").onclick = () => $("tOvFile").click();
 $("tMaskPer").addEventListener("change", (e) => {
-  project.tz.maskPer = +e.target.value || 0;
-  const G = project.tz.maskGrid.match(/^(\d+)x(\d+)$/);
-  if (G && !gridOptions(project.tz.maskPer).some((o) => o.cols === +G[1] && o.rows === +G[2])) project.tz.maskGrid = "";
+  const v = +e.target.value || 0;
+  if (ui.tzMaskWhich === "all") {
+    project.tz.maskPer = v;
+    const G = project.tz.maskGrid.match(/^(\d+)x(\d+)$/);
+    if (G && !gridOptions(project.tz.maskPer).some((o) => o.cols === +G[1] && o.rows === +G[2])) project.tz.maskGrid = "";
+  } else {
+    project.tz.maskPerS = project.tz.maskPerS || {};
+    if (v > 0) project.tz.maskPerS[+ui.tzMaskWhich] = v;
+    else delete project.tz.maskPerS[+ui.tzMaskWhich];
+  }
+  tzChanged();
+  scheduleHistory();
+});
+$("tMaskWhich").addEventListener("change", (e) => {
+  ui.tzMaskWhich = e.target.value;
+  refreshTZPanel();
+});
+$("tEvenSize").addEventListener("change", (e) => {
+  project.tz.evenSize = e.target.checked;
   tzChanged();
   scheduleHistory();
 });
@@ -14780,7 +14941,8 @@ function drawTZ() {
   ui.tzImgHits = [];
   const slides = [{ kind: "title" }];
   for (const { hz, g } of imgGroups(imgs)) slides.push({ kind: "ov", hz, ims: g.map((j) => imgs[j]) });
-  for (const g of maskGroups(items)) slides.push({ kind: "g", ...g });
+  maskGroups(items).forEach((g, mgi) => slides.push({ kind: "g", mgi, ...g }));
+  const emap = evenScaleMap(maskGroups(items), items);
   // 2.0.80: «Крупно» — один лист на всё окно (двойной щелчок по листу, кнопки ◀ ▶, Esc — все листы)
   slides.forEach((sl2, i) => sl2.no = i);
   ui.tzSlideCount = slides.length;
@@ -14859,13 +15021,13 @@ function drawTZ() {
       c.textBaseline = "alphabetic";
     };
     if (sl.kind === "ov") sl.ims.forEach((im, j) => {
-      const lay = maskCellLayout(sl.hz, sl.ims.length, j, im.w, im.h, NL.box), [ix, iy, iw, ih] = lay.image;
+      const lay = maskCellLayout(sl.hz, sl.ims.length, j, im.w, im.h, NL.box, null, !!NL.note), [ix, iy, iw, ih] = lay.image;
       cell(lay, im.img, im.caption || "");
       ui.tzImgHits.push({ x: x + ix * k, y: y + iy * k, w: iw * k, h: ih * k, im });
     });
     if (sl.kind === "g") sl.g.forEach((mi, j) => {
       const it = items[mi];
-      const lay = maskCellLayout(sl.hz, sl.g.length, j, it.w, it.h, NL.box, it.info);
+      const lay = maskCellLayout(sl.hz, sl.g.length, j, it.w, it.h, NL.box, it.info, !!NL.note, evenSc(emap, it));
       if (lay.info) {
         const [tx, ty, tw, th] = lay.info;
         infoPaint(c, infoFit(it.info, tw, th), x + tx * k, y + ty * k, k * PT);
@@ -14874,7 +15036,7 @@ function drawTZ() {
     });
     drawNote();
     const skey = sl.kind === "title" ? "req" : sl.kind === "ov" ? imgKey(sl.ims[0]) : noteKey(sl.g.map((i) => items[i]));
-    ui.tzSlideHits.push({ x, y, w: sw, h: sh, key: skey, no: sl.no });
+    ui.tzSlideHits.push({ x, y, w: sw, h: sh, key: skey, no: sl.no, mgi: sl.kind === "g" ? sl.mgi : null });
     if (sl.kind === "title" ? isReqSel(ui.tzSel) : skey === ui.tzSel) {
       c.strokeStyle = "#1ec8b4";
       c.lineWidth = 3;
@@ -14970,7 +15132,15 @@ function tzPointer(e, type) {
     }
     if (!h) {
       const sh = ui.tzSlideHits.find((q) => p[0] >= q.x && p[0] <= q.x + q.w && p[1] >= q.y && p[1] <= q.y + q.h);
-      if (sh) selectTZText(sh.key === "req" && isReqSel(ui.tzSel) ? ui.tzSel : sh.key);
+      if (sh) {
+        // 2.0.147: выбор слайда мышью — он же становится целью для «Масок на слайде»
+        const which = sh.mgi != null ? String(sh.mgi) : "all";
+        if (ui.tzMaskWhich !== which) {
+          ui.tzMaskWhich = which;
+          refreshTZPanel();
+        }
+        selectTZText(sh.key === "req" && isReqSel(ui.tzSel) ? ui.tzSel : sh.key);
+      }
       return;
     }
     selectTZText(pkKey(h.pk));
@@ -15683,7 +15853,9 @@ function swatchSelect(sel, colorOf) {
       it.type = "button";
       it.className = "ssel-it" + (o.value === sel.value ? " on" : "");
       it.setAttribute("role", "option");
+      t.className = "t";
       t.textContent = o.text;
+      it.title = o.text;
       it.append(sw(o.value), t);
       it.onclick = () => {
         sel.value = o.value;
