@@ -519,10 +519,12 @@ html:not([data-page=mask]) .toolbar .zoom {
   display: none;
 }
 html[data-page=field] .panel > details.sec:not(.fsec):not(.psec),
+html[data-page=cut] .panel > details.sec:not(.csec):not(.psec),
 html[data-page=tz] .panel > details.sec:not(.tsec):not(.psec) {
   display: none;
 }
 html:not([data-page=field]) .fsec,
+html:not([data-page=cut]) .csec,
 html:not([data-page=field]) .ftools,
 html:not([data-page=tz]) .tsec,
 html:not([data-page=tz]) .ttools {
@@ -1759,6 +1761,43 @@ html:not([data-page=field]) .mstrip.fstrip {
 /* 2.0.114: версия проекта */
 #projVer { width: 64px; flex: none; text-align: center; }
 #tList .fitem[data-key] { cursor: pointer; }
+
+/* 2.0.117: список с цветом (тип кабинета) */
+select.ssel-src { display: none !important; }
+.ssel { position: relative; min-width: 0; }
+.ssel.grow { flex: 1 1 auto; }
+.ssel-btn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--field); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.ssel-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ssel-btn .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ssel-btn .ar { flex: none; color: var(--muted); }
+.ssel .sw, .paintrow .sw { flex: none; width: 22px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); }
+.ssel .sw.none { background: repeating-linear-gradient(45deg, #444 0 3px, #222 3px 6px); }
+.ssel-pop { position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 4px); max-height: 340px; overflow: auto; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--raise); box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.ssel-it { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.ssel-it:hover { background: rgba(255,255,255,.07); }
+.ssel-it.on { background: rgba(25,197,181,.16); }
+/* 2.0.117: покраска кабинетов */
+.paintrow { position: relative; gap: 8px; align-items: center; flex-wrap: nowrap; }
+.cabsw { flex: none; width: 46px; height: 32px; border-radius: 6px; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+.cabsw.empty { background: repeating-linear-gradient(45deg, #444 0 4px, #222 4px 8px); }
+.cabsw:hover { border-color: var(--accent); }
+#btnPaint { display: inline-flex; align-items: center; gap: 8px; }
+.pal-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; left: 0; top: 0; }
+.pal-pop { position: absolute; z-index: 40; left: 0; top: calc(100% + 6px); width: 248px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--raise); box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.pal-h { font-size: 11px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; margin: 2px 0 6px; }
+.pal-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-bottom: 10px; }
+.pal-sw { aspect-ratio: 1; width: 100%; border-radius: 5px; border: 1px solid rgba(255,255,255,.22); cursor: pointer; padding: 0; }
+.pal-sw:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pal-pop .btns { margin: 0; }
+/* 2.0.117: положение текста */
+.txpos { display: grid; grid-template-columns: repeat(3, 34px); gap: 4px; }
+.txpos button { height: 30px; border-radius: 6px; border: 1px solid var(--line); background: var(--field); color: var(--fg); font-size: 15px; cursor: pointer; padding: 0; }
+.txpos button:hover { border-color: var(--accent); color: var(--accent); }
+/* 2.0.118: нарезка */
+.csizes { display: flex; flex-wrap: wrap; gap: 6px; }
+.csz { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.csz input { width: 64px; }
+#cEmpty .b { margin-left: 6px; }
 </style>
 
 </head>
@@ -1782,6 +1821,75 @@ html:not([data-page=field]) .mstrip.fstrip {
         <input type="file" id="fileProj" accept=".ledmask,.json,.plist,application/json,application/xml,text/xml" hidden>
       </div>
       <p class="hint" id="projState"></p>
+    </div></details>
+
+    <!-- 2.0.116: экспорт ТЗ — сразу после «Проект» -->
+    <details class="sec tsec texp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
+      <div class="row"><label for="tTpl">Тип ТЗ</label><div class="ctl"><select id="tTpl" class="grow">
+        <option value="Resolume">Resolume — кодек DXV3</option>
+        <option value="D3">D3 — кодек HAP</option>
+        <option value="MP4">Медиаплееры — MPEG-4 (MP4)</option>
+        <option value="Vol">Волюметрик</option>
+      </select></div></div>
+      <div class="row" id="tTplSubRow" hidden><label for="tTplSub">Нить</label><div class="ctl"><select id="tTplSub" class="grow">
+        <option value="Vol2">2 метра — 32 px</option>
+        <option value="Vol4">4 метра — 64 px</option>
+        <option value="Vol3">3 метра — 36 px</option>
+      </select></div></div>
+      <div class="row" id="tVolWhat" hidden><span class="lbl">Волюметрик в ТЗ</span><div class="ctl" style="row-gap:6px">
+        <label class="chk"><input type="checkbox" id="tVolMask"> Маска</label>
+        <label class="chk"><input type="checkbox" id="tVolCom" checked> Коммутация</label>
+        <label class="chk"><input type="checkbox" id="tVol3d" checked> 3D-вид</label>
+        <label class="chk"><input type="checkbox" id="tVolInfo" checked> Информация</label>
+      </div></div>
+      <label class="chk"><input type="checkbox" id="tSaveProj" checked> Файл проекта в архив</label>
+      <div class="btns"><button class="x" id="tSave">Сохранить ТЗ Resolume</button></div>
+      <p class="hint" id="tNote">ZIP с папкой: PPTX по шаблону, такой же PDF и PNG каждой маски и поля и файл проекта.</p>
+    </div></details>
+
+    <!-- 2.0.118: нарезка длинной маски -->
+    <details class="sec csec" open><summary>НАРЕЗКА</summary><div class="sec-body">
+      <p class="hint">Для очень длинных (или очень высоких) экранов. Маску режут по кабинетам на части и складывают друг под другом — получается удобный кадр для ТЗ и медиасервера. Номера кабинетов сохраняются, на каждой части подписано, какая это часть и где разрез, а в ТЗ под маской — пояснение для контентщиков.</p>
+      <div class="ctl"><select id="cSel" class="grow" aria-label="Нарезка"></select><button class="b" id="cAdd">+ Нарезка</button><button class="b sq" id="cDel" title="Удалить нарезку" aria-label="Удалить нарезку">−</button></div>
+      <p class="hint" id="cEmpty">Нарезок пока нет. <button class="b" id="cAdd2">+ Нарезать маску</button></p>
+      <div id="cBody">
+      <div class="btns"><button class="b" id="cRename">Переименовать</button></div>
+      <div class="row"><label for="cSrc">Маска</label><div class="ctl"><select id="cSrc" class="grow"></select></div></div>
+      <div class="row"><span class="lbl">Резать</span><div class="ctl"><div class="seg" id="cDir" role="group" aria-label="Как резать">
+        <button data-dir="h" aria-pressed="true" title="Длинный экран: режем по длине, части кладём друг под другом">по длине ⇣</button>
+        <button data-dir="v" aria-pressed="false" title="Высокий экран: режем по высоте, части кладём рядом">по высоте ⇢</button>
+      </div></div></div>
+      <div class="tgroup">ЧАСТИ И КАБИНЕТЫ</div>
+      <div class="row"><label for="cParts">Частей</label><div class="ctl"><input type="number" id="cParts" min="1" max="64" class="num" style="width:70px" aria-label="Частей"><button class="b" id="cEven" title="Первые части одинаковые, последняя — остаток">Авто</button></div></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Кабинетов в каждой части (по длине)</span><div class="csizes" id="cSizes"></div></div>
+      <p class="hint">Первые части одинаковые, последняя — остаток (151 на 3 → 51 + 51 + 49). Меняете часть — разница уходит в последнюю.</p>
+      <div class="tgroup">ПОЛЕ</div>
+      <label class="chk"><input type="checkbox" id="cFit" checked> Поле по краю кабинетов (без лишнего места)</label>
+      <div class="row"><span class="lbl">Размер поля, px</span><div class="ctl"><input type="number" id="cFW" min="1" class="num" style="width:84px" aria-label="Ширина поля"><span class="unit">×</span><input type="number" id="cFH" min="1" class="num" style="width:84px" aria-label="Высота поля"></div></div>
+      <div class="row"><label for="cGap">Отступ между частями, px</label><div class="ctl"><input type="number" id="cGap" min="0" class="num" style="width:84px"></div></div>
+      <div class="tgroup">ПОДПИСИ НА МАСКЕ</div>
+      <label class="chk"><input type="checkbox" id="cSep" checked> Белая линия между частями</label>
+      <label class="chk"><input type="checkbox" id="cMarks" checked> Подписи частей, место разреза и стрелки</label>
+      <div class="tgroup">КРУПНЫЕ МЕТКИ ДО НАРЕЗКИ</div>
+      <label class="chk"><input type="checkbox" id="cBigOn"> Крупные метки во всю длину экрана — режутся вместе с маской, видно, где какая часть с какой соединяется</label>
+      <div class="row"><label for="cBigMode">Метки</label><div class="ctl"><select id="cBigMode" class="grow"><option value="num">Номера 1, 2, 3…</option><option value="text">Свой текст на всю длину</option></select></div></div>
+      <div class="row" id="cBigStepRow"><label for="cBigStep">Шаг, кабинетов</label><div class="ctl"><input type="number" id="cBigStep" min="0" class="num" style="width:84px"><span class="unit">пусто — авто</span></div></div>
+      <div class="row" id="cBigTextRow" hidden><label for="cBigText">Текст</label><div class="ctl"><input type="text" id="cBigText" class="grow"></div></div>
+      <div class="tgroup">ТЕКСТ В НАЧАЛЕ МАСКИ</div>
+      <label class="chk"><input type="checkbox" id="cInfoOn" checked> Новое разрешение и прежнее название (в первой части)</label>
+      <label class="chk"><input type="checkbox" id="cInfoSrc"> + исходное разрешение экрана</label>
+      <div class="row"><label for="cInfoSize">Размер текста, px</label><div class="ctl"><input type="number" id="cInfoSize" min="6" class="num" style="width:70px" placeholder="авто" aria-label="Размер текста"><button class="b" id="cInfoAuto">Авто</button></div></div>
+      <div class="row"><label for="cInfoColor">Цвет текста</label><div class="ctl"><input type="color" id="cInfoColor"></div></div>
+      <div class="row"><span class="lbl">Положение</span><div class="ctl"><div class="txpos" id="cInfoPos" role="group" aria-label="Положение текста">
+        <button data-pos="tl" title="Слева сверху">↖</button><button data-pos="t" title="По центру сверху">↑</button><button data-pos="tr" title="Справа сверху">↗</button>
+        <button data-pos="l" title="Слева по центру">←</button><button data-pos="c" title="По центру">•</button><button data-pos="r" title="Справа по центру">→</button>
+        <button data-pos="bl" title="Слева снизу">↙</button><button data-pos="b" title="По центру снизу">↓</button><button data-pos="br" title="Справа снизу">↘</button>
+      </div></div></div>
+      <div class="tgroup">ИТОГ</div>
+      <div class="info" id="cInfo"></div>
+      <div class="ctl ffile"><span class="ffile-lbl">Имя файла</span><span class="ffile-pre" id="cFilePre">—</span><input type="text" id="cFile" class="grow" spellcheck="false" aria-label="Имя файла нарезки"></div>
+      <div class="btns"><button class="x" id="cPNG">Сохранить PNG</button></div>
+      </div>
     </div></details>
 
     <details class="sec fsec" open><summary>ОБЩЕЕ ПОЛЕ</summary><div class="sec-body">
@@ -1849,27 +1957,6 @@ html:not([data-page=field]) .mstrip.fstrip {
       <div class="row"><label for="tTxtSel">Слайд</label><div class="ctl"><select id="tTxtSel" class="grow"></select></div></div>
       <div class="tzt rte" id="tTxt" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Текст выбранного слайда"></div>
       <div class="btns"><button class="b" id="tTxtReset">Вернуть текст шаблона</button><button class="b" id="tTxtPos">Вернуть на место</button></div>
-      <div class="tgroup">СОХРАНИТЬ ТЗ</div>
-      <div class="row"><label for="tTpl">Тип ТЗ</label><div class="ctl"><select id="tTpl" class="grow">
-        <option value="Resolume">Resolume — кодек DXV3</option>
-        <option value="D3">D3 — кодек HAP</option>
-        <option value="MP4">Медиаплееры — MPEG-4 (MP4)</option>
-        <option value="Vol">Волюметрик</option>
-      </select></div></div>
-      <div class="row" id="tTplSubRow" hidden><label for="tTplSub">Нить</label><div class="ctl"><select id="tTplSub" class="grow">
-        <option value="Vol2">2 метра — 32 px</option>
-        <option value="Vol4">4 метра — 64 px</option>
-        <option value="Vol3">3 метра — 36 px</option>
-      </select></div></div>
-      <div class="row" id="tVolWhat" hidden><span class="lbl">Волюметрик в ТЗ</span><div class="ctl" style="row-gap:6px">
-        <label class="chk"><input type="checkbox" id="tVolMask"> Маска</label>
-        <label class="chk"><input type="checkbox" id="tVolCom" checked> Коммутация</label>
-        <label class="chk"><input type="checkbox" id="tVol3d" checked> 3D-вид</label>
-        <label class="chk"><input type="checkbox" id="tVolInfo" checked> Информация</label>
-      </div></div>
-      <label class="chk"><input type="checkbox" id="tSaveProj" checked> Файл проекта в архив</label>
-      <div class="btns"><button class="x" id="tSave">Сохранить ТЗ Resolume</button></div>
-      <p class="hint" id="tNote">ZIP с папкой: PPTX по шаблону, такой же PDF и PNG каждой маски и поля и файл проекта.</p>
     </div></details>
 
     <details class="sec" open><summary>ЭКРАН И КАБИНЕТЫ</summary><div class="sec-body">
@@ -2015,6 +2102,11 @@ html:not([data-page=field]) .mstrip.fstrip {
       <p class="hint num" id="txWho">Настройки ниже — для основного текста</p>
       <div class="row"><label for="txSize">Размер текста</label><div class="ctl"><select id="txSize"></select><button class="b sq" id="txMinus">−</button><button class="b sq" id="txPlus">+</button></div></div>
       <div class="row"><span class="lbl">Поворот текста <span class="num" id="txRotVal">0°</span></span><div class="ctl"><button class="b" id="txRotCCW" title="Против часовой на 45°">⟲ 45°</button><button class="b" id="txRot0">0°</button><button class="b" id="txRotCW" title="По часовой на 45°">⟳ 45°</button></div></div>
+      <div class="row"><span class="lbl">Положение</span><div class="ctl"><div class="txpos" id="txPos" role="group" aria-label="Положение текста на маске">
+        <button data-pos="tl" title="Слева сверху">↖</button><button data-pos="t" title="По центру сверху">↑</button><button data-pos="tr" title="Справа сверху">↗</button>
+        <button data-pos="l" title="Слева по центру">←</button><button data-pos="c" title="По центру маски">•</button><button data-pos="r" title="Справа по центру">→</button>
+        <button data-pos="bl" title="Слева снизу">↙</button><button data-pos="b" title="По центру снизу">↓</button><button data-pos="br" title="Справа снизу">↘</button>
+      </div></div></div>
       <div class="row"><label for="txColor">Цвет текста</label><div class="ctl"><input type="color" id="txColor" title="Цвет выбранного текста"><button class="b" id="txColorReset" title="Вернуть цвет по умолчанию (белый; у проекции — цвет текста из настроек)">По умолчанию</button></div></div>
       <div class="row"><span class="lbl">Магнит</span><div class="ctl"><label class="chk"><input type="checkbox" id="txMagnet" checked> притягивать к центру и краям экрана и других текстов</label></div></div>
       <div hidden>
@@ -2036,7 +2128,17 @@ html:not([data-page=field]) .mstrip.fstrip {
         <button class="b" id="btnAllOn">Включить все</button>
         <button class="b" id="btnClearSel">Снять выделение</button>
       </div>
-      <div class="ctl"><input type="color" id="paintColor" aria-label="Цвет покраски"><button class="b" id="btnPaint">Покрасить выделенные</button></div>
+      <div class="row"><span class="lbl">Цвет кабинетов</span><div class="ctl paintrow">
+        <button type="button" class="cabsw empty" id="selColor" aria-label="Цвет выделенного кабинета — выбрать новый"></button>
+        <button class="b" id="btnPaint"><span class="sw" id="lastSw"></span>Покрасить</button>
+        <input type="color" id="paintColor" class="pal-native" aria-label="Другой цвет" tabindex="-1">
+        <div class="pal-pop" id="palPop" hidden>
+          <div class="pal-h" id="palRecentH">Недавние</div><div class="pal-grid" id="palRecent"></div>
+          <div class="pal-h">Палитра</div><div class="pal-grid" id="palPreset"></div>
+          <div class="btns"><button class="b" id="palOther">Другой цвет…</button><button class="b" id="palNone">Снять цвет</button></div>
+        </div>
+      </div></div>
+      <p class="hint">Левый квадрат — цвет выделенного кабинета: нажмите и выберите цвет — выделенные сразу перекрасятся. «Покрасить» — последним выбранным цветом.</p>
       <div class="row"><span class="lbl">Угловые кабинеты</span><div class="ctl">
         <div class="seg corner" role="group" aria-label="Треугольники: какая половина светится">
           <button data-corner="0" title="Треугольник: светится нижняя левая половина">◣</button>
@@ -2145,6 +2247,7 @@ html:not([data-page=field]) .mstrip.fstrip {
     <div class="toolbar">
       <div class="seg pages" role="group" aria-label="Страница">
         <button data-page="mask" aria-pressed="true">Маска</button>
+        <button data-page="cut" aria-pressed="false">Нарезка</button>
         <button data-page="field" aria-pressed="false">Общее поле</button>
         <button data-page="tz" aria-pressed="false">Формирование ТЗ</button>
       </div>
@@ -3758,8 +3861,8 @@ html:not([data-page=field]) .mstrip.fstrip {
 "use strict";
 const ICON_B64 = "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";
 const STANDALONE = true;
-const APP_VERSION = "2.0.115";
-const BUILD_STAMP = "10.11 12:26";
+const APP_VERSION = "2.0.118";
+const BUILD_STAMP = "10.11 13:00";
 const UPDATE_URL = "https://slavahoh1976-ops.github.io/-tz/download/version.json";
 const QS = new URLSearchParams(location.search);
 let PLATFORM = window.AndroidBridge ? "android" : window.LEDMASK_PLATFORM || QS.get("platform") || (window.pywebview ? "windows" : "web");
@@ -3872,7 +3975,14 @@ const CATALOG = [
   ["StarColor 1.8 - (172x86)", 172, 86, 320, 160, [81, 90, 28]],
   ["NIC 2.6 - (96x48)", 96, 48, 250, 125, [47, 9, 93]],
   ["Unilumin 1.9 - (256x256)", 256, 256, 500, 500, [11, 88, 108]],
-  ["Yestech MT P3.9x7.8 - (128х128) сетка", 128, 128, 500, 500, [183, 0, 21]]
+  ["Yestech MT P3.9x7.8 - (128х128) сетка", 128, 128, 500, 500, [0, 141, 141]],
+  // 2.0.117: без названия, 50×50 см, у каждого кабинета свой цвет (цвета в списке не повторяются)
+  ["(120x120)", 120, 120, 500, 500, [0, 141, 0]],
+  ["(144x144)", 144, 144, 500, 500, [141, 141, 0]],
+  ["(160x160)", 160, 160, 500, 500, [0, 0, 141]],
+  ["(200x200)", 200, 200, 500, 500, [141, 0, 84]],
+  ["(240x240)", 240, 240, 500, 500, [0, 141, 84]],
+  ["(320x320)", 320, 320, 500, 500, [141, 0, 141]]
 ];
 const TYPES = CATALOG.slice().sort((a, b) => a[1] * a[2] - b[1] * b[2] || a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
 const DEFAULT_TYPE = "Dicolor UC-260 - (192x192)";
@@ -6491,6 +6601,7 @@ function syncUI() {
   $("scrRenum").checked = project.renumber !== false;
   const ti = TYPES.findIndex((t) => t[0] === st.cabinetTypeName);
   $("cabType").value = ti >= 0 ? ti : "";
+  if (window.cabTypeUI) window.cabTypeUI.sync();
   $("wpx").value = st.cabWpx;
   $("hpx").value = st.cabHpx;
   $("cols").value = st.cabCols;
@@ -6686,9 +6797,14 @@ function fitStage(wh) {
 }
 function draw() {
   drawQueued = false;
+  if (ui.page === "mask") syncPaintUI();
   vol3dDraw();
   if (ui.page === "field") {
     drawField();
+    return;
+  }
+  if (ui.page === "cut") {
+    drawCut();
     return;
   }
   if (ui.page === "tz") {
@@ -7919,6 +8035,7 @@ for (const id of ["wpx", "hpx"]) $(id).addEventListener("input", () => {
   if (t && (t[1] !== st.cabWpx || t[2] !== st.cabHpx)) {
     st.cabinetTypeName = "";
     $("cabType").value = "";
+    if (window.cabTypeUI) window.cabTypeUI.sync();
   }
 });
 bindNum("cols", "cabCols");
@@ -8024,8 +8141,109 @@ const numStep = (d) => {
 };
 $("numPlus").onclick = () => numStep(1);
 $("numMinus").onclick = () => numStep(-1);
-$("paintColor").addEventListener("input", (e) => {
-  ui.paint = fromHex(e.target.value);
+// 2.0.117: покраска кабинетов. Левый прямоугольник — цвет выделенного кабинета, по нажатию палитра:
+// выбранный цвет сразу красит выделенные кабинеты. Правая кнопка — покрасить последним выбранным цветом.
+const PAL_PRESET = ["#7A2006", "#B8100B", "#E0461E", "#F08A00", "#F2C200", "#8DB600", "#2E9D3A", "#00805F", "#00A3A3", "#0077C8", "#1F3FBF", "#4B2BA8", "#8B2FA8", "#C2186B", "#6B4B2A", "#8C8C8C", "#3A4048", "#FFFFFF", "#0C6049", "#704D00", "#26224F", "#00146E", "#9A3412", "#590D0B"];
+const recentColors = () => {
+  try {
+    const a = JSON.parse(localStorage.getItem("ledmask.recentColors") || "[]");
+    return Array.isArray(a) ? a.filter((c) => /^#[0-9A-F]{6}$/.test(c)).slice(0, 16) : [];
+  } catch (e) {
+    return [];
+  }
+};
+function pushRecentColor(h) {
+  const a = [h, ...recentColors().filter((c) => c !== h)].slice(0, 16);
+  try {
+    localStorage.setItem("ledmask.recentColors", JSON.stringify(a));
+  } catch (e) {
+  }
+}
+function paintSelected(h, quiet) {
+  const st = S();
+  ui.paint = fromHex(h);
+  pushRecentColor(h);
+  syncPaintUI();
+  if (!ui.selected.size) {
+    if (!quiet) status("Цвет выбран. Выделите кабинеты и нажмите «Покрасить»", true);
+    return;
+  }
+  const black = new Set(st.blackCabinets);
+  for (const k of ui.selected) {
+    st.cabinetColors[k] = { ...ui.paint };
+    black.delete(k);
+  }
+  st.blackCabinets = [...black];
+  changed();
+  status("Покрашено кабинетов: ".concat(ui.selected.size), true);
+}
+function unpaintSelected() {
+  const st = S();
+  if (!ui.selected.size) return status("Сначала выделите кабинеты", true);
+  for (const k of ui.selected) delete st.cabinetColors[k];
+  changed();
+  status("Цвет снят — кабинеты как весь экран: ".concat(ui.selected.size), true);
+}
+// цвет выделенного кабинета (как он сейчас нарисован)
+function selCabColor() {
+  const st = S();
+  if (!ui.selected.size || st.kind !== "led") return null;
+  const black = new Set(st.blackCabinets), seen = /* @__PURE__ */ new Set();
+  for (const k of ui.selected) {
+    seen.add(black.has(k) ? "#000000" : st.cabinetColors[k] ? hex(st.cabinetColors[k]).toUpperCase() : hex(st.pixelColor).toUpperCase());
+    if (seen.size > 1) break;
+  }
+  return [...seen];
+}
+function syncPaintUI() {
+  const last = hex(ui.paint).toUpperCase(), cur = selCabColor(), a = $("selColor"), b = $("lastSw");
+  if (b.dataset.c !== last) {
+    b.dataset.c = last;
+    b.style.background = last;
+    $("btnPaint").title = "Покрасить выделенные кабинеты последним выбранным цветом ".concat(last);
+  }
+  const key = cur ? cur.join(",") : "";
+  if (a.dataset.c === key) return;
+  a.dataset.c = key;
+  a.classList.toggle("empty", !cur);
+  a.style.background = !cur ? "" : cur.length > 1 ? "linear-gradient(135deg, ".concat(cur[0], " 50%, ").concat(cur[1], " 50%)") : cur[0];
+  a.title = !cur ? "Выделите кабинеты — здесь будет их цвет. Нажмите, чтобы выбрать цвет" : cur.length > 1 ? "У выделенных кабинетов разные цвета. Нажмите, чтобы выбрать новый" : "Цвет выделенного кабинета ".concat(cur[0], ". Нажмите, чтобы выбрать новый");
+}
+function openPalette() {
+  const pop = $("palPop");
+  if (!pop.hidden) return pop.hidden = true;
+  const mk = (h) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "pal-sw";
+    b.style.background = h;
+    b.title = h;
+    b.setAttribute("aria-label", "Цвет " + h);
+    b.onclick = () => {
+      pop.hidden = true;
+      paintSelected(h);
+    };
+    return b;
+  };
+  const rc = recentColors(), g1 = $("palRecent"), g2 = $("palPreset");
+  g1.replaceChildren(...rc.map(mk));
+  $("palRecentH").hidden = g1.hidden = !rc.length;
+  g2.replaceChildren(...PAL_PRESET.map(mk));
+  pop.hidden = false;
+}
+$("selColor").onclick = openPalette;
+$("palOther").onclick = () => {
+  $("palPop").hidden = true;
+  $("paintColor").value = hex(ui.paint);
+  $("paintColor").click();
+};
+$("palNone").onclick = () => {
+  $("palPop").hidden = true;
+  unpaintSelected();
+};
+$("paintColor").addEventListener("change", (e) => paintSelected(e.target.value.toUpperCase()));
+document.addEventListener("pointerdown", (e) => {
+  if (!$("palPop").hidden && !e.target.closest("#palPop,#selColor")) $("palPop").hidden = true;
 });
 $("scrName").addEventListener("input", (e) => {
   S().name = e.target.value;
@@ -8086,19 +8304,11 @@ $("btnAllOn").onclick = () => {
 };
 $("btnClearSel").onclick = clearSelection;
 $("btnPaint").onclick = () => {
-  const st = S();
   if (!ui.selected.size) {
     status("Сначала выделите кабинеты: инструмент «Выбор» или «Диапазон»", true);
     return;
   }
-  const black = new Set(st.blackCabinets);
-  for (const k of ui.selected) {
-    st.cabinetColors[k] = { ...ui.paint };
-    black.delete(k);
-  }
-  st.blackCabinets = [...black];
-  changed();
-  status("Покрашено кабинетов: ".concat(ui.selected.size), true);
+  paintSelected(hex(ui.paint).toUpperCase(), true);
 };
 document.querySelectorAll(".seg.corner button").forEach((b) => b.onclick = () => {
   ui.corner = +b.dataset.corner;
@@ -8359,6 +8569,33 @@ function pasteTexts(list, shift) {
   changed();
   status(list.length > 1 ? "Скопировано текстов: ".concat(list.length) : "Текст скопирован", true);
 }
+// 2.0.117: положение текста — 9 кнопок (углы, края, центр). Основной текст или выбранные доп. тексты.
+function placeText(pos) {
+  const st = S();
+  if (!L || L.st !== st) return;
+  const [W, H] = dims(st), s = L.scale, m = Math.round(Math.min(W, H) * 0.03);
+  const at = (hw, hh) => {
+    const dx = Math.max(0, W / 2 - hw - m), dy = Math.max(0, H / 2 - hh - m);
+    return [pos.includes("l") ? -dx : pos.includes("r") ? dx : 0, pos.includes("t") ? dy : pos.includes("b") ? -dy : 0].map(Math.round);
+  };
+  const ids = selExtras();
+  if (ids.length) {
+    for (const i of ids) {
+      const f = labelFrame(i), it = st.extraLabels[i];
+      [it.x, it.y] = at(f.w / 2 / s, f.h / 2 / s);
+    }
+  } else {
+    if (!titleLines(st, s).length) return status("Основной текст выключен", true);
+    const f = titleFrame();
+    [st.titleOffsetX, st.titleOffsetY] = at(f.w / 2 / s, f.h / 2 / s);
+    if (ui.textMode !== 0) {
+      ui.textMode = 0;
+      refreshTextList();
+    }
+  }
+  changed();
+}
+document.querySelectorAll("#txPos button").forEach((b) => b.onclick = () => placeText(b.dataset.pos));
 $("btnCopyText").onclick = () => {
   const st = S(), ids = selExtras();
   if (!ids.length) {
@@ -8571,7 +8808,7 @@ $("zAuto").onclick = () => {
   requestDraw();
 };
 const hist = { stack: [], i: -1, timer: 0 };
-const histSnap = () => JSON.stringify({ name: project.name, guides: project.guides, screens: project.screens, fields: project.fields, tz: project.tz });
+const histSnap = () => JSON.stringify({ name: project.name, guides: project.guides, screens: project.screens, fields: project.fields, cuts: project.cuts, tz: project.tz });
 function histCommit() {
   clearTimeout(hist.timer);
   hist.timer = 0;
@@ -8604,12 +8841,13 @@ function histGo(d) {
   const cur = (d < 0 ? hist.stack[hist.i] : hist.stack[j]).cur;
   const o = JSON.parse(hist.stack[j].s);
   const fs0 = freshFieldState();
-  project = { renumber: project.renumber, ver: project.ver, name: o.name, guides: o.guides, screens: o.screens, fields: o.fields || fs0.fields, tz: o.tz || fs0.tz, fieldCur: Math.min(project.fieldCur || 0, (o.fields || fs0.fields).length - 1), cur: Math.max(0, Math.min(o.screens.length - 1, cur)) };
+  project = { renumber: project.renumber, ver: project.ver, cuts: o.cuts || project.cuts || [], cutCur: project.cutCur || 0, name: o.name, guides: o.guides, screens: o.screens, fields: o.fields || fs0.fields, tz: o.tz || fs0.tz, fieldCur: Math.min(project.fieldCur || 0, (o.fields || fs0.fields).length - 1), cur: Math.max(0, Math.min(o.screens.length - 1, cur)) };
   hist.i = j;
   ui.textMode = -1;
   ui.selLabel = -1;
   syncUI();
   changed({ forcePhys: true });
+  if (ui.page === "cut") refreshCutPanel();
   updateUndoButtons();
   status(d < 0 ? "Отменено · осталось шагов назад: ".concat(hist.i) : "Возвращено · шагов вперёд: ".concat(hist.stack.length - 1 - hist.i));
 }
@@ -8705,6 +8943,8 @@ function projectData(lite) {
       }
       return { ...o, jpeg: "data:image/jpeg;base64," + bytesToB64(im.baseJpeg || im.jpeg) };
     }),
+    cuts: project.cuts || [],
+    cutCur: project.cutCur || 0,
     fields: project.fields.map((f) => ({ ...f, items: f.items.map((it) => ({ ...it, si: project.screens.findIndex((s) => s.uid === it.uid) })) }))
   };
 }
@@ -8720,8 +8960,8 @@ function loadData(d) {
   project.ver = typeof d.projectVersion === "string" ? d.projectVersion.slice(0, 20) : "";
   if (project.tz.tpl) {
     ui.tzTpl = project.tz.tpl;
-    ui.tzSubManual = /^Vol/.test(ui.tzTpl);
-    if (!ui.tzSubManual) ui.tzFlatTpl = ui.tzTpl;
+    ui.tzSubManual = false;
+    if (!/^Vol/.test(ui.tzTpl)) ui.tzFlatTpl = ui.tzTpl;
   } else {
     ui.tzTpl = ui.tzFlatTpl = "Resolume";
     ui.tzSubManual = false;
@@ -9311,6 +9551,7 @@ const noteText = (key2) => {
   const n = project.tz.notes;
   if (volNoteKey(key2) && project.tz.volInfo === false) return ""; // галочка «Информация» в ТЗ выключена
   if (n && Object.prototype.hasOwnProperty.call(n, key2)) return n[key2] || "";
+  if (/^c:/.test(key2 || "")) return cutNoteDefault(key2);
   return volNoteKey(key2) ? volNoteDefault(key2) : "";
 };
 function noteShapeXml(id, note) {
@@ -9873,8 +10114,8 @@ async function exportTZ(label) {
       const it = items[n];
       busy("Рендер ".concat(n + 1, " из ").concat(items.length, ": ").concat(it.w, "×").concat(it.h, "…"));
       await tick();
-      const r = it.kind === "field" ? await renderFieldPNG(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? await renderBands(it.w, it.h, (ctx) => volItemPaint(ctx, it)) : await renderPNG(it.st);
-      const base = it.kind === "field" ? fieldFileBase(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? "".concat(safeName(it.st.name || "volumetric"), it.kind === "volcom" ? it.com ? "-коммутация-сверху" : "-вид-снизу" : "-3D") : maskFileBase(it.st);
+      const r = it.kind === "cut" ? await renderCutPNG(it.c) : it.kind === "field" ? await renderFieldPNG(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? await renderBands(it.w, it.h, (ctx) => volItemPaint(ctx, it)) : await renderPNG(it.st);
+      const base = it.kind === "cut" ? cutFileBase(it.c) : it.kind === "field" ? fieldFileBase(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? "".concat(safeName(it.st.name || "volumetric"), it.kind === "volcom" ? it.com ? "-коммутация-сверху" : "-вид-снизу" : "-3D") : maskFileBase(it.st);
       pngs.push({ ...r, w: r.w || it.w, h: r.h || it.h, file: "".concat(folder).concat(uniq(base), ".png"), label: it.label, key: it.key, info: it.info });
     }
     const ov = tzImages();
@@ -10261,7 +10502,7 @@ function freshField(k) {
   return { id: newUid(), name: k ? "Общее поле ".concat(k + 1) : "Общее поле", items: [], title: { on: true, x: 0, y: 0, size: 0, meters: false }, stack: false };
 }
 function freshFieldState() {
-  return { fields: [freshField(0)], fieldCur: 0, tz: { fields: {}, masks: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskGrid: "", req: {}, notes: {}, pos: {} } };
+  return { fields: [freshField(0)], fieldCur: 0, cuts: [], cutCur: 0, tz: { fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskGrid: "", req: {}, notes: {}, pos: {} } };
 }
 function loadFieldState(d, raw) {
   const seen = /* @__PURE__ */ new Set();
@@ -10291,6 +10532,9 @@ function loadFieldState(d, raw) {
   });
   if (!project.fields.length) project.fields = [freshField(0)];
   project.fieldCur = clampI(d.fieldCur, project.fields.length);
+  // 2.0.118: нарезки
+  project.cuts = (Array.isArray(d.cuts) ? d.cuts : []).filter((c) => c && typeof c === "object").map(normCut);
+  project.cutCur = clampI(d.cutCur, Math.max(1, project.cuts.length));
   const tz = d.tz && typeof d.tz === "object" ? d.tz : {};
   const boolMap = (m) => {
     const o = {};
@@ -10313,7 +10557,8 @@ function loadFieldState(d, raw) {
   };
   project.tz = { fields: boolMap(tz.fields), masks: boolMap(tz.masks), overview: tz.overview == null ? true : !!tz.overview, projZip: tz.projZip !== false, volMask: tz.volMask === true, volCom: tz.volCom !== false, vol3d: tz.vol3d !== false, volInfo: tz.volInfo !== false, imgPer: Math.max(0, Math.min(3, pint(tz.imgPer, 0))), maskPer: Math.max(0, Math.min(10, pint(tz.maskPer, 0))), maskGrid: /^\d+x\d+$/.test(tz.maskGrid || "") ? tz.maskGrid : "", req: strMap(tz.req), notes: strMap(tz.notes), pos: posMap(tz.pos) };
   // 2.0.114: порядок листов ТЗ и выбранный тип ТЗ — раньше при открытии сбрасывались
-  if (Array.isArray(tz.order)) project.tz.order = tz.order.filter((k) => typeof k === "string" && /^[fm]:/.test(k));
+  if (Array.isArray(tz.order)) project.tz.order = tz.order.filter((k) => typeof k === "string" && /^[fmc]:/.test(k));
+  project.tz.cuts = boolMap(tz.cuts);
   if (typeof tz.tpl === "string" && TPL[tz.tpl]) project.tz.tpl = tz.tpl;
   keepRest(project.tz, tz);
 }
@@ -10783,7 +11028,7 @@ pv.addEventListener("wheel", (e) => {
 pv.addEventListener("dblclick", (e) => {
   if (ui.page === "tz") {
     // двойной щелчок по картинке общего плана на превью ТЗ — редактор номеров экранов
-    const [x, y] = local(e), h = (ui.tzImgHits || []).find((q) => x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h);
+    const [x, y] = tzLocal(e), h = (ui.tzImgHits || []).find((q) => x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h);
     if (h) openMarkEditor(h.im);
     else {
       // двойной щелчок по листу — крупно / обратно ко всем листам
@@ -10983,8 +11228,9 @@ function setPage(pg) {
   if (pg === "tz" && ui.page !== "tz") {
     const st = S(), saved = project.tz.tpl && TPL[project.tz.tpl] ? project.tz.tpl : "";
     if (saved) {
+      // волюметрик: тип ТЗ сохранён, длина нити — по модели кабинета
       ui.tzTpl = saved;
-      ui.tzSubManual = /^Vol/.test(saved);
+      ui.tzSubManual = false;
     } else if (ui.page === "mask" && st && st.kind === "vol" && st.vol) {
       const V = st.vol, a = V.model !== "custom" ? ["Vol2", "Vol4", "Vol3"][V.model] : V.sx === 6 && V.sz === 6 ? "Vol3" : V.len >= 3.5 ? "Vol4" : "Vol2";
       ui.tzSubManual = false;
@@ -11006,7 +11252,557 @@ function setPage(pg) {
     refreshTZText();
   }
   if (pg === "mask") scheduleStrip();
+  if (pg === "cut") refreshCutPanel();
   requestDraw();
+}
+// ---- 2.0.118: НАРЕЗКА — очень длинную (или высокую) LED-маску режем по кабинетам на части и складываем
+// друг под другом (или рядом). Номера кабинетов остаются, на частях — подписи и место разреза.
+// project.cuts = [{ id, name, uid, dir: "h" | "v", sizes: [кабинетов в части…], fit, fw, fh, gap, sep, marks,
+//   big: { on, mode: "num" | "text", step, text }, info: { on, src, size, color, pos }, file }]
+function freshCut(k, uid) {
+  return { id: newUid(), name: "Нарезка ".concat(k + 1), uid: uid || "", dir: "h", sizes: [], fit: true, fw: 3840, fh: 2160, gap: 0, sep: true, marks: true, big: { on: false, mode: "num", step: 0, text: "" }, info: { on: true, src: false, size: 0, color: "#FFFFFF", pos: "c" }, file: "" };
+}
+function normCut(c, k) {
+  const d = freshCut(k), q = c && typeof c === "object" ? c : {}, b = q.big && typeof q.big === "object" ? q.big : {}, i = q.info && typeof q.info === "object" ? q.info : {};
+  const out = {
+    id: typeof q.id === "string" && q.id ? q.id : d.id,
+    name: typeof q.name === "string" && q.name ? q.name : d.name,
+    uid: typeof q.uid === "string" ? q.uid : "",
+    dir: q.dir === "v" ? "v" : "h",
+    sizes: (Array.isArray(q.sizes) ? q.sizes : []).map((v) => Math.max(1, pint(v, 1))).slice(0, 64),
+    fit: q.fit !== false,
+    fw: Math.max(1, Math.min(32e3, pint(q.fw, d.fw))),
+    fh: Math.max(1, Math.min(32e3, pint(q.fh, d.fh))),
+    gap: Math.max(0, Math.min(2e3, pint(q.gap, 0))),
+    sep: q.sep !== false,
+    marks: q.marks !== false,
+    big: { on: !!b.on, mode: b.mode === "text" ? "text" : "num", step: Math.max(0, pint(b.step, 0)), text: typeof b.text === "string" ? b.text.slice(0, 200) : "" },
+    info: { on: i.on !== false, src: !!i.src, size: Math.max(0, pint(i.size, 0)), color: typeof i.color === "string" && /^#[0-9a-f]{6}$/i.test(i.color) ? i.color.toUpperCase() : "#FFFFFF", pos: ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"].includes(i.pos) ? i.pos : "c" },
+    file: typeof q.file === "string" ? q.file.slice(0, 120) : ""
+  };
+  return keepRest(out, q);
+}
+const CC = () => project.cuts[Math.max(0, Math.min(project.cuts.length - 1, project.cutCur || 0))];
+const cutSrc = (c) => c && project.screens.find((s) => s.uid === c.uid && s.kind === "led") || null;
+const inAnyCut = (uid) => (project.cuts || []).some((c) => c.uid === uid);
+// кабинетов в частях: первые части одинаковые и не меньше последней (151 на 3 → 51 + 51 + 49)
+function cutAutoSizes(n, L) {
+  n = Math.max(1, Math.min(L, n | 0));
+  const p = Math.ceil(L / n), last = L - p * (n - 1);
+  if (last >= 1) return [...Array(n - 1).fill(p), last];
+  const b = Math.floor(L / n), r = L - b * n;
+  return Array.from({ length: n }, (_, i) => b + (i < r ? 1 : 0));
+}
+function cutSizes(c, L) {
+  const s = c.sizes;
+  if (s.length >= 1 && s.every((v) => v >= 1) && s.reduce((a, v) => a + v, 0) === L) return s.slice();
+  return cutAutoSizes(s.length || 2, L);
+}
+// сколько частей по умолчанию: результат ближе всего к 16:9
+function cutBestParts(st, dir) {
+  const [W0, H0] = dims(st), L = dir === "v" ? st.cabRows : st.cabCols;
+  let best = 2, bd = Infinity;
+  for (let n = 2; n <= Math.min(12, L); n++) {
+    const len = (dir === "v" ? H0 : W0) / n, thick = (dir === "v" ? W0 : H0) * n, ar = dir === "v" ? thick / len : len / thick, d = Math.abs(Math.log(ar / (16 / 9)));
+    if (d < bd) {
+      bd = d;
+      best = n;
+    }
+  }
+  return best;
+}
+function cutGeom(c) {
+  const st = cutSrc(c);
+  if (!st) return null;
+  const { xs, ys } = grid(st), [W0, H0] = dims(st), h = c.dir !== "v", L = h ? st.cabCols : st.cabRows, E = h ? xs : ys;
+  const sizes = cutSizes(c, L), thick = h ? H0 : W0, gap = c.gap | 0, parts = [];
+  let a = 0;
+  sizes.forEach((n, i) => {
+    const b = a + n, s0 = E[a], len = E[b] - E[a];
+    parts.push({ i, a, b, s0, len, dx: h ? 0 : i * (thick + gap), dy: h ? i * (thick + gap) : 0, w: h ? len : thick, h: h ? thick : len, sx: h ? s0 : 0, sy: h ? 0 : s0 });
+    a = b;
+  });
+  const maxLen = Math.max(...parts.map((p) => p.len)), n = parts.length;
+  const needW = h ? maxLen : n * thick + gap * (n - 1), needH = h ? n * thick + gap * (n - 1) : maxLen;
+  const W = c.fit ? needW : c.fw, H = c.fit ? needH : c.fh;
+  return { st, W0, H0, L, sizes, parts, h, thick, W, H, needW, needH, fits: W >= needW && H >= needH };
+}
+const cutRange = (G, p) => G.h ? "столбцы ".concat(p.a + 1, "–").concat(p.b, " слева") : "ряды ".concat(p.a + 1, "–").concat(p.b, " сверху");
+const cutPartText = (G, p) => "Часть ".concat(p.i + 1, " из ").concat(G.parts.length, " · ").concat(cutRange(G, p));
+function cutFileAuto(c) {
+  const G = cutGeom(c);
+  return G ? "".concat(G.st.name || "screen", " нарезка ").concat(G.parts.length) : "нарезка";
+}
+function cutFileBase(c) {
+  const G = cutGeom(c), tail = String(c.file || "").trim() || cutFileAuto(c);
+  return safeName((G ? "".concat(G.W, "x").concat(G.H, "-") : "") + tail, "нарезка").slice(0, 180);
+}
+function cutInfo(c) {
+  const G = cutGeom(c);
+  if (!G) return null;
+  return { w: G.W, h: G.H, label: "".concat(G.W, "×").concat(G.H, "  |  ").concat(G.st.name || "screen", " — нарезка на ").concat(G.parts.length, " ").concat(G.parts.length < 5 ? "части" : "частей") };
+}
+// крупные метки во всю длину исходного экрана (рисуются до нарезки — режутся вместе с маской)
+function paintCutBig(ctx, c, G, s) {
+  const B = c.big, len = G.h ? G.W0 : G.H0, th = G.thick;
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.42)";
+  ctx.strokeStyle = "rgba(0,0,0,0.55)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const put = (txt, pos, fs) => {
+    ctx.font = "bold ".concat(Math.max(1, fs * s), "px ").concat(FONT);
+    ctx.lineWidth = Math.max(1, fs * s * 0.04);
+    const x = G.h ? pos * s : th / 2 * s, y = G.h ? th / 2 * s : pos * s;
+    ctx.save();
+    ctx.translate(x, y);
+    if (!G.h) ctx.rotate(-Math.PI / 2);
+    ctx.strokeText(txt, 0, 0);
+    ctx.fillText(txt, 0, 0);
+    ctx.restore();
+  };
+  if (B.mode === "text" && B.text.trim()) {
+    // свой текст растянут на всю длину: буквы расставлены равномерно
+    const chars = [...B.text.trim()], fs = Math.min(th * 0.62, len / Math.max(1, chars.length) * 0.95);
+    chars.forEach((ch, i) => ch.trim() && put(ch, (i + 0.5) * len / chars.length, fs));
+  } else {
+    const st = G.st, L = G.L, step = B.step > 0 ? B.step : Math.max(1, G.h ? st.cabRows : st.cabCols), { xs, ys } = grid(st), E = G.h ? xs : ys;
+    for (let k = 0, n = 1; k < L; k += step, n++) {
+      const a = E[k], b = E[Math.min(L, k + step)], fs = Math.min(th * 0.62, (b - a) * 0.8);
+      put(String(n), (a + b) / 2, fs);
+    }
+  }
+  ctx.restore();
+}
+function pill(ctx, txt, x, y, fs, align, bg, fg, maxW) {
+  ctx.font = "600 ".concat(fs, "px ").concat(FONT);
+  // не шире части: если не помещается — шрифт меньше
+  if (maxW > 0) {
+    const w0 = ctx.measureText(txt).width + fs * 0.9;
+    if (w0 > maxW) {
+      fs = Math.max(4, fs * maxW / w0);
+      ctx.font = "600 ".concat(fs, "px ").concat(FONT);
+    }
+  }
+  const w = ctx.measureText(txt).width + fs * 0.9, h = fs * 1.5, x0 = align === "right" ? x - w : x;
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x0, y, w, h, fs * 0.35);
+  else ctx.rect(x0, y, w, h);
+  ctx.fill();
+  ctx.fillStyle = fg;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  ctx.fillText(txt, x0 + fs * 0.45, y + h / 2);
+  return h;
+}
+function paintCut(ctx, c, s) {
+  const G = cutGeom(c);
+  if (!G) return;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, Math.round(G.W * s), Math.round(G.H * s));
+  const st2 = { ...G.st, line1Enabled: false, line2Enabled: false, line3Enabled: false };
+  for (const p of G.parts) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(p.dx * s, p.dy * s, p.w * s, p.h * s);
+    ctx.clip();
+    ctx.translate((p.dx - p.sx) * s, (p.dy - p.sy) * s);
+    drawMask(ctx, st2, s, project.guides);
+    if (c.big.on) paintCutBig(ctx, c, G, s);
+    ctx.restore();
+  }
+  const fs = Math.max(10, Math.min(140, G.thick * 0.075)) * s, n = G.parts.length;
+  // пустое место у коротких частей — «не заполнять»
+  for (const p of G.parts) {
+    const rest = G.h ? G.W - p.dx - p.w : G.H - p.dy - p.h;
+    if (rest < G.thick * 0.25) continue;
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.28)";
+    ctx.font = "".concat(fs, "px ").concat(FONT);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const cx = G.h ? (p.w + rest / 2) * s : (p.dx + p.w / 2) * s, cy = G.h ? (p.dy + p.h / 2) * s : (p.dy + p.h + rest / 2) * s;
+    ctx.translate(cx, cy);
+    if (!G.h && rest > p.w) ctx.rotate(-Math.PI / 2);
+    ctx.fillText("пусто — не заполнять", 0, 0);
+    ctx.restore();
+  }
+  if (c.sep && n > 1) {
+    ctx.save();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = Math.max(1, 3 * s);
+    for (const p of G.parts.slice(1)) {
+      ctx.beginPath();
+      if (G.h) {
+        const y = (p.dy - G.gap / 2) * s;
+        ctx.moveTo(0, y);
+        ctx.lineTo(G.W * s, y);
+      } else {
+        const x = (p.dx - G.gap / 2) * s;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, G.H * s);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  if (c.marks) {
+    ctx.save();
+    for (const p of G.parts) {
+      const pad = fs * 0.5, x = p.dx * s + pad, y = p.dy * s + pad, mw = p.w * s - pad * 2;
+      let hh = pill(ctx, cutPartText(G, p), x, y, fs, "left", "rgba(0,0,0,0.72)", "#fff", G.h ? mw * 0.62 : mw);
+      if (p.i > 0) pill(ctx, "↳ продолжение части ".concat(p.i), x, y + hh + fs * 0.3, fs * 0.85, "left", "rgba(0,0,0,0.62)", "#FFD54A", mw);
+      if (p.i < n - 1) {
+        // разрез: красный пунктир по краю части и подпись, куда идёт продолжение
+        const ex = (p.dx + p.w) * s, ey = (p.dy + p.h) * s;
+        ctx.save();
+        ctx.strokeStyle = "#FF3B30";
+        ctx.lineWidth = Math.max(2, fs * 0.16);
+        ctx.setLineDash([fs * 0.5, fs * 0.35]);
+        ctx.beginPath();
+        if (G.h) {
+          ctx.moveTo(ex - ctx.lineWidth / 2, p.dy * s);
+          ctx.lineTo(ex - ctx.lineWidth / 2, ey);
+        } else {
+          ctx.moveTo(p.dx * s, ey - ctx.lineWidth / 2);
+          ctx.lineTo(ex, ey - ctx.lineWidth / 2);
+        }
+        ctx.stroke();
+        ctx.restore();
+        const t = "✂ разрез — дальше часть ".concat(p.i + 2).concat(G.h ? " ↓" : " →");
+        if (G.h) pill(ctx, t, ex - pad - ctx.lineWidth, y, fs, "right", "rgba(150,0,0,0.85)", "#fff", mw * 0.36);
+        else pill(ctx, t, x, ey - pad - fs * 1.5 - ctx.lineWidth, fs, "left", "rgba(150,0,0,0.85)", "#fff", mw);
+      }
+      // стрелка направления в начале части
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.font = "bold ".concat(fs * 1.6, "px ").concat(FONT);
+      ctx.textBaseline = "bottom";
+      ctx.textAlign = "left";
+      if (G.h) ctx.fillText("→", x, (p.dy + p.h) * s - pad);
+      else {
+        ctx.translate(p.dx * s + p.w * s - pad, y + hh * 2.4);
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        ctx.fillText("↓", 0, 0);
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  if (c.info.on) {
+    // в начале первой части: новое разрешение и прежнее название
+    const p = G.parts[0], I = c.info, lines0 = ["".concat(G.W, "×").concat(G.H), G.st.name || "screen"];
+    if (I.src) lines0.push("исходник ".concat(G.W0, "×").concat(G.H0));
+    let big = I.size > 0 ? I.size : Math.max(12, Math.min(p.w, p.h) * 0.28), lines = lines0.map((t, k) => [t, (k ? big * 0.5 : big) * s]);
+    let b = blockSize(lines, TITLE_GAP * s);
+    const m = Math.min(p.w, p.h) * 0.06 * s, fitK = Math.min(1, (p.w * s - 2 * m) / b.w, (p.h * s - 2 * m) / b.h);
+    if (fitK < 1) {
+      // текст не шире и не выше первой части
+      big *= fitK;
+      lines = lines0.map((t, k) => [t, (k ? big * 0.5 : big) * s]);
+      b = blockSize(lines, TITLE_GAP * s);
+    }
+    const pw = p.w * s, ph = p.h * s, pos = I.pos;
+    const cx = p.dx * s + (pos.includes("l") ? m + b.w / 2 : pos.includes("r") ? pw - m - b.w / 2 : pw / 2);
+    const cy = p.dy * s + (pos.includes("t") ? m + b.h / 2 : pos.includes("b") ? ph - m - b.h / 2 : ph / 2);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(p.dx * s, p.dy * s, pw, ph);
+    ctx.clip();
+    ctx.fillStyle = I.color;
+    ctx.textBaseline = "alphabetic";
+    drawBlock(ctx, lines, TITLE_GAP * s, cx, cy, 0);
+    ctx.restore();
+  }
+}
+async function renderCutPNG(c, onBand) {
+  const G = cutGeom(c);
+  return renderBands(G.W, G.H, (ctx) => paintCut(ctx, c, 1), onBand);
+}
+const cutThumbs = /* @__PURE__ */ new Map();
+function cutThumb(c) {
+  const G = cutGeom(c);
+  if (!G) return null;
+  const k = JSON.stringify(c) + JSON.stringify(G.st) + JSON.stringify(project.guides), o = cutThumbs.get(c.id);
+  if (o && o.k === k) return o.cv;
+  const s = Math.min(1, 1600 / Math.max(G.W, G.H)), cv = document.createElement("canvas");
+  cv.width = Math.max(1, Math.round(G.W * s));
+  cv.height = Math.max(1, Math.round(G.H * s));
+  paintCut(cv.getContext("2d"), c, s);
+  cutThumbs.set(c.id, { k, cv });
+  return cv;
+}
+// пояснение для контентщиков — текстовый блок ТЗ под маской (по умолчанию; его можно изменить в ТЗ)
+function cutNoteDefault(key2) {
+  const c = (project.cuts || []).find((q) => "c:" + q.id === String(key2)), G = c && cutGeom(c);
+  if (!G) return "";
+  const st = G.st, [pw, ph, known] = physM(st), [mw, mh] = typeMM(st), n = G.parts.length;
+  const sz = known ? "".concat(compactM(pw), "×").concat(compactM(ph), " м, ") : "";
+  const parts = G.parts.map((p) => "часть ".concat(p.i + 1, " — ").concat(cutRange(G, p))).join("; ");
+  const how = G.h ? "по горизонтали и уложен частями друг под другом" : "по вертикали и уложен частями рядом слева направо";
+  return "**Внимание! Маска нарезана.**\n" + "Экран ".concat(st.name || "", ": ").concat(sz).concat(st.cabCols, "×").concat(st.cabRows, " кабинетов по ").concat(compactM(mw / 10), "×").concat(compactM(mh / 10), " см — целиком ").concat(G.W0, "×").concat(G.H0, " px. ") + "Он слишком ".concat(G.h ? "длинный" : "высокий", ", поэтому в маске для изготовления контента разрезан на ").concat(n, " ").concat(n < 5 ? "части" : "частей", " ").concat(how, ", как на маске (").concat(parts, "). ") + "Делайте контент для всего экрана как одну картинку ".concat(G.W0, "×").concat(G.H0, " px, затем разрежьте его по красным линиям разреза и сложите так же, как на маске — получится файл ").concat(G.W, "×").concat(G.H, " px. ") + (G.parts.some((p) => (G.h ? p.w : p.h) < (G.h ? G.W : G.H)) ? "Чёрное место «пусто — не заполнять» оставьте чёрным." : "");
+}
+function cutChanged(panel) {
+  scheduleAutosave();
+  scheduleHistory();
+  if (panel) refreshCutPanel();
+  else updateCutInfo();
+  requestDraw();
+}
+const escHtml = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+function updateCutInfo() {
+  const c = CC(), G = c && cutGeom(c), out = [];
+  if (!G) {
+    setHtml($("cInfo"), "<span>Выберите LED-маску, которую нужно нарезать.</span>");
+    return;
+  }
+  const [pw, ph, known] = physM(G.st);
+  out.push("<span>Исходник: <b>".concat(escHtml(G.st.name || "screen"), "</b> · ").concat(G.W0, "×").concat(G.H0, " px · ").concat(G.st.cabCols, "×").concat(G.st.cabRows, " кабинетов").concat(known ? " · ".concat(compactM(pw), "×").concat(compactM(ph), " м") : "", "</span>"));
+  out.push("<span>Части: ".concat(G.sizes.join(" + "), " = ").concat(G.L, " кабинетов ").concat(G.h ? "по длине" : "по высоте", "</span>"));
+  out.push("<span>Новая маска: <b>".concat(G.W, "×").concat(G.H, "</b> px").concat(c.fit ? "" : " (нужно не меньше ".concat(G.needW, "×").concat(G.needH, ")"), "</span>"));
+  if (!G.fits) out.push('<span class="warn">Поле меньше нарезки — части не помещаются. Увеличьте поле или включите «по краю кабинетов».</span>');
+  setHtml($("cInfo"), out.join(""));
+  setTxt($("cFilePre"), "".concat(G.W, "x").concat(G.H, "-"));
+  if (document.activeElement !== $("cFile")) setVal($("cFile"), String(c.file || "").trim() || cutFileAuto(c));
+}
+function refreshCutPanel() {
+  if (ui.page !== "cut") return;
+  const has = project.cuts.length > 0;
+  $("cBody").hidden = !has;
+  $("cEmpty").hidden = has;
+  fillSelect($("cSel"), project.cuts.map((c, i) => "".concat(i + 1, ". ").concat(c.name)));
+  if (!has) return;
+  $("cSel").value = project.cutCur;
+  const c = CC(), leds = project.screens.filter((s) => s.kind === "led");
+  $("cSrc").replaceChildren(...leds.map((s) => {
+    const o = document.createElement("option"), [w, h] = dims(s);
+    o.value = s.uid;
+    o.textContent = "".concat(project.screens.indexOf(s) + 1, ". ").concat(s.name || "screen", " — ").concat(w, "×").concat(h, " (").concat(s.cabCols, "×").concat(s.cabRows, ")");
+    return o;
+  }));
+  if (!leds.some((s) => s.uid === c.uid)) c.uid = leds[0] ? leds[0].uid : "";
+  $("cSrc").value = c.uid;
+  document.querySelectorAll("#cDir button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dir === c.dir)));
+  const G = cutGeom(c);
+  $("cParts").value = G ? G.parts.length : 2;
+  const box = $("cSizes");
+  box.replaceChildren();
+  if (G) G.sizes.forEach((v, i) => {
+    const w = document.createElement("label"), inp = document.createElement("input");
+    w.className = "csz";
+    w.textContent = "".concat(i + 1, ":");
+    inp.type = "number";
+    inp.min = 1;
+    inp.value = v;
+    inp.setAttribute("aria-label", "Кабинетов в части ".concat(i + 1));
+    inp.onchange = () => setCutSize(i, pint(inp.value, v));
+    w.appendChild(inp);
+    box.appendChild(w);
+  });
+  $("cFit").checked = c.fit;
+  $("cFW").value = c.fit && G ? G.needW : c.fw;
+  $("cFH").value = c.fit && G ? G.needH : c.fh;
+  $("cFW").disabled = $("cFH").disabled = c.fit;
+  $("cGap").value = c.gap;
+  $("cSep").checked = c.sep;
+  $("cMarks").checked = c.marks;
+  $("cBigOn").checked = c.big.on;
+  $("cBigMode").value = c.big.mode;
+  $("cBigStep").value = c.big.step || "";
+  $("cBigStep").placeholder = G ? String(G.h ? G.st.cabRows : G.st.cabCols) : "";
+  $("cBigText").value = c.big.text;
+  $("cBigStepRow").hidden = c.big.mode !== "num";
+  $("cBigTextRow").hidden = c.big.mode !== "text";
+  $("cInfoOn").checked = c.info.on;
+  $("cInfoSrc").checked = c.info.src;
+  $("cInfoSize").value = c.info.size > 0 ? String(c.info.size) : "";
+  $("cInfoColor").value = c.info.color;
+  updateCutInfo();
+}
+function setCutSize(i, v) {
+  const c = CC(), G = cutGeom(c);
+  if (!G) return;
+  const s = G.sizes.slice(), n = s.length;
+  if (n < 2) return refreshCutPanel();
+  const j = i === n - 1 ? n - 2 : n - 1, room = s[i] + s[j] - 1;
+  s[i] = Math.max(1, Math.min(room, v));
+  s[j] = room + 1 - s[i];
+  c.sizes = s;
+  cutChanged(true);
+}
+function addCut() {
+  const cur = S(), st = cur && cur.kind === "led" ? cur : project.screens.find((s) => s.kind === "led");
+  if (!st) return status("Нарезка — только для LED-масок. Сначала сделайте LED-маску", true);
+  const c = freshCut(project.cuts.length, st.uid);
+  c.dir = st.cabRows > st.cabCols ? "v" : "h";
+  c.sizes = cutAutoSizes(cutBestParts(st, c.dir), c.dir === "v" ? st.cabRows : st.cabCols);
+  project.cuts.push(c);
+  project.cutCur = project.cuts.length - 1;
+  cutChanged(true);
+}
+$("cAdd").onclick = addCut;
+$("cAdd2").onclick = addCut;
+$("cDel").onclick = async () => {
+  if (!project.cuts.length) return;
+  const c = CC();
+  if (!await ask("Удалить нарезку?", "«".concat(c.name, "» будет удалена. Маска останется в проекте."), "", "Удалить", false)) return;
+  project.cuts.splice(project.cutCur, 1);
+  project.cutCur = Math.max(0, Math.min(project.cutCur, project.cuts.length - 1));
+  cutChanged(true);
+};
+$("cSel").onchange = (e) => {
+  project.cutCur = +e.target.value;
+  refreshCutPanel();
+  requestDraw();
+};
+$("cRename").onclick = async () => {
+  const c = CC();
+  if (!c) return;
+  const v = await ask("Название нарезки", "", c.name, "OK");
+  if (v != null && v.trim()) {
+    c.name = v.trim().slice(0, 60);
+    cutChanged(true);
+  }
+};
+$("cSrc").onchange = (e) => {
+  const c = CC(), st = project.screens.find((s) => s.uid === e.target.value);
+  c.uid = e.target.value;
+  if (st) c.sizes = cutAutoSizes(cutBestParts(st, c.dir), c.dir === "v" ? st.cabRows : st.cabCols);
+  cutChanged(true);
+};
+document.querySelectorAll("#cDir button").forEach((b) => b.onclick = () => {
+  const c = CC(), st = cutSrc(c);
+  if (c.dir === b.dataset.dir) return;
+  c.dir = b.dataset.dir;
+  if (st) c.sizes = cutAutoSizes(cutBestParts(st, c.dir), c.dir === "v" ? st.cabRows : st.cabCols);
+  cutChanged(true);
+});
+const setCutParts = (n) => {
+  const c = CC(), G = cutGeom(c);
+  if (!G) return;
+  n = Math.max(1, Math.min(Math.min(64, G.L), n | 0));
+  c.sizes = cutAutoSizes(n, G.L);
+  cutChanged(true);
+};
+$("cParts").onchange = (e) => setCutParts(pint(e.target.value, 2));
+stepper("cParts", (d) => {
+  const G = cutGeom(CC());
+  if (G) setCutParts(G.parts.length + d);
+});
+$("cEven").onclick = () => {
+  const G = cutGeom(CC());
+  if (G) setCutParts(G.parts.length);
+};
+$("cFit").onchange = (e) => {
+  const c = CC(), G = cutGeom(c);
+  c.fit = e.target.checked;
+  if (!c.fit && G) {
+    c.fw = Math.max(c.fw, G.needW);
+    c.fh = Math.max(c.fh, G.needH);
+  }
+  cutChanged(true);
+};
+for (const [id, k] of [["cFW", "fw"], ["cFH", "fh"], ["cGap", "gap"]]) $(id).onchange = (e) => {
+  CC()[k] = Math.max(k === "gap" ? 0 : 1, Math.min(32e3, pint(e.target.value, CC()[k])));
+  cutChanged(true);
+};
+for (const [id, set] of [["cSep", (c, v) => c.sep = v], ["cMarks", (c, v) => c.marks = v], ["cBigOn", (c, v) => c.big.on = v], ["cInfoOn", (c, v) => c.info.on = v], ["cInfoSrc", (c, v) => c.info.src = v]]) $(id).onchange = (e) => {
+  set(CC(), e.target.checked);
+  cutChanged(false);
+};
+$("cBigMode").onchange = (e) => {
+  CC().big.mode = e.target.value;
+  if (e.target.value === "text" && !CC().big.text) CC().big.text = "1 2 3 4 5 6 7 8 9";
+  CC().big.on = true;
+  cutChanged(true);
+};
+$("cBigStep").onchange = (e) => {
+  CC().big.step = Math.max(0, pint(e.target.value, 0));
+  cutChanged(true);
+};
+$("cBigText").oninput = (e) => {
+  CC().big.text = e.target.value.slice(0, 200);
+  cutChanged(false);
+};
+$("cInfoSize").onchange = (e) => {
+  CC().info.size = Math.max(0, pint(e.target.value, 0));
+  cutChanged(false);
+};
+stepper("cInfoSize", (d) => {
+  const c = CC(), G = cutGeom(c);
+  if (!G) return;
+  const p = G.parts[0], cur = c.info.size > 0 ? c.info.size : Math.round(Math.max(12, Math.min(p.w, p.h) * 0.28));
+  c.info.size = Math.max(6, Math.round(cur * (d > 0 ? 1.1 : 1 / 1.1)));
+  $("cInfoSize").value = c.info.size;
+  cutChanged(false);
+});
+$("cInfoAuto").onclick = () => {
+  CC().info.size = 0;
+  $("cInfoSize").value = "";
+  cutChanged(false);
+};
+$("cInfoColor").oninput = (e) => {
+  CC().info.color = e.target.value.toUpperCase();
+  cutChanged(false);
+};
+document.querySelectorAll("#cInfoPos button").forEach((b) => b.onclick = () => {
+  CC().info.pos = b.dataset.pos;
+  CC().info.on = true;
+  $("cInfoOn").checked = true;
+  cutChanged(false);
+});
+$("cFile").addEventListener("input", (e) => {
+  const c = CC(), v = e.target.value.trim();
+  c.file = v === cutFileAuto(c) ? "" : v;
+  scheduleAutosave();
+});
+$("cFile").addEventListener("change", (e) => {
+  const c = CC(), v = e.target.value.trim();
+  c.file = v === cutFileAuto(c) ? "" : v;
+  e.target.value = c.file || cutFileAuto(c);
+  scheduleAutosave();
+});
+$("cPNG").onclick = async () => {
+  const c = CC(), G = c && cutGeom(c);
+  if (!G) return status("Выберите LED-маску для нарезки", true);
+  busy("Рендер нарезки ".concat(G.W, "×").concat(G.H, "…"));
+  await tick();
+  try {
+    const r = await renderCutPNG(c, async (p) => {
+      busy("Рендер нарезки ".concat(G.W, "×").concat(G.H, "… ").concat(Math.round(p * 100), "%"));
+      await tick();
+    });
+    busy("");
+    await save("".concat(cutFileBase(c), ".png"), new Blob([r.png], { type: "image/png" }));
+  } catch (e) {
+    busy("");
+    status("Ошибка рендера: " + e.message, true);
+  }
+};
+function drawCut() {
+  const c = CC(), G = c && cutGeom(c);
+  const R = prepCanvas(G ? [G.W, G.H] : [16, 9]);
+  if (!G) {
+    pctx.fillStyle = "#8c9bab";
+    pctx.font = "15px ".concat(FONT);
+    pctx.textAlign = "center";
+    pctx.fillText(project.cuts.length ? "Выберите LED-маску для нарезки" : "Нажмите «+ Нарезка», чтобы разрезать длинную маску на части", R.width / 2, R.height / 2);
+    pctx.textAlign = "left";
+    return;
+  }
+  const pad = R.width < 600 ? 20 : 48, s = Math.min((R.width - pad * 2) / G.W, (R.height - pad * 2) / G.H);
+  pctx.save();
+  pctx.translate(Math.round((R.width - G.W * s) / 2), Math.round((R.height - G.H * s) / 2));
+  paintCut(pctx, c, s);
+  pctx.strokeStyle = "rgba(255,255,255,0.35)";
+  pctx.lineWidth = 1;
+  pctx.strokeRect(-0.5, -0.5, G.W * s + 1, G.H * s + 1);
+  pctx.restore();
+  pctx.fillStyle = "#8c9bab";
+  pctx.font = "12px ".concat(FONT);
+  pctx.fillText("".concat(G.W, "×").concat(G.H, " px · ").concat(G.parts.length, " ").concat(G.parts.length < 5 ? "части" : "частей"), 12, R.height - 10);
 }
 document.querySelectorAll(".seg.pages button").forEach((b) => b.onclick = () => setPage(b.dataset.page));
 $("fAll").onclick = () => {
@@ -11203,20 +11999,31 @@ const tzFieldOn = (f) => {
 };
 const tzMaskOn = (st) => {
   var _a;
-  return (_a = project.tz.masks[st.uid]) != null ? _a : !inAnyField(st.uid);
+  return (_a = project.tz.masks[st.uid]) != null ? _a : !inAnyField(st.uid) && !inAnyCut(st.uid);
+};
+// 2.0.118: нарезка в ТЗ по умолчанию входит; маска, которая нарезана, — по умолчанию нет (как маски общих полей)
+const tzCutOn = (c) => {
+  const m = project.tz.cuts || {};
+  return m[c.id] != null ? !!m[c.id] : true;
 };
 // 2.0.101: порядок масок и общих полей в ТЗ — project.tz.order (ключи «f:id» / «m:uid»), меняется перетаскиванием в списке.
 // Новые поля и маски — в конец; по умолчанию сначала поля, потом маски.
 function tzOrder() {
-  const def = project.fields.map((f) => "f:" + f.id).concat(project.screens.map((s) => "m:" + s.uid)), have = new Set(def);
+  const def = project.fields.map((f) => "f:" + f.id).concat((project.cuts || []).map((c) => "c:" + c.id), project.screens.map((s) => "m:" + s.uid)), have = new Set(def);
   const ord = (Array.isArray(project.tz.order) ? project.tz.order : []).filter((k, i, a) => have.has(k) && a.indexOf(k) === i), got = new Set(ord);
-  return ord.concat(def.filter((k) => !got.has(k))).map((k) => k[0] === "f" ? { k, f: project.fields.find((f) => "f:" + f.id === k) } : { k, st: project.screens.find((s) => "m:" + s.uid === k) });
+  return ord.concat(def.filter((k) => !got.has(k))).map((k) => k[0] === "f" ? { k, f: project.fields.find((f) => "f:" + f.id === k) } : k[0] === "c" ? { k, c: project.cuts.find((c) => "c:" + c.id === k) } : { k, st: project.screens.find((s) => "m:" + s.uid === k) });
 }
 function tzItems() {
   const out = [], volOnly = /^Vol/.test(ui.tzTpl);
   const volTz = volOnly, tz = project.tz;
   for (const o of tzOrder()) {
   // 2.0.80: в ТЗ «Волюметрик» — только волюметрики (без LED-масок и общих полей); в Resolume / D3 / MP4 — без волюметриков
+  if (o.c) {
+    // 2.0.118: нарезка — как общее поле (в ТЗ «Волюметрик» не входит)
+    const ci = !volOnly && tzCutOn(o.c) && cutInfo(o.c);
+    if (ci) out.push({ kind: "cut", c: o.c, key: "c:" + o.c.id, name: o.c.name, ...ci });
+    continue;
+  }
   if (o.f) {
     const f = o.f;
     if (volOnly || !tzFieldOn(f)) continue;
@@ -11347,7 +12154,13 @@ function refreshTZPanel() {
   // 2.0.101: один список в порядке ТЗ
   const volTpl = /^Vol/.test(ui.tzTpl);
   for (const o of tzOrder()) {
-    if (o.f) {
+    if (o.c) {
+      const c = o.c, ci = cutInfo(c);
+      row(c.name, !ci ? "нет маски" : volTpl ? "не в ТЗ «Волюметрик»" : "".concat(ci.w, "×").concat(ci.h, " · нарезка"), tzCutOn(c), (on) => {
+        tz.cuts = tz.cuts || {};
+        tz.cuts[c.id] = on;
+      }, "head", !ci || volTpl, o.k);
+    } else if (o.f) {
       const f = o.f, fi = fieldInfo(f);
       row(f.name, !fi ? "нет экранов" : volTpl ? "не в ТЗ «Волюметрик»" : "".concat(fi.w, "×").concat(fi.h), tzFieldOn(f), (on) => {
         tz.fields[f.id] = on;
@@ -12216,8 +13029,42 @@ function fieldThumb(f) {
   fieldThumbs.set(f.id, { k, cv });
   return cv;
 }
+// 2.0.117: масштаб превью ТЗ — колесо мыши / тачпад к курсору, сдвиг — перетащить пустое место, Esc — как было
+ui.tzView = { z: 1, x: 0, y: 0 };
+function tzLocal(e) {
+  const p = local(e), V = ui.tzView;
+  return [(p[0] - V.x) / V.z, (p[1] - V.y) / V.z];
+}
+function tzViewReset() {
+  if (ui.tzView.z === 1 && !ui.tzView.x && !ui.tzView.y) return false;
+  ui.tzView = { z: 1, x: 0, y: 0 };
+  requestDraw();
+  return true;
+}
+function tzViewClamp() {
+  const V = ui.tzView, r = $("wrap").getBoundingClientRect();
+  if (V.z <= 1) return ui.tzView = { z: 1, x: 0, y: 0 };
+  V.x = Math.min(0, Math.max(r.width - r.width * V.z, V.x));
+  V.y = Math.min(0, Math.max(r.height - r.height * V.z, V.y));
+}
+pv.addEventListener("wheel", (e) => {
+  if (ui.page !== "tz") return;
+  e.preventDefault();
+  const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+  if (!dy) return;
+  const V = ui.tzView, p = local(e), z = Math.max(1, Math.min(8, V.z * Math.max(0.5, Math.min(2, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018))))));
+  const ux = (p[0] - V.x) / V.z, uy = (p[1] - V.y) / V.z;
+  V.z = z;
+  V.x = p[0] - ux * z;
+  V.y = p[1] - uy * z;
+  tzViewClamp();
+  ui.tzHover = null;
+  requestDraw();
+}, { passive: false });
 function drawTZ() {
   const R = prepCanvas([16, 9]), c = pctx, items = tzItems(), imgs = tzImages();
+  c.translate(ui.tzView.x, ui.tzView.y);
+  c.scale(ui.tzView.z, ui.tzView.z);
   ui.tzHits = [];
   ui.tzSlideHits = [];
   ui.tzImgHits = [];
@@ -12313,7 +13160,7 @@ function drawTZ() {
         const [tx, ty, tw, th] = lay.info;
         infoPaint(c, infoFit(it.info, tw, th), x + tx * k, y + ty * k, k * PT);
       }
-      cell(lay, it.kind === "field" ? fieldThumb(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? volItemThumb(it) : thumb({ uid: it.st.uid, st: it.st, w0: it.w, h0: it.h }), it.label);
+      cell(lay, it.kind === "cut" ? cutThumb(it.c) : it.kind === "field" ? fieldThumb(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? volItemThumb(it) : thumb({ uid: it.st.uid, st: it.st, w0: it.w, h0: it.h }), it.label);
     });
     drawNote();
     const skey = sl.kind === "title" ? "req" : sl.kind === "ov" ? imgKey(sl.ims[0]) : noteKey(sl.g.map((i) => items[i]));
@@ -12364,6 +13211,7 @@ function syncTzZoomUI() {
 }
 function tzZoomTo(i) {
   ui.tzZoom = i;
+  ui.tzView = { z: 1, x: 0, y: 0 };
   ui.tzHover = null;
   requestDraw();
 }
@@ -12376,11 +13224,17 @@ $("tZoom").onclick = () => {
 $("tZoomPrev").onclick = () => ui.tzZoom > 0 && tzZoomTo(ui.tzZoom - 1);
 $("tZoomNext").onclick = () => ui.tzZoom < ui.tzSlideCount - 1 && tzZoomTo(ui.tzZoom + 1);
 window.addEventListener("keydown", (e) => {
-  if (ui.page !== "tz" || ui.tzZoom < 0) return;
+  if (ui.page !== "tz") return;
+  if (ui.tzZoom < 0) {
+    const t0 = e.target;
+    if (e.key === "Escape" && !(t0 && (/^(INPUT|TEXTAREA|SELECT)$/.test(t0.tagName) || t0.isContentEditable)) && $("modal").hidden) tzViewReset();
+    return;
+  }
   const t = e.target;
   if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-  if (e.key === "Escape") tzZoomTo(-1);
-  else if (e.key === "ArrowLeft") $("tZoomPrev").click();
+  if (e.key === "Escape") {
+    if (!tzViewReset()) tzZoomTo(-1);
+  } else if (e.key === "ArrowLeft") $("tZoomPrev").click();
   else if (e.key === "ArrowRight") $("tZoomNext").click();
   else return;
   e.preventDefault();
@@ -12396,9 +13250,14 @@ const tzHitAt = (p) => {
   return null;
 };
 function tzPointer(e, type) {
-  const p = local(e);
+  const p = tzLocal(e);
   if (type === "down") {
     const h = tzHitAt(p);
+    if (!h && ui.tzView.z > 1) {
+      const q = local(e);
+      ui.tzPan = { sx: q[0], sy: q[1], x0: ui.tzView.x, y0: ui.tzView.y };
+      pv.setPointerCapture(e.pointerId);
+    }
     if (!h) {
       const sh = ui.tzSlideHits.find((q) => p[0] >= q.x && p[0] <= q.x + q.w && p[1] >= q.y && p[1] <= q.y + q.h);
       if (sh) selectTZText(sh.key === "req" && isReqSel(ui.tzSel) ? ui.tzSel : sh.key);
@@ -12408,6 +13267,20 @@ function tzPointer(e, type) {
     pv.setPointerCapture(e.pointerId);
     ui.tzDrag = { hit: h, px: p[0], py: p[1], x0: h.ex, y0: h.ey, moved: false };
     requestDraw();
+    return;
+  }
+  if (type === "move" && ui.tzPan) {
+    const q = local(e);
+    ui.tzView.x = ui.tzPan.x0 + q[0] - ui.tzPan.sx;
+    ui.tzView.y = ui.tzPan.y0 + q[1] - ui.tzPan.sy;
+    tzViewClamp();
+    pv.style.cursor = "grabbing";
+    requestDraw();
+    return;
+  }
+  if (type !== "move" && ui.tzPan) {
+    ui.tzPan = null;
+    pv.style.cursor = "default";
     return;
   }
   if (type === "move") {
@@ -12829,6 +13702,8 @@ fillSelect($("cabType"), TYPES.map((t) => t[0]));
   o.textContent = "Своё разрешение";
   $("cabType").appendChild(o);
 }
+// 2.0.117: список типов кабинетов — с цветным прямоугольником перед названием (цвет кабинета)
+window.cabTypeUI = swatchSelect($("cabType"), (v) => v === "" || !TYPES[+v] ? null : "rgb(".concat(TYPES[+v][5].join(","), ")"));
 fillSelect($("inscSize"), INSC);
 fillSelect($("exSize"), INSC);
 fillSelect($("txSize"), INSC);
@@ -12980,6 +13855,81 @@ $("autoContour").addEventListener("change", (e) => {
   changed();
   status(st.autoContour ? "Автоконтур включён: выключите кабинет — контур его обойдёт" : "Автоконтур выключен", true);
 });
+function swatchSelect(sel, colorOf) {
+  const box = document.createElement("div"), btn = document.createElement("button"), pop = document.createElement("div");
+  box.className = "ssel" + (sel.classList.contains("grow") ? " grow" : "");
+  btn.type = "button";
+  btn.className = "ssel-btn";
+  btn.setAttribute("aria-haspopup", "listbox");
+  if (sel.id) btn.setAttribute("aria-label", (document.querySelector('label[for="'.concat(sel.id, '"]')) || {}).textContent || sel.id);
+  pop.className = "ssel-pop";
+  pop.setAttribute("role", "listbox");
+  pop.hidden = true;
+  sel.classList.add("ssel-src");
+  sel.tabIndex = -1;
+  sel.after(box);
+  box.append(btn, pop);
+  const sw = (v) => {
+    const s = document.createElement("span"), c = colorOf(v);
+    s.className = "sw" + (c ? "" : " none");
+    if (c) s.style.background = c;
+    return s;
+  };
+  const sync = () => {
+    const o = sel.options[sel.selectedIndex], t = document.createElement("span"), ar = document.createElement("span");
+    t.className = "t";
+    t.textContent = o ? o.text : "";
+    ar.className = "ar";
+    ar.textContent = "▾";
+    btn.replaceChildren(sw(o ? o.value : ""), t, ar);
+  };
+  const close = () => {
+    pop.hidden = true;
+    box.classList.remove("open");
+  };
+  const open = () => {
+    pop.replaceChildren();
+    for (const o of sel.options) {
+      const it = document.createElement("button"), t = document.createElement("span");
+      it.type = "button";
+      it.className = "ssel-it" + (o.value === sel.value ? " on" : "");
+      it.setAttribute("role", "option");
+      t.textContent = o.text;
+      it.append(sw(o.value), t);
+      it.onclick = () => {
+        sel.value = o.value;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+        close();
+        sync();
+        btn.focus();
+      };
+      pop.appendChild(it);
+    }
+    pop.hidden = false;
+    box.classList.add("open");
+    const on = pop.querySelector(".on");
+    if (on) on.scrollIntoView({ block: "nearest" });
+  };
+  btn.onclick = () => pop.hidden ? open() : close();
+  btn.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const n = sel.options.length, i = Math.max(0, Math.min(n - 1, sel.selectedIndex + (e.key === "ArrowDown" ? 1 : -1)));
+    if (i === sel.selectedIndex) return;
+    sel.selectedIndex = i;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    sync();
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (!box.contains(e.target)) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !pop.hidden) close();
+  });
+  sel.addEventListener("change", sync);
+  sync();
+  return { sync, close };
+}
 function stepper(id, fn) {
   const inp = $(id), wrap = document.createElement("span");
   wrap.className = "stp";
