@@ -1,13 +1,13 @@
 {
- "version": "2.0.112",
- "notes": "Копирование и выбор нескольких доп. текстов, стрелки, масштаб колесом мыши; тип ТЗ запоминается; номер в кружке — двойным щелчком; картинки общего плана больше не пропадают",
+ "version": "2.0.142",
+ "notes": "Два режима — LED/Маски и Волюметрик. Мэппинг выходов: размер слайса на выходе (числа и мышь), формулы в полях, вид Input+Output, зум и сдвиг. Волюметрик: координатная адресация для MADRIX, MAD-SHOW, TouchDesigner; масштаб окна коммутации и 3D-вида колесом/тачпадом. Экспорт после Проекта на всех страницах; наши стрелки во всех числовых полях; удаление доп. текста клавишей Delete; безопасные имена проекта и файлов.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "21fa071189e13e98bec957007030e8036cb709e3d425e06a2f2a00319e02b030"
+  "sha256": "f9536e7d46fdaff29bf828117cc92b20f4a03afb695aeda215ec74e2e3ee73cd"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "8cd8960e2b69c174e00ca5200807177f5d1ef1d65ea7863dc10e92d01fde52ad"
+  "sha256": "91fa3ed06d498085c4ec0f0fdec374e0e210870a5468b3f8570113feeec3e014"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
