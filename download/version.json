@@ -1,15 +1,7 @@
 {
- "version": "2.0.152",
- "notes": "Кнопки долей сдвига (1/2…1/8) больше не вылезают за край панели настроек. Прокрутка выпадающего списка типов кабинета не прокручивает панель настроек позади — колесо работает только внутри списка. Плюс всё из 2.0.151: подраздел «СМЕЩЕНИЕ» (двигать выделенные кабинеты, шаблоны и свои значения в px/см, чёрный фон и контур силуэта/дыр), поднятие версии ТЗ при повторном сохранении, приглушённые уникальные цвета кабинетов и премиальная тёмно-синяя тема «Волюметрик».",
- "mac": {
-  "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "54f36a57ab8e3c785b07b4a0aa420ee72d9693a424a0f4f29e1b3da66ec0f303"
- },
- "windows": {
-  "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "2b068188b7ee32f681eb15d810ec2b354516e790fbddb88fb2f46f06e4c02501"
- },
- "android": {
-  "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
- }
+ "version": "2.0.154",
+ "notes": "Мэппинг: при нескольких масках каждый слайс можно брать со своей маски (поле «Источник (маска)» у слайса) — например, слайсы 1–5 с маски 1, 6–8 с маски 2; выход собирается из участков разных масок. Плюс всё из 2.0.153: фикс прокрутки списка типов кабинета на мак-версии; подраздел «СМЕЩЕНИЕ»; поднятие версии ТЗ при повторном сохранении; приглушённые уникальные цвета кабинетов; тёмно-синяя тема «Волюметрик».",
+ "mac": { "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip", "sha256": "4e88069bceb30d49aad908e52c91d5aa18f2adba5c5802e4b0ad7ff235de1aad" },
+ "windows": { "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe", "sha256": "f3a8f76e2809be8b4933fa60a22b3bd27805cf68b8ecc7c82f2dc01c12bb92fe" },
+ "android": { "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk" }
 }
