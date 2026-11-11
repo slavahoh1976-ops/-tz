@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.12 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.13 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.12'
+VERSION = '1.13'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
 SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
@@ -221,6 +221,7 @@ def normalize(s):
         ps.append({'id': str(p.get('id') or 'p%d' % len(ps)), 'name': str(p.get('name') or 'Пресет')[:40],
                    'fade': clamp(fnum(p.get('fade'), 3), 0, 600),
                    'pos': {str(int(fnum(k))): clamp(fnum(v), 0, 100) for k, v in p['pos'].items()},
+                   'en': {str(int(fnum(k))): bool(v) for k, v in (p.get('en') or {}).items()},
                    'speed': {str(int(fnum(k))): clamp(fnum(v, 60), 1, 100)
                              for k, v in (p.get('speed') or {}).items()},
                    'fx': [{'params': e['params'], 'members': [int(fnum(m)) for m in e.get('members') or [] if int(fnum(m)) in seen],
@@ -703,6 +704,12 @@ class Engine:
             m = int(k)
             if m in self.rt:
                 self.rt[m]['speed'] = v
+        en = p.get('en') or {}
+        if en:                               # Safety (мотор вкл / стоп) по лебёдкам
+            for w in self.show['winches']:
+                if str(w['id']) in en and w['enabled'] != bool(en[str(w['id'])]):
+                    w['enabled'] = bool(en[str(w['id'])])
+                    self.changed()
         self.last_preset = pid
 
     def fxp(self, p, base=None):
@@ -815,6 +822,7 @@ class Engine:
         ms = self.ids(b.get('ids')) or [w['id'] for w in self.show['winches']]
         pos = {str(m): round(self.rt[m]['pos'], 4) for m in ms}
         spd = {str(m): round(self.rt[m]['speed'], 3) for m in ms}
+        enm = {str(m): bool(self.winch(m)['enabled']) for m in ms}
         fxl = []
         if b.get('fx', True) is not False:
             inset = set(ms)
@@ -828,12 +836,12 @@ class Engine:
             p = self.find_preset(pid)
             if not p:
                 raise ValueError('Пресет не найден')
-            p['pos'], p['speed'], p['fx'] = pos, spd, fxl
+            p['pos'], p['speed'], p['fx'], p['en'] = pos, spd, fxl, enm
         else:
             n = len(self.show['presets']) + 1
             p = {'id': 'p%x%02x' % (int(time.time() * 1000), random.randint(0, 255)),
                  'name': (str(b.get('name') or '').strip() or 'Пресет %d' % n)[:40],
-                 'fade': clamp(fnum(b.get('fade'), 3), 0, 600), 'pos': pos, 'speed': spd, 'fx': fxl}
+                 'fade': clamp(fnum(b.get('fade'), 3), 0, 600), 'pos': pos, 'speed': spd, 'fx': fxl, 'en': enm}
             self.show['presets'].append(p)
         self.last_preset = p['id']
         self.changed()
@@ -1647,7 +1655,9 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
 .pgbig{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.pgbig button{padding:12px 0;font-size:14px;font-weight:600}
 .pgrow{display:grid;grid-template-columns:78px 1fr 84px;gap:8px;align-items:center;margin:8px 0}.pgrow span{color:var(--mu)}.pgrow input.num{width:84px}
 .pgsub{font-size:11px;color:var(--mu);margin:-4px 0 6px 86px}
-#pgtab{font-size:12px}#pgtab td input.num{width:76px;padding:3px 4px}#pgtab td{white-space:nowrap;padding:3px 2px}
+#pgtab{font-size:12px}.saf{padding:2px 7px;font-size:11px;white-space:nowrap}.saf.on{color:var(--ok);border-color:#1f5c3a}.saf.off{color:#fff;background:var(--bad);border-color:var(--bad)}
+.pgstop{color:var(--bad)}.stopon{background:var(--bad)!important;color:#fff!important;border-color:var(--bad)!important}
+#pgtab td input.num{width:76px;padding:3px 4px}#pgtab td{white-space:nowrap;padding:3px 2px}
 .pgedit{background:#0e2422;border:1px solid var(--ac2);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--p3);border:1px solid var(--ln);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10}
 #toast.show{opacity:1}#toast.err{border-color:var(--bad)}
@@ -2002,6 +2012,9 @@ const spdCh=w=>fixOf(w).ch.find(c=>c.role==='speed');
 const spd2dmx=(w,sp)=>{const c=spdCh(w);return c?Math.round(c.slow+(c.fast-c.slow)*sp/100):null};
 const dmx2spd=(w,d)=>{const c=spdCh(w);if(!c||c.fast===c.slow)return 100;return clamp((d-c.slow)/(c.fast-c.slow)*100,1,100)};
 const wById=i=>show.winches.find(w=>w.id===+i);
+const safCh=w=>fixOf(w).ch.find(c=>c.role==='safety');
+const safTxt=w=>{const c=safCh(w);return w.enabled?(c?c.on+' вкл':'вкл'):(c?c.off+' стоп':'стоп')};
+function setEn(list,on){pgAdd(list);const S=new Set(list.map(Number));return saveCfg({winches:show.winches.map(w=>S.has(w.id)?{...w,enabled:on}:w)}).then(r=>{if(r.ok)toast(on?'Мотор включён (Safety)':'Мотор — СТОП (Safety)')})}
 function tabProg(){
   const el=$('#tab'),I=ids(),w0=wById(I[0]),pl=[...PG.ids].map(wById).filter(Boolean),ed=PG.edit&&show.presets.find(p=>p.id===PG.edit);
   const pmx=w0?posMax(w0):255,sc=w0&&spdCh(w0);
@@ -2011,10 +2024,12 @@ function tabProg(){
   <div class="pgsub">DMX 0–${pmx}${w0&&posBits(w0)===16?' (16 бит: грубо + fine)':''} · 0 = верх${w0&&w0.invert?' (инверсия)':''}</div>
   <div class="pgrow"><span>Скорость</span><input type="range" id="pgspd" min="1" max="100" step="1"><input type="number" class="num" id="pgspdd" min="0" max="255" step="1" title="DMX-значение скорости"></div>
   <div class="pgsub">${sc?`DMX ${sc.fast} = быстро · ${sc.slow} = медленно`:'у прибора нет канала скорости'}</div>
+  <div class="pgrow"><span>Мотор</span><div class="row" style="margin:0;gap:6px"><button id="pgen" title="Safety: мотор включён">▶ Вкл</button><button id="pgdis" class="pgstop" title="Safety: мотор выключен — лебёдка стоит, даже когда моторы включены">■ Стоп</button></div><span class="hint" id="pgsaf"></span></div>
+  <div class="pgsub">Safety: ${w0&&safCh(w0)?`DMX ${safCh(w0).on} = вкл · ${safCh(w0).off} = стоп`:'у прибора нет канала Safety'}${st&&!st.armed?' · общая кнопка «МОТОРЫ» сейчас выключена':''}</div>
   <div class="pgrow"><span>Переход</span><span class="hint">для кнопок Верх/Середина/Низ</span><input type="number" class="num" id="pgfade" min="0" step="0.5" value="${$('#fade')?.value||3}"></div>
   <h4>В программаторе (${pl.length})<span class="sp"></span><button class="ghost" id="pgclr" style="padding:2px 8px">Очистить</button></h4>
-  ${pl.length?`<div style="overflow-x:auto"><table id="pgtab"><thead><tr><th>Лб</th><th>Экран</th><th class="n">%</th><th>DMX поз.</th><th>DMX скор.</th><th></th></tr></thead><tbody>
-  ${pl.map(w=>{const o=objOf(w.id);return`<tr data-id="${w.id}"${sel.has(w.id)?' class="cur"':''}><td>${esc(w.name)}</td><td>${o?esc(o.name):'–'}</td><td class="n" data-c="p">–</td><td><input class="num" data-c="pd" type="number" min="0" max="${posMax(w)}"></td><td><input class="num" data-c="sd" type="number" min="0" max="255"${spdCh(w)?'':' disabled'}></td><td><button class="ghost" data-a="rm" title="Убрать из программатора" style="padding:2px 6px">✕</button></td></tr>`}).join('')}</tbody></table></div>`
+  ${pl.length?`<div style="overflow-x:auto"><table id="pgtab"><thead><tr><th>Лб</th><th>Экран</th><th class="n">%</th><th>DMX поз.</th><th>DMX скор.</th><th title="Safety: мотор вкл / стоп">Safety</th><th></th></tr></thead><tbody>
+  ${pl.map(w=>{const o=objOf(w.id);return`<tr data-id="${w.id}"${sel.has(w.id)?' class="cur"':''}><td>${esc(w.name)}</td><td>${o?esc(o.name):'–'}</td><td class="n" data-c="p">–</td><td><input class="num" data-c="pd" type="number" min="0" max="${posMax(w)}"></td><td><input class="num" data-c="sd" type="number" min="0" max="255"${spdCh(w)?'':' disabled'}></td><td><button class="saf ${w.enabled?'on':'off'}" data-a="saf" title="Нажмите, чтобы переключить">${safTxt(w)}</button></td><td><button class="ghost" data-a="rm" title="Убрать из программатора" style="padding:2px 6px">✕</button></td></tr>`}).join('')}</tbody></table></div>`
    :'<p class="hint">Пусто. Выделите лебёдки и задайте положение/скорость — они попадут сюда. Перетаскивание на сцене, «Глубина» и «Формы» тоже добавляют в программатор.</p>'}
   <h4>Запись в пресет</h4>
   ${ed?`<div class="pgedit">Редактируется пресет <b>«${esc(ed.name)}»</b><div class="row" style="margin:8px 0 0"><button class="pri" id="pgupd">↻ Обновить пресет</button><button id="pgcancel">Закончить</button></div></div>`:''}
@@ -2033,10 +2048,12 @@ function tabProg(){
   $('#pgspd').oninput=e=>{if(need())ss(+e.target.value)};
   $('#pgspdd').onchange=e=>{if(!need())return;const d=+e.target.value,by={};ids().forEach(i=>{const v=+dmx2spd(wById(i),d).toFixed(3);(by[v]=by[v]||[]).push(i)});pgAdd(ids());for(const v in by)api('/api/speed',{ids:by[v],value:+v})};
   $('#pgclr').onclick=()=>{PG.ids.clear();PG.edit=null;renderTab()};
+  $('#pgen').onclick=()=>need()&&setEn(ids(),true);$('#pgdis').onclick=()=>need()&&setEn(ids(),false);
   $$('#pgtab tr[data-id]').forEach(tr=>{const id=+tr.dataset.id,w=wById(id);
     tr.querySelector('[data-c=pd]').onchange=e=>apiMove({abs:{[id]:dmx2pos(w,+e.target.value)},fade:F()});
     tr.querySelector('[data-c=sd]').onchange=e=>api('/api/speed',{ids:[id],value:+dmx2spd(w,+e.target.value).toFixed(3)});
     tr.querySelector('[data-a=rm]').onclick=()=>{PG.ids.delete(id);renderTab()};
+    tr.querySelector('[data-a=saf]').onclick=()=>setEn([id],!w.enabled);
     tr.children[0].onclick=()=>setSel([id])});
   const store=async(id)=>{const r=await api('/api/preset/store',{id,name:$('#pgname').value,fade:+$('#pgpfade').value,ids:PG.ids.size?[...PG.ids]:null,fx:$('#pgfx').checked});
     if(r.ok){toast(id?'Пресет обновлён':'Пресет записан'+(PG.ids.size?' ('+PG.ids.size+' лб)':' (все лебёдки)'));if(!id)$('#pgname').value=''}};
@@ -2044,6 +2061,7 @@ function tabProg(){
   if(ed){$('#pgupd').onclick=()=>store(ed.id);$('#pgcancel').onclick=()=>{PG.edit=null;PG.ids.clear();renderTab()}}
 }
 function liveProg(){const I=ids(),f=document.activeElement;
+  const sf=$('#pgsaf');if(sf){const ws=I.map(wById).filter(Boolean),n=ws.filter(w=>w.enabled).length;sf.textContent=!ws.length?'':n===ws.length?'все вкл':n?`вкл ${n} из ${ws.length}`:'все СТОП';$('#pgen').classList.toggle('tglon',!!ws.length&&n===ws.length);$('#pgdis').classList.toggle('stopon',!!ws.length&&n===0)}
   if(I.length){const w0=wById(I[0]),ps=I.map(i=>st.pos[i]??0),av=ps.reduce((a,b)=>a+b,0)/ps.length,sp=st.spd[I[0]]??60;
     if(f!==$('#pgpos'))$('#pgpos').value=av;if(f!==$('#pgposd'))$('#pgposd').value=pos2dmx(w0,st.pos[I[0]]??0);
     if(f!==$('#pgspd'))$('#pgspd').value=sp;const sd=spd2dmx(w0,sp);if(f!==$('#pgspdd'))$('#pgspdd').value=sd??''}
