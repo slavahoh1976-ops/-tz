@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.11 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.12 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.11'
+VERSION = '1.12'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
 SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
@@ -223,7 +223,8 @@ def normalize(s):
                    'pos': {str(int(fnum(k))): clamp(fnum(v), 0, 100) for k, v in p['pos'].items()},
                    'speed': {str(int(fnum(k))): clamp(fnum(v, 60), 1, 100)
                              for k, v in (p.get('speed') or {}).items()},
-                   'fx': [{'params': e['params'], 'members': [int(fnum(m)) for m in e.get('members') or [] if int(fnum(m)) in seen]}
+                   'fx': [{'params': e['params'], 'members': [int(fnum(m)) for m in e.get('members') or [] if int(fnum(m)) in seen],
+                           'base': {str(int(fnum(k))): clamp(fnum(v), 0, 100) for k, v in (e.get('base') or {}).items()}}
                           for e in (p.get('fx') or []) if isinstance(e, dict) and isinstance(e.get('params'), dict)]})
     s['presets'] = ps
 
@@ -695,7 +696,7 @@ class Engine:
             if f > 0:
                 prm['fadein'] = f
             try:
-                self.api_fx_start({'ids': e['members'], 'params': prm}, now)
+                self.api_fx_start({'ids': e['members'], 'params': prm, 'base': e.get('base')}, now)
             except ValueError:
                 pass
         for k, v in p.get('speed', {}).items():
@@ -716,7 +717,10 @@ class Engine:
                 'order': b['order'] if b['order'] in ORDERS else 'index', 'reverse': bool(b['reverse']),
                 'fadein': clamp(fnum(b['fadein'], 3), 0, 60), 'linked': b.get('linked', True) is not False,
                 'rate': clamp(fnum(b.get('rate'), 100), 10, 400),        # скорость эффекта, %
-                'mspeed': clamp(fnum(b.get('mspeed'), 0), 0, 100)}       # скорость моторов, % (0 = не менять)
+                'mspeed': clamp(fnum(b.get('mspeed'), 0), 0, 100),       # скорость моторов, % (0 = не менять)
+                # rel: off — между «верхней» и «нижней» точкой; center/down/up — от опорных (выставленных) позиций
+                'rel': b.get('rel') if b.get('rel') in ('center', 'down', 'up') else 'off',
+                'amp': clamp(fnum(b.get('amp'), 15), 1, 100)}
 
     def stop_fx(self, fid):
         f = self.fx.pop(fid, None)
@@ -817,7 +821,8 @@ class Engine:
             for fx in self.fx.values():
                 mem = [m for m in fx['members'] if m in inset]
                 if mem:
-                    fxl.append({'params': dict(fx['params']), 'members': mem})
+                    fxl.append({'params': dict(fx['params']), 'members': mem,
+                                'base': {str(m): round(fx['base'].get(m, self.rt[m]['pos']), 4) for m in mem}})
         pid = b.get('id')
         if pid:
             p = self.find_preset(pid)
@@ -846,8 +851,13 @@ class Engine:
             self.detach(m)
         fid = self.fx_next
         self.fx_next += 1
+        bb = b.get('base') if isinstance(b.get('base'), dict) else {}
+        base = {}
+        for m in ms:                         # опорная позиция: из пресета, иначе куда лебёдка едет / где стоит
+            r = self.rt[m]
+            base[m] = clamp(fnum(bb.get(str(m)), r['fade']['to'] if r['fade'] else r['pos']), 0, 100)
         self.fx[fid] = {'id': fid, 'params': p, 'members': ms, 'u': u, 'uc': uc, 'unit': unit, 'rk': rk, 't0': now, 'ph': 0.0,
-                        'start': {m: self.rt[m]['pos'] for m in ms}, 'rnd': {}}
+                        'start': {m: self.rt[m]['pos'] for m in ms}, 'base': base, 'rnd': {}}
         for m in ms:
             self.rt[m]['fx'], self.rt[m]['fade'] = fid, None
             if p['mspeed'] > 0:
@@ -1106,7 +1116,12 @@ class Engine:
                 s = {'a': a, 'b': random.random(), 't0': now, 'dur': p['period'] * 100.0 / p['rate'] * (0.6 + 0.8 * random.random())}
                 f['rnd'][key] = s
             v = s['a'] + (s['b'] - s['a']) * ease((now - s['t0']) / s['dur'])
-        pos = p['lo'] + (p['hi'] - p['lo']) * v
+        rel = p.get('rel', 'off')
+        if rel == 'off':
+            pos = p['lo'] + (p['hi'] - p['lo']) * v
+        else:
+            b0 = f.get('base', {}).get(m, f['start'].get(m, 50))
+            pos = b0 + p['amp'] * (2 * v - 1 if rel == 'center' else (v if rel == 'down' else -v))
         if p['fadein'] > 0:
             k = (now - f['t0']) / p['fadein']
             if k < 1:
@@ -1708,7 +1723,7 @@ requestAnimationFrame(fxAnim);
 const FXN=Object.fromEntries(FX.map(f=>[f.t,f.n]));
 const SH=[['flat','Ровно'],['line','Наклон'],['v','V'],['a','Λ'],['sine','Синус'],['arc','Дуга'],['checker','Шахматы'],['random','Случайно']];
 const ORD=[['index','По порядку'],['x','Слева направо (X)'],['y','Спереди назад (глубина)'],['radial','От центра']];
-const O={fxp:{type:'wave',lo:0,hi:100,period:8,spread:1,width:.15,order:'index',reverse:false,fadein:3,linked:true,rate:100,mspeed:0},shp:{lo:0,hi:100,order:'index',reverse:false,fade:4,linked:true},chp:{spd:60}};
+const O={fxp:{type:'wave',lo:0,hi:100,period:8,spread:1,width:.15,order:'index',reverse:false,fadein:3,linked:true,rate:100,mspeed:0,rel:'off',amp:15},shp:{lo:0,hi:100,order:'index',reverse:false,fade:4,linked:true},chp:{spd:60}};
 
 function dlg(msg,def){return new Promise(res=>{const d=$('#dlg'),inp=$('#dlgin'),txt=def!==undefined;$('#dlgmsg').textContent=msg;inp.hidden=!txt;inp.value=txt?def:'';d.hidden=false;
   setTimeout(()=>{if(txt){inp.focus();inp.select()}else $('#dlgok').focus()},0);
@@ -2070,7 +2085,9 @@ function tabFx(){
   el.innerHTML=`<h4>Групповое движение<span class="sp"></span><span class="hint" style="text-transform:none;letter-spacing:0">${FX.length} эффектов</span></h4><div class="fxgrid">${FX.map(f=>`<button class="fxcard${p.type===f.t?' on':''}" data-t="${f.t}" title="${esc(f.d)}"><b>${f.n}</b><canvas class="fxprev" data-t="${f.t}" width="216" height="64"></canvas></button>`).join('')}</div>
   <p class="hint" style="margin:8px 0 0">${esc(FX.find(f=>f.t===p.type)?.d||'')}</p>
   <h4>Параметры</h4>
-  ${rng('fxp','lo','Верхняя точка',0,100,1,'%')}${rng('fxp','hi','Нижняя точка',0,100,1,'%')}${rng('fxp','period','Период цикла',0.5,60,0.5,' с')}${rng('fxp','rate','Скорость эффекта',10,400,5,'%')}<div class="hint" id="fcyc" style="margin:-2px 0 6px 126px"></div>
+  <div class="row"><span class="t" style="width:110px">Движение</span><select id="frel" style="flex:1">${[['off','Между верхней и нижней точкой'],['center','От опорных позиций ± (вверх и вниз)'],['down','От опорных позиций — вниз'],['up','От опорных позиций — вверх']].map(([k,n])=>`<option value="${k}"${(p.rel||'off')===k?' selected':''}>${n}</option>`).join('')}</select></div>
+  ${(p.rel||'off')==='off'?rng('fxp','lo','Верхняя точка',0,100,1,'%')+rng('fxp','hi','Нижняя точка',0,100,1,'%')
+    :rng('fxp','amp','Амплитуда',1,60,0.5,'%')+'<div class="hint" style="margin:-2px 0 6px">Опорные позиции — где лебёдки стоят (выставлены программатором или пресетом) в момент запуска. Эффект качает каждую вокруг своей точки.</div>'}${rng('fxp','period','Период цикла',0.5,60,0.5,' с')}${rng('fxp','rate','Скорость эффекта',10,400,5,'%')}<div class="hint" id="fcyc" style="margin:-2px 0 6px 126px"></div>
   ${NOSPREAD.includes(p.type)?'':rng('fxp','spread',['mirror','ripple'].includes(p.type)?'Волн до края':'Сдвиг фазы',0,4,0.05,'×')}
   ${p.type==='chase'?rng('fxp','width','Ширина капли',0.03,0.5,0.01,''):''}
   ${rng('fxp','mspeed','Скорость моторов',0,100,1,'%')}
@@ -2087,6 +2104,7 @@ function tabFx(){
   $$('.fxcard',el).forEach(b=>b.onclick=()=>{p.type=b.dataset.t;renderTab();pushFx()});
   $('#ford').onchange=e=>{p.order=e.target.value;pushFx()};
   $('#frev').onchange=e=>{p.reverse=e.target.checked;pushFx()};
+  $('#frel').onchange=e=>{p.rel=e.target.value;renderTab();pushFx()};
   if($('#flink'))$('#flink').onchange=e=>{p.linked=e.target.checked;pushFx()};
   $('#fgo').onclick=async()=>{if(!sel.size)return toast('Выделите лебёдки',true);const r=await api('/api/fx/start',{ids:ids(),params:p});if(r.ok){editFx=r.id;fxSig=''}};
   $('#fnew').onclick=()=>{editFx=null;fxSig=''};
@@ -2094,10 +2112,10 @@ function tabFx(){
 }
 function liveFx(){
   if(editFx&&!st.fx.some(f=>f.id===editFx))editFx=null;
-  const sig=JSON.stringify([editFx,st.fx.map(f=>[f.id,f.members.length,f.params.type])]);
+  const sig=JSON.stringify([editFx,st.fx.map(f=>[f.id,f.members.length,f.params.type,f.params.rel])]);
   $('#fedit').textContent=editFx?`✎ Правка эффекта #${editFx} — ползунки меняют его вживую`:'Настройте и запустите на выделенных лебёдках';
   if(sig===fxSig)return;fxSig=sig;
-  $('#flist').innerHTML=st.fx.map(f=>`<div class="it${f.id===editFx?' on':''}" data-id="${f.id}"><b>#${f.id} ${FXN[f.params.type]}</b><span class="hint">${f.members.length} лб</span><button data-a="sel" title="Выделить его лебёдки">◎</button><button data-a="ed" title="Править">✎</button><button data-a="st" title="Остановить">■</button></div>`).join('')||'<p class="hint">Нет активных эффектов.</p>';
+  $('#flist').innerHTML=st.fx.map(f=>`<div class="it${f.id===editFx?' on':''}" data-id="${f.id}"><b>#${f.id} ${FXN[f.params.type]}${f.params.rel&&f.params.rel!=='off'?' <span class="hint">· от опорных</span>':''}</b><span class="hint">${f.members.length} лб</span><button data-a="sel" title="Выделить его лебёдки">◎</button><button data-a="ed" title="Править">✎</button><button data-a="st" title="Остановить">■</button></div>`).join('')||'<p class="hint">Нет активных эффектов.</p>';
   $$('#flist .it').forEach(it=>{const f=st.fx.find(x=>x.id===+it.dataset.id);it.querySelectorAll('button').forEach(b=>b.onclick=()=>{
     if(b.dataset.a==='sel')setSel(f.members);else if(b.dataset.a==='st')api('/api/fx/stop',{id:f.id});else{editFx=f.id;Object.assign(O.fxp,f.params);renderTab()}})});
 }
