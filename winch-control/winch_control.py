@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Winch Control 1.10 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
+Winch Control 1.11 — пульт для DMX-лебёдок (EastSun ES-L32 и другие) по Art-Net.
 
 Запуск:
     python winch_control.py            — откроется пульт в браузере
@@ -15,7 +15,7 @@ import argparse, base64, json, math, os, random, socket, struct, subprocess, sys
 import urllib.request
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
-VERSION = '1.10'
+VERSION = '1.11'
 BASE_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 SHOW_FILE = os.path.join(BASE_DIR, 'winch_show.json')      # старый формат (до 1.05) — переносится в Shows
 SHOWS_DIR = os.path.join(BASE_DIR, 'Shows')
@@ -809,8 +809,8 @@ class Engine:
 
     def api_preset_store(self, b, now):
         ms = self.ids(b.get('ids')) or [w['id'] for w in self.show['winches']]
-        pos = {str(m): round(self.rt[m]['pos'], 3) for m in ms}
-        spd = {str(m): round(self.rt[m]['speed'], 1) for m in ms}
+        pos = {str(m): round(self.rt[m]['pos'], 4) for m in ms}
+        spd = {str(m): round(self.rt[m]['speed'], 3) for m in ms}
         fxl = []
         if b.get('fx', True) is not False:
             inset = set(ms)
@@ -1273,8 +1273,8 @@ class Engine:
                    'err': T['err'] if c['source'] == 'artnet' else '', 'last': T['last'], 'run': T['run']}
             return {
                 'version': VERSION, 'show': show_name(self.show_path), 'rev': self.rev, 'armed': self.armed, 'master': self.master,
-                'pos': {w: round(r['pos'], 2) for w, r in self.rt.items()},
-                'spd': {w: round(r['speed']) for w, r in self.rt.items()},
+                'pos': {w: round(r['pos'], 4) for w, r in self.rt.items()},
+                'spd': {w: round(r['speed'], 3) for w, r in self.rt.items()},
                 'out': {w: r['out'] for w, r in self.rt.items()},
                 'fx': [{'id': f['id'], 'members': f['members'], 'params': f['params']} for f in self.fx.values()],
                 'fxOf': {w: r['fx'] for w, r in self.rt.items() if r['fx']},
@@ -1628,6 +1628,12 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
 .sh-it{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--ln);border-radius:8px;margin-bottom:5px;background:var(--p2);cursor:pointer}
 .sh-it:hover{border-color:#4a5462}.sh-it.cur{border-color:var(--ac);cursor:default}.sh-it b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .sh-it .hint{white-space:nowrap}.sh-it button{padding:3px 8px}
+.cell.pg .lbl{color:var(--ac2)}.cell.pg .lbl::after{content:'';display:block;height:2px;margin:1px 2px 0;background:var(--ac2);border-radius:1px}
+.pgbig{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.pgbig button{padding:12px 0;font-size:14px;font-weight:600}
+.pgrow{display:grid;grid-template-columns:78px 1fr 84px;gap:8px;align-items:center;margin:8px 0}.pgrow span{color:var(--mu)}.pgrow input.num{width:84px}
+.pgsub{font-size:11px;color:var(--mu);margin:-4px 0 6px 86px}
+#pgtab{font-size:12px}#pgtab td input.num{width:76px;padding:3px 4px}#pgtab td{white-space:nowrap;padding:3px 2px}
+.pgedit{background:#0e2422;border:1px solid var(--ac2);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--p3);border:1px solid var(--ln);padding:8px 14px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:10}
 #toast.show{opacity:1}#toast.err{border-color:var(--bad)}
 #off{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;font-size:16px;z-index:9;text-align:center;padding:20px}
@@ -1677,8 +1683,8 @@ tr.next td:first-child{box-shadow:inset 3px 0 0 var(--ac)}
 const $=s=>document.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-let show=null,st=null,rev=-1,sel=new Set(),tab='presets',editFx=null,curSeq=null,fxSig='',cells={},mposDrag=false;
-const TABS=[['presets','Пресеты'],['fx','Эффекты'],['shapes','Формы'],['seq','Шоу'],['tc','Таймкод'],['lim','Пределы'],['ch','Каналы'],['set','Настройки']];
+let show=null,st=null,rev=-1,sel=new Set(),tab='prog',editFx=null,curSeq=null,fxSig='',cells={},mposDrag=false;
+const TABS=[['prog','Программатор'],['presets','Пресеты'],['fx','Эффекты'],['shapes','Формы'],['seq','Шоу'],['tc','Таймкод'],['lim','Пределы'],['ch','Каналы'],['set','Настройки']];
 const FX=[{t:'wave',n:'Волна',d:'Синус бежит по ряду'},{t:'breathe',n:'Дыхание',d:'Все вместе вверх-вниз'},{t:'chase',n:'Бегущая капля',d:'Одна опускается и бежит по ряду'},
  {t:'pingpong',n:'Маятник',d:'Равномерно туда-обратно со сдвигом'},{t:'standing',n:'Стоячая волна',d:'Узлы стоят, пучности качаются'},{t:'random',n:'Хаос',d:'Случайные плавные движения'},
  {t:'cascade',n:'Домино',d:'По очереди вниз, затем по очереди вверх'},{t:'fill',n:'Наполнение',d:'По очереди вниз, все вместе вверх'},{t:'bounce',n:'Мячики',d:'Отскок от верхней точки со сдвигом'},
@@ -1882,7 +1888,7 @@ function liveArr(force){const U=arrUnits(true);if(U.length!==1||!V3)return;const
 
 /* ---------- выбор ---------- */
 function setSel(arr,add){if(!add)sel.clear();arr.forEach(i=>sel.add(i));markSel()}
-function markSel(){if(view3d&&v3arr)setTimeout(renderArr,0);if(tab==='lim'&&st&&st.teach.length)api('/api/teach',{on:true,ids:ids()});Object.entries(cells).forEach(([id,c])=>c.el.classList.toggle('sel',sel.has(+id)));$('#selc').textContent=sel.size;$$('.nsel').forEach(e=>e.textContent=sel.size);syncMpos(true);if(tab==='ch')renderTab()}
+function markSel(){if(view3d&&v3arr)setTimeout(renderArr,0);if(tab==='prog')setTimeout(()=>{if(tab==='prog'&&!$('#tab').contains(document.activeElement))renderTab()},0);if(tab==='lim'&&st&&st.teach.length)api('/api/teach',{on:true,ids:ids()});Object.entries(cells).forEach(([id,c])=>c.el.classList.toggle('sel',sel.has(+id)));$('#selc').textContent=sel.size;$$('.nsel').forEach(e=>e.textContent=sel.size);syncMpos(true);if(tab==='ch')renderTab()}
 function renderSelBar(){
   $('#selbar').innerHTML=`<span class="t">Выбор:</span><button data-s="all">Все <kbd>Ctrl+A</kbd></button><button data-s="none">Нет</button><button data-s="inv">Инверт</button><button data-s="odd">Нечёт</button><button data-s="even">Чёт</button>
   <span class="t" style="margin-left:10px">Группы:</span>${show.groups.map(g=>`<button class="chip" data-g="${g.id}" title="Shift — добавить к выделению">${esc(g.name)}<span class="x" data-del="${g.id}">✕</span></button>`).join('')}<button class="ghost" id="gadd">+ группа из выделенных</button>
@@ -1912,7 +1918,7 @@ function renderStage(){
   cells={};$$('#stage .cell').forEach(el=>{const id=+el.dataset.id;cells[id]={el,ball:el.querySelector('.ball'),cable:el.querySelector('.cable'),val:el.querySelector('.val')};
     el.querySelector('.lbl').onclick=()=>{const on=!sel.has(id);expand([id]).forEach(i=>on?sel.add(i):sel.delete(i));markSel()};
     const tr=el.querySelector('.track');tr.onpointerdown=e=>startDrag(e,id,tr);
-    tr.ondblclick=e=>{const r=tr.getBoundingClientRect(),p=clamp((e.clientY-r.top)/r.height*100,0,100);if(!sel.has(id))setSel(expand([id]));api('/api/move',{ids:ids(),pos:p,fade:fadeVal()})}});
+    tr.ondblclick=e=>{const r=tr.getBoundingClientRect(),p=clamp((e.clientY-r.top)/r.height*100,0,100);if(!sel.has(id))setSel(expand([id]));apiMove({ids:ids(),pos:p,fade:fadeVal()})}});
   s.onpointerdown=e=>{if(e.target===s)setSel([])};
   fitStage();markSel();
 }
@@ -1922,7 +1928,7 @@ function fitStage(){if(!show)return;const s=$('#stage'),n=show.winches.length||1
   s.style.setProperty('--cw',cw+'px');s.classList.toggle('narrow',cw<36);s.style.setProperty('--th',clamp((s.clientHeight-28)/rows-70,70,380)+'px');
   const z=$('#cwz');if(z&&document.activeElement!==z)z.value=cw;const za=$('#cwauto');if(za)za.classList.toggle('tglon',cwPref==='auto')}
 new ResizeObserver(()=>fitStage()).observe($('#stage'));
-const sendMove=throttle(t=>api('/api/move',{abs:t,fade:0}),45);
+const sendMove=throttle(t=>apiMove({abs:t,fade:0}),45);
 function startDrag(e,id,tr){
   e.preventDefault();
   if(!sel.has(id))setSel(expand([id]),e.shiftKey||e.ctrlKey||e.metaKey);
@@ -1932,10 +1938,10 @@ function startDrag(e,id,tr){
   tr.onpointerup=tr.onpointercancel=()=>{tr.onpointermove=null};
 }
 function syncMpos(force){if(mposDrag||!st||!sel.size)return;const a=ids().map(i=>st.pos[i]??0),v=a.reduce((x,y)=>x+y,0)/a.length;$('#mpos').value=v;$('#mposv').textContent=Math.round(v)+'%'}
-const sendMpos=throttle(v=>api('/api/move',{ids:ids(),pos:v,fade:0}),45);
+const sendMpos=throttle(v=>apiMove({ids:ids(),pos:v,fade:0}),45);
 $('#mpos').oninput=e=>{mposDrag=true;$('#mposv').textContent=Math.round(e.target.value)+'%';if(sel.size)sendMpos(+e.target.value)};
 $('#mpos').onchange=()=>{mposDrag=false};
-$$('.move [data-p]').forEach(b=>b.onclick=()=>{if(!sel.size)return toast('Выделите лебёдки',true);api('/api/move',{ids:ids(),pos:+b.dataset.p,fade:fadeVal()})});
+$$('.move [data-p]').forEach(b=>b.onclick=()=>{if(!sel.size)return toast('Выделите лебёдки',true);apiMove({ids:ids(),pos:+b.dataset.p,fade:fadeVal()})});
 
 /* ---------- верхняя панель ---------- */
 $('#arm').onclick=async()=>{if(!st)return;if(!st.armed&&!await ask('Включить моторы (Safety)?\nЛебёдки поедут к текущим позициям на пульте.'))return;api('/api/arm',{on:!st.armed})};
@@ -1954,21 +1960,81 @@ function live(){
   else{net.className='pill ok';net.textContent=`Art-Net → ${show.artnet.ip} · ${a.fps} fps · U ${a.universes.join(', ')||'–'}`}
   const arm=$('#arm');arm.className=st.armed?'on':'';arm.textContent=st.armed?'● МОТОРЫ ВКЛ':'МОТОРЫ ВЫКЛ';
   if(document.activeElement!==$('#master')){$('#master').value=Math.round(st.master*100);$('#masterv').textContent=Math.round(st.master*100)+'%'}
-  for(const id in cells){const c=cells[id],p=st.pos[id]??0;c.ball.style.top=p+'%';c.cable.style.height=p+'%';c.val.textContent=Math.round(p)+'%';c.el.classList.toggle('fx',!!st.fxOf[id])}
+  for(const id in cells){const c=cells[id],p=st.pos[id]??0;c.ball.style.top=p+'%';c.cable.style.height=p+'%';c.val.textContent=Math.round(p)+'%';c.el.classList.toggle('fx',!!st.fxOf[id]);c.el.classList.toggle('pg',PG.ids.has(+id))}
   syncMpos();
   const tp=$('#tcpill');if(st.tc&&st.tc.en){tp.hidden=false;tp.textContent='TC '+fmtTC(st.tc.t,show.timecode.fps)}else tp.hidden=true;
-  if(tab==='fx')liveFx();else if(tab==='seq')liveSeq();else if(tab==='tc')liveTc();else if(tab==='lim')liveLim();else if(tab==='ch')liveCh();else if(tab==='presets')$$('.ptile').forEach(t=>t.classList.toggle('last',t.dataset.id===st.lastPreset));
+  if(tab==='prog')liveProg();else if(tab==='fx')liveFx();else if(tab==='seq')liveSeq();else if(tab==='tc')liveTc();else if(tab==='lim')liveLim();else if(tab==='ch')liveCh();else if(tab==='presets')$$('.ptile').forEach(t=>t.classList.toggle('last',t.dataset.id===st.lastPreset));
 }
 
 /* ---------- вкладки ---------- */
 (()=>{let r=false;try{r=localStorage.getItem('panelSide')==='right'}catch(e){}document.querySelector('main').classList.toggle('pright',r);
   $('#pside').onclick=()=>{const m=document.querySelector('main');m.classList.toggle('pright');try{localStorage.setItem('panelSide',m.classList.contains('pright')?'right':'left')}catch(e){}setTimeout(fitStage,50)}})();
 function renderTabs(){$('#tabs').innerHTML=TABS.map(([k,n])=>`<button data-t="${k}" class="${tab===k?'on':''}">${n}</button>`).join('');$$('#tabs button').forEach(b=>b.onclick=()=>{if(tab==='lim'&&b.dataset.t!=='lim'){single=false;if(st&&st.teach.length)api('/api/teach',{on:false})}tab=b.dataset.t;renderTabs();renderTab()})}
-function renderTab(){({presets:tabPresets,fx:tabFx,shapes:tabShapes,seq:tabSeq,tc:tabTc,lim:tabLim,ch:tabCh,set:tabSet})[tab]();live()}
+function renderTab(){({prog:tabProg,presets:tabPresets,fx:tabFx,shapes:tabShapes,seq:tabSeq,tc:tabTc,lim:tabLim,ch:tabCh,set:tabSet})[tab]();live()}
 function rng(o,k,label,min,max,step,unit){const v=O[o][k];return`<div class="rng"><span>${label}</span><input type="range" data-o="${o}" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}"><output>${fmtv(v,unit)}</output></div>`}
 function fmtv(v,u){v=+v;return(Number.isInteger(v)?v:v.toFixed(2).replace(/0$/,''))+(u||'')}
 function bindRng(root,cb){$$('input[type=range][data-o]',root).forEach(r=>r.oninput=()=>{O[r.dataset.o][r.dataset.k]=+r.value;const u=r.closest('.rng').querySelector('output');u.textContent=fmtv(r.value,u.textContent.replace(/[\d.\-]/g,''));cb&&cb(r.dataset.k)})}
 const ordSel=(id,v)=>`<select id="${id}">${ORD.map(([k,n])=>`<option value="${k}"${k===v?' selected':''}>${n}</option>`).join('')}</select>`;
+
+/* Программатор: выбрал лебёдки → задал DMX-положение и скорость → записал в пресет */
+const PG={ids:new Set(),edit:null};let pgSig='';
+function apiMove(b){pgAdd(b.abs?Object.keys(b.abs):(b.ids||[]));return api('/api/move',b)}
+function pgAdd(arr){let ch=false;(arr||[]).forEach(i=>{i=+i;if(!PG.ids.has(i)){PG.ids.add(i);ch=true}});if(ch&&tab==='prog')renderTab()}
+const posBits=w=>fixOf(w).ch.some(c=>c.role==='pos_hi')?16:8,posMax=w=>posBits(w)===16?65535:255;
+const pos2dmx=(w,p)=>Math.round((w.invert?1-p/100:p/100)*posMax(w));
+const dmx2pos=(w,d)=>{let r=clamp(d/posMax(w),0,1);if(w.invert)r=1-r;return r*100};
+const spdCh=w=>fixOf(w).ch.find(c=>c.role==='speed');
+const spd2dmx=(w,sp)=>{const c=spdCh(w);return c?Math.round(c.slow+(c.fast-c.slow)*sp/100):null};
+const dmx2spd=(w,d)=>{const c=spdCh(w);if(!c||c.fast===c.slow)return 100;return clamp((d-c.slow)/(c.fast-c.slow)*100,1,100)};
+const wById=i=>show.winches.find(w=>w.id===+i);
+function tabProg(){
+  const el=$('#tab'),I=ids(),w0=wById(I[0]),pl=[...PG.ids].map(wById).filter(Boolean),ed=PG.edit&&show.presets.find(p=>p.id===PG.edit);
+  const pmx=w0?posMax(w0):255,sc=w0&&spdCh(w0);
+  el.innerHTML=`<h4>Выделено: <span class="nsel">${sel.size}</span><span class="sp"></span><span class="hint" style="text-transform:none;letter-spacing:0">выберите лебёдки или экраны на сцене</span></h4>
+  <div class="pgbig"><button id="pgtop" title="В верхнее положение (с учётом предела ⤒)">⤒ Верх</button><button id="pgmid">Середина</button><button id="pgbot" title="В нижнее положение (с учётом предела ⤓)">⤓ Низ</button></div>
+  <div class="pgrow"><span>Положение</span><input type="range" id="pgpos" min="0" max="100" step="0.1"><input type="number" class="num" id="pgposd" min="0" max="${pmx}" step="1" title="DMX-значение позиции"></div>
+  <div class="pgsub">DMX 0–${pmx}${w0&&posBits(w0)===16?' (16 бит: грубо + fine)':''} · 0 = верх${w0&&w0.invert?' (инверсия)':''}</div>
+  <div class="pgrow"><span>Скорость</span><input type="range" id="pgspd" min="1" max="100" step="1"><input type="number" class="num" id="pgspdd" min="0" max="255" step="1" title="DMX-значение скорости"></div>
+  <div class="pgsub">${sc?`DMX ${sc.fast} = быстро · ${sc.slow} = медленно`:'у прибора нет канала скорости'}</div>
+  <div class="pgrow"><span>Переход</span><span class="hint">для кнопок Верх/Середина/Низ</span><input type="number" class="num" id="pgfade" min="0" step="0.5" value="${$('#fade')?.value||3}"></div>
+  <h4>В программаторе (${pl.length})<span class="sp"></span><button class="ghost" id="pgclr" style="padding:2px 8px">Очистить</button></h4>
+  ${pl.length?`<div style="overflow-x:auto"><table id="pgtab"><thead><tr><th>Лб</th><th>Экран</th><th class="n">%</th><th>DMX поз.</th><th>DMX скор.</th><th></th></tr></thead><tbody>
+  ${pl.map(w=>{const o=objOf(w.id);return`<tr data-id="${w.id}"${sel.has(w.id)?' class="cur"':''}><td>${esc(w.name)}</td><td>${o?esc(o.name):'–'}</td><td class="n" data-c="p">–</td><td><input class="num" data-c="pd" type="number" min="0" max="${posMax(w)}"></td><td><input class="num" data-c="sd" type="number" min="0" max="255"${spdCh(w)?'':' disabled'}></td><td><button class="ghost" data-a="rm" title="Убрать из программатора" style="padding:2px 6px">✕</button></td></tr>`}).join('')}</tbody></table></div>`
+   :'<p class="hint">Пусто. Выделите лебёдки и задайте положение/скорость — они попадут сюда. Перетаскивание на сцене, «Глубина» и «Формы» тоже добавляют в программатор.</p>'}
+  <h4>Запись в пресет</h4>
+  ${ed?`<div class="pgedit">Редактируется пресет <b>«${esc(ed.name)}»</b><div class="row" style="margin:8px 0 0"><button class="pri" id="pgupd">↻ Обновить пресет</button><button id="pgcancel">Закончить</button></div></div>`:''}
+  <div class="row"><input id="pgname" placeholder="Название нового пресета"><input id="pgpfade" type="number" class="num" value="3" min="0" step="0.5" title="Время перехода пресета, с"><button class="${ed?'':'pri'}" id="pgstore">● Записать новый</button></div>
+  <label class="chk" title="Работающие эффекты на этих лебёдках тоже запишутся в пресет"><input type="checkbox" id="pgfx"> с эффектами</label>
+  <p class="hint">В пресет записываются только лебёдки из программатора: их DMX-положение и скорость. Пустой программатор — запишутся все. Открыть пресет для правки: ⇥ на плитке во вкладке «Пресеты».</p>`;
+  pgSig='';
+  const F=()=>Math.max(0,+$('#pgfade').value||0),need=()=>{if(!sel.size){toast('Выделите лебёдки на сцене',true);return false}return true};
+  $('#pgtop').onclick=()=>need()&&apiMove({ids:ids(),pos:0,fade:F()});
+  $('#pgmid').onclick=()=>need()&&apiMove({ids:ids(),pos:50,fade:F()});
+  $('#pgbot').onclick=()=>need()&&apiMove({ids:ids(),pos:100,fade:F()});
+  const sp=throttle(v=>apiMove({ids:ids(),pos:v,fade:0}),45);
+  $('#pgpos').oninput=e=>{if(need())sp(+e.target.value)};
+  $('#pgposd').onchange=e=>{if(!need())return;const d=+e.target.value,t={};ids().forEach(i=>{const w=wById(i);t[i]=dmx2pos(w,d*posMax(w)/pmx)});apiMove({abs:t,fade:F()})};
+  const ss=throttle(v=>{pgAdd(ids());api('/api/speed',{ids:ids(),value:v})},60);
+  $('#pgspd').oninput=e=>{if(need())ss(+e.target.value)};
+  $('#pgspdd').onchange=e=>{if(!need())return;const d=+e.target.value,by={};ids().forEach(i=>{const v=+dmx2spd(wById(i),d).toFixed(3);(by[v]=by[v]||[]).push(i)});pgAdd(ids());for(const v in by)api('/api/speed',{ids:by[v],value:+v})};
+  $('#pgclr').onclick=()=>{PG.ids.clear();PG.edit=null;renderTab()};
+  $$('#pgtab tr[data-id]').forEach(tr=>{const id=+tr.dataset.id,w=wById(id);
+    tr.querySelector('[data-c=pd]').onchange=e=>apiMove({abs:{[id]:dmx2pos(w,+e.target.value)},fade:F()});
+    tr.querySelector('[data-c=sd]').onchange=e=>api('/api/speed',{ids:[id],value:+dmx2spd(w,+e.target.value).toFixed(3)});
+    tr.querySelector('[data-a=rm]').onclick=()=>{PG.ids.delete(id);renderTab()};
+    tr.children[0].onclick=()=>setSel([id])});
+  const store=async(id)=>{const r=await api('/api/preset/store',{id,name:$('#pgname').value,fade:+$('#pgpfade').value,ids:PG.ids.size?[...PG.ids]:null,fx:$('#pgfx').checked});
+    if(r.ok){toast(id?'Пресет обновлён':'Пресет записан'+(PG.ids.size?' ('+PG.ids.size+' лб)':' (все лебёдки)'));if(!id)$('#pgname').value=''}};
+  $('#pgstore').onclick=()=>store(null);
+  if(ed){$('#pgupd').onclick=()=>store(ed.id);$('#pgcancel').onclick=()=>{PG.edit=null;PG.ids.clear();renderTab()}}
+}
+function liveProg(){const I=ids(),f=document.activeElement;
+  if(I.length){const w0=wById(I[0]),ps=I.map(i=>st.pos[i]??0),av=ps.reduce((a,b)=>a+b,0)/ps.length,sp=st.spd[I[0]]??60;
+    if(f!==$('#pgpos'))$('#pgpos').value=av;if(f!==$('#pgposd'))$('#pgposd').value=pos2dmx(w0,st.pos[I[0]]??0);
+    if(f!==$('#pgspd'))$('#pgspd').value=sp;const sd=spd2dmx(w0,sp);if(f!==$('#pgspdd'))$('#pgspdd').value=sd??''}
+  $$('#pgtab tr[data-id]').forEach(tr=>{const id=tr.dataset.id,w=wById(id);if(!w)return;const p=st.pos[id]??0,sp=st.spd[id]??60;
+    tr.querySelector('[data-c=p]').textContent=p.toFixed(1);const pd=tr.querySelector('[data-c=pd]'),sd=tr.querySelector('[data-c=sd]');
+    if(f!==pd)pd.value=pos2dmx(w,p);if(f!==sd)sd.value=spd2dmx(w,sp)??'';tr.classList.toggle('cur',sel.has(+id))})}
 
 /* Пресеты */
 function tabPresets(){
@@ -1977,7 +2043,7 @@ function tabPresets(){
   <div class="row"><input id="pname" placeholder="Название (необязательно)"><input id="pfade" type="number" class="num" value="3" min="0" step="0.5" title="Время перехода, с"><button class="pri" id="pstore">● Записать</button></div>
   <div class="row" style="gap:14px"><label class="chk"><input type="checkbox" id="ponly"> только выделенные (<span class="nsel">${sel.size}</span>)</label><label class="chk" title="Работающие эффекты запишутся в пресет и запустятся при его вызове"><input type="checkbox" id="pfx" checked> с эффектами</label></div>
   <h4>Пресеты <span class="sp"></span><span class="hint" style="text-transform:none;letter-spacing:0">клавиши 1–9</span></h4>
-  <div class="ptiles">${show.presets.map((p,i)=>`<div class="ptile" data-id="${p.id}"><span class="pk">${i<9?i+1:''}</span><button class="pgo"><b>${esc(p.name)}</b><small>${Object.keys(p.pos).length} лб · ${p.fade} с${p.fx&&p.fx.length?` · <span class="fxb">${p.fx.map(e=>FXN[e.params.type]||'эффект').join(', ')}</span>`:''}</small>${presetTCs(p.id).length?`<small class="tcb">TC ${presetTCs(p.id).map(t=>fmtTC(t,show.timecode.fps)).join(', ')}</small>`:''}</button><div class="pact"><button data-a="upd" title="Перезаписать текущими позициями">↻</button><button data-a="ren" title="Переименовать">✎</button><button data-a="fade" title="Время перехода">⏱</button><button data-a="tc" title="Запуск по таймкоду">TC</button><button data-a="del" title="Удалить">✕</button></div></div>`).join('')}</div>
+  <div class="ptiles">${show.presets.map((p,i)=>`<div class="ptile" data-id="${p.id}"><span class="pk">${i<9?i+1:''}</span><button class="pgo"><b>${esc(p.name)}</b><small>${Object.keys(p.pos).length} лб · ${p.fade} с${p.fx&&p.fx.length?` · <span class="fxb">${p.fx.map(e=>FXN[e.params.type]||'эффект').join(', ')}</span>`:''}</small>${presetTCs(p.id).length?`<small class="tcb">TC ${presetTCs(p.id).map(t=>fmtTC(t,show.timecode.fps)).join(', ')}</small>`:''}</button><div class="pact"><button data-a="edit" title="Открыть в программаторе для правки">⇥</button><button data-a="upd" title="Перезаписать текущими позициями">↻</button><button data-a="ren" title="Переименовать">✎</button><button data-a="fade" title="Время перехода">⏱</button><button data-a="tc" title="Запуск по таймкоду">TC</button><button data-a="del" title="Удалить">✕</button></div></div>`).join('')}</div>
   ${show.presets.length?'':'<p class="hint">Расставьте лебёдки (перетаскивайте шарики, двойной клик — сразу в точку) и нажмите «Записать».</p>'}`;
   $('#pstore').onclick=async()=>{const only=$('#ponly').checked;if(only&&!sel.size)return toast('Нет выделенных',true);const r=await api('/api/preset/store',{name:$('#pname').value,fade:+$('#pfade').value,ids:only?ids():null,fx:$('#pfx').checked});if(r.ok)toast('Пресет записан'+(st&&st.fx.length&&$('#pfx').checked?' вместе с эффектами':''))};
   $$('.ptile').forEach(t=>{const p=show.presets.find(x=>x.id===t.dataset.id);
@@ -1989,6 +2055,7 @@ function tabPresets(){
         const ev=show.timecode.events.filter(e=>!(e.action==='preset'&&e.ref===p.id)).concat(ts.map((t,i)=>({id:'e'+Date.now().toString(36)+i,t,action:'preset',ref:p.id,fade:null})));
         const r=await saveCfg({timecode:{...show.timecode,events:ev}});if(!r.ok)return;
         if(ts.length&&!show.timecode.enabled){if(await ask('Таймкод назначен. Включить «Запуск по таймкоду» сейчас?'))api('/api/tc_enable',{on:true})}else toast(ts.length?'Пресет запустится по TC':'TC у пресета убран');return}
+      if(a==='edit'){await api('/api/preset/recall',{id:p.id});PG.ids=new Set(Object.keys(p.pos).map(Number));PG.edit=p.id;setSel([...PG.ids]);tab='prog';renderTabs();renderTab();toast('Пресет «'+p.name+'» в программаторе');return}
       if(a==='upd'){if(await ask('Перезаписать «'+p.name+'» текущими позициями?'))api('/api/preset/store',{id:p.id,ids:Object.keys(p.pos).map(Number),fx:true});return}
       if(a==='ren'){const n=await askText('Название',p.name);if(!n)return;q.name=n}
       if(a==='fade'){const f=await askText('Время перехода, секунд',p.fade);if(f===null)return;q.fade=+f||0}
@@ -2047,7 +2114,7 @@ function tabShapes(){
   <p class="hint">«Ровно» ставит все в верхнюю точку. Порядок «По столбцам / рядам / от центра» учитывает сетку сцены (Настройки → Колонок).</p>`;
   bindRng(el);
   $('#sord').onchange=e=>p.order=e.target.value;$('#srev').onchange=e=>p.reverse=e.target.checked;if($('#slink'))$('#slink').onchange=e=>p.linked=e.target.checked;
-  $$('.shape',el).forEach(b=>b.onclick=()=>{if(!sel.size)return toast('Выделите лебёдки',true);api('/api/shape',{ids:ids(),shape:b.dataset.t,...p})});
+  $$('.shape',el).forEach(b=>b.onclick=()=>{if(!sel.size)return toast('Выделите лебёдки',true);pgAdd(ids());api('/api/shape',{ids:ids(),shape:b.dataset.t,...p})});
 }
 
 /* Шоу */
@@ -2207,8 +2274,8 @@ document.addEventListener('pointerdown',()=>{let auto=false;try{auto=localStorag
 let jog=null;
 function jogStart(dir,fast){jogStop();if(!sel.size)return toast('Выделите лебёдку на сцене',true);const base={};ids().forEach(i=>base[i]=st?.pos?.[i]??0);
   jog={dir,rate:fast?15:3,t0:performance.now(),base,moved:false};
-  jog.timer=setInterval(()=>{const dt=(performance.now()-jog.t0)/1000-0.25;if(dt<=0)return;const t={};for(const i in jog.base)t[i]=clamp(jog.base[i]+jog.dir*jog.rate*dt,0,100);jog.moved=true;api('/api/move',{abs:t,fade:0})},40)}
-function jogStop(){if(!jog)return;clearInterval(jog.timer);if(!jog.moved){const t={};for(const i in jog.base)t[i]=clamp(jog.base[i]+jog.dir*0.1,0,100);api('/api/move',{abs:t,fade:0})}jog=null}
+  jog.timer=setInterval(()=>{const dt=(performance.now()-jog.t0)/1000-0.25;if(dt<=0)return;const t={};for(const i in jog.base)t[i]=clamp(jog.base[i]+jog.dir*jog.rate*dt,0,100);jog.moved=true;apiMove({abs:t,fade:0})},40)}
+function jogStop(){if(!jog)return;clearInterval(jog.timer);if(!jog.moved){const t={};for(const i in jog.base)t[i]=clamp(jog.base[i]+jog.dir*0.1,0,100);apiMove({abs:t,fade:0})}jog=null}
 function tabLim(){
   const el=$('#tab'),on=!!(st&&st.teach.length);
   el.innerHTML=`<h4>Пределы по выставленной лебёдке</h4>
