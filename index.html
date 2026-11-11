@@ -1819,6 +1819,21 @@ html[data-mode=vol] .seg.pages [data-page=out],
 html[data-mode=vol] .seg.kind,
 html[data-mode=led] .seg.kind [data-kind=vol] { display: none !important; }
 
+/* 2.0.149: режим «Волюметрик» — синяя цветовая схема интерфейса (в «Масках» — обычная тёмная) */
+html[data-mode=vol] {
+  /* благородная тёмно-синяя премиальная тема (midnight sapphire) */
+  --bg: #060c18;
+  --panel: #0c1630;
+  --raise: #15264a;
+  --field: #0a1428;
+  --line: #243a63;
+  --fg: #eaf1fc;
+  --muted: #8296b8;
+  --accent: #4d8ff2;
+  --accent-ink: #03101f;
+  --stage: #07101f;
+}
+
 /* 2.0.134: адресация волюметрика — недоступна в бесплатной версии */
 #tVolSetRow.locked .chk, #tVolSetRow.locked #tVolSetup { opacity: 0.5; }
 
@@ -2274,6 +2289,26 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
         <button class="b" id="btnContourDel">Убрать границы</button>
         <button class="b" id="btnContourToggle">Показать / скрыть</button>
       </div>
+    </div></details>
+
+    <details class="sec led-only" open><summary>СМЕЩЕНИЕ</summary><div class="sec-body">
+      <p class="hint">Для монтажа кабинетов под конструкцией или каше. Выделите на холсте нужные кабинеты, задайте величину сдвига и нажмите направление — поедут только выделенные кабинеты. Разрешение маски меняется само. Сдвиг применяется одинаково ко всем выделенным и складывается при повторном нажатии.</p>
+      <div class="tgroup">ВЕЛИЧИНА СДВИГА</div>
+      <div class="row"><span class="lbl">Доля кабинета</span><div class="ctl"><div class="seg shiftFrac" role="group" aria-label="Шаблон сдвига по отношению к кабинету">
+        <button data-f="0.5" title="Половина кабинета" aria-pressed="true">1/2</button><button data-f="0.333333" title="Треть кабинета">1/3</button><button data-f="0.25" title="Четверть кабинета">1/4</button><button data-f="0.2" title="1/5 кабинета">1/5</button><button data-f="0.166667" title="1/6 кабинета">1/6</button><button data-f="0.142857" title="1/7 кабинета">1/7</button><button data-f="0.125" title="1/8 кабинета">1/8</button>
+      </div></div></div>
+      <div class="row"><label for="shiftPx">Свой сдвиг</label><div class="ctl"><input type="number" id="shiftPx" min="1" class="w-md" inputmode="numeric"><span class="unit">px</span><input type="number" id="shiftCm" min="0.1" step="0.1" class="w-md" inputmode="decimal"><span class="unit">см</span></div></div>
+      <div class="tgroup">НАПРАВЛЕНИЕ</div>
+      <div class="row"><span class="lbl">По горизонтали</span><div class="ctl"><div class="seg" role="group" aria-label="Сдвиг выделенных кабинетов по горизонтали">
+        <button class="b" id="shiftL" title="Выделенные кабинеты — влево">◀ Влево</button><button class="b" id="shiftR" title="Выделенные кабинеты — вправо">Вправо ▶</button>
+      </div></div></div>
+      <div class="row"><span class="lbl">По вертикали</span><div class="ctl"><div class="seg" role="group" aria-label="Сдвиг выделенных кабинетов по вертикали">
+        <button class="b" id="shiftU" title="Выделенные кабинеты — вверх">▲ Вверх</button><button class="b" id="shiftD" title="Выделенные кабинеты — вниз">Вниз ▼</button>
+      </div></div></div>
+      <div class="btns"><button class="b" id="shiftReset">Сбросить сдвиг</button></div>
+      <div class="tgroup">ПОДЛОЖКА — КАРТИНКА</div>
+      <p class="hint">Загрузите картинку с каше или конструкцией, по которой выставляете смещение — это та же подложка, что в разделе «КАШЕ». Видна только на холсте, в PNG и ТЗ не попадает.</p>
+      <div class="btns"><button class="b" id="shiftRefLoad">Загрузить картинку…</button></div>
     </div></details>
 
     <details class="sec cache-sec" open><summary>КАШЕ — ФИГУРЫ</summary><div class="sec-body">
@@ -3992,8 +4027,8 @@ if (typeof String !== "undefined" && !String.prototype.matchAll) {
 }
 const ICON_B64 = "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAv5UlEQVR42sV9ebhdRZXvb1XV3me4Y3IzkYGQhDBDmNNoS5AYQGV4jUz9IIA4oLQig8PXn9AhIILYDSp2q43yQEMrY2RIFAhTi4rSIIYhTAkJJLkhN7m58xl2Va33x669zz7n7HPuvcHvvZPs755h7xpWrVq11m+tWkUY54uZ6bjjjpPPPPOMAcDJ35RSEFKALYOIwMxgDt+7Z2sKA9gVEd3vvgZV6oMxRiqlDABorVsAsJRyxBgjAeR27NhBkyZNKgEItmN7S8+rPZg8eTIA4LXXXkNPT09c5fbt29HTU/37/vvvn8lPnSreffXVAgBks1lvxowZ3vr160cAiIULF7YXCgWzdu3awTPPPBMHHnjgiJTSWmuTvRGLFi0SaXRp9qJx0J4ACAAGAKSUuOWmmxZs6d5+7OtvvT41CIL9iHkPELVqbSAICLSGMQYgglIKQRDAGAMBACTCEhmwRoMgYGABZoABIQjGDaBSyjPGBMRALpftNNraYqnYL6T0s7lsGzPDBEEhCIJSNpfvtNYwCQFmhrUWRmuA4RiBoY0FKPxsjEEmk/GlEKJcLhcJBCZ4QgiltS4IIUQul2uz1ppyqTTkeR6EEP0ZL7NNefK1to6OP8yZM+e5G759wybL4YCceeaZ8t577zV/ywGQEeF/+MMfTnvqqaf+cbC//1OBNgtLpaLS1sJqDbYW1tqQuGDAhvxtaxiCQpYHEUEQgQGwDe8ScGNAiGdO/DIWxhowEaQQsJZhrIEQAkIISBKwbsCjOimqjx1bukFgN7viOpjD55lhOXxaEgEkYKyJ2xpOz7B+TykIT0EIUWhvb3+mq6vr5ytWrFhJREUAtGzZMlq+fLn9IAMQc/2tt97a9dvVq7/aPzDw2UDrSUGpjGK5BGutsdYyM5MTOVQjsqr+kiN800rd70KI+LvkdGdmWOao8eTuZwplF9ka0ZcUgcxcJeIaiseU9kRlMsCCiImIhRCklJKeUhAg5HO516ftMe36Xz/88ApjzKizoSElli1bJpYvX84A+FOf+tR53d3dN5QKxZkjIyMIjNbWWrLWiojwFUJxlQhMEj75t1EnG72PiFf7vqpsV3NtnWkMUV9+OE0atS9tgCJmEkKwAFkpBKRS0vM8tLa1Pnb0YQsv+/6Pvr8uKUHGNACO+JaZ/eOOO+4Hvb29FwfFEso60EYbqa2pInoj7knrbBrhxjowteWlDW7Nwti0TaPNxNEGoG4gwsGwSkj2fV9mstmBKdOmXvz444//qtEgpLVAALAPP/zwjOXXXPPz4aHh40eKRWOMJqO1sK4hUUfH04lm9zfj2tE4udEgpZXZqJ608poRvfbZpNh0lxFCyNbWVkycOPGbzz777LcBKAC6dnGt4vxnnnnGrlmzZsaNN974THd39xHFUlEHQVlprckYA2NMrF0k/452JTuUfCaNaI2ebVi2WxPASL0/7fmqepmr1IT4HstgjN43tok2uP5ZawUA1lrbYqHwsfnz5uut3VufcYNg02YAARDMLA899NA1vb29HwmCINBae1EnKdF4Iqro6g2mU/X3BBLhM+z0fwIh+oJIuGe4qlwRcWMsqCtaDFXVytU9cYPB0WIeETnJ1VEfojpqZnW0LiTrjKqKlSe4AUiUQ0KAQ3EEKSVLIUw2m1Xz9t77c48++uhPkwtzkmZSSmkWLFjw4x07dlxcKpV0oLVirUEAiu6yicZXk5qi/xG1Ek2n+B6iChEio4JSpWKCyCk0riMiKFEvgcDuq4qaWVeUk91EBNiEsky1jMQgW2lTpVHRDBIAcfzRJ0LeiRcWAkopFiRsW0urPvSIw4685557XolEPSUNh5NOOumMdevW3TsyMqKNMQraYBgWJQb2tIwF1mA+CUwi6Z7mkLucURWOiQBCYyZsVEgKN0ACFOmK0ZBQ9HtlvhAzmKLZYkOOizQUZlgAIrqPGSF1CMSOLCQg2MY8Yo0FOe1MQABsQcyRSRD/BbvWM1yZYUsJBgQJYguwrZlolYEfEgLvEvCiILwkFEYI6ARAJCCUMp5SsrW97fnXX3/9Q0RkAUcmALR69erWSy+99OW+vr5ZOgjYGiMGmHEgEy5ng5MDg6nWVBpAtdLL8Su79yLxvgGHx59rJxM7SoRyIRxUTmjvEaVBVWIptN7cX6RpQ4l7qgWdK4cTjO1IQ9aVVzPbq16uja4/WjJeUh5uUQr3KIU2AFIIkFTaz/hq1qxZX37uued+uGjRIkVnnnmmvP/++80RRxzxzc2bN39rZGREW63VoLU4D8D3A4OJpgxmIHAWpkUo4yJutMQQrp22SkJRhCw4TnXcy1Q1huzoGK0JDAKxrdCyTjKQI49b9Ny7yrziUTSxStsosV6EhRKME1xEwkkWjhqIeOVzz1bjVgQJCw+MHACQwn96Hr7qSwiSkFJYKSS1tLRsv+DTF+6zfPnyQfnaa6/x3Xff3bFy5cq7BgcH8zCGBq2hpcz4RaCRYY0CCFZKQAiQdd1lBisJFgS24SBYAiAITAQmAUsESwKWGCwVjBDQzNAgaGIYEDQAKyVYSBhrYNyCz1LCCAHD4TphAFcuwRLFhDJuAEDk2hBiSBACSNxvXTkghPdEAw8BDevKIgRCwEoJyxbG2hCaAKA9Cc1w7QcsA5YEDChuX8iMBEOEkmvHMdpiBhEeEATFILbWWua2gaGhbe9u2vQnCQAbN2781I4dPUt1uWxHtJYHMWGlYUijUQIgpQKMhrEWgZAwHR0AE0xQDlVKQWHlIGjL0E4ls8zQHHbCWNchIaE57KwhAEKCjUZgLTiXB7omhkQvl8BsYQXBQsAyELCFicsNic0IP5fd94YZEgTt7o0APQJDE2C5AvKZqH0koAnQUsIaA20tykygSVPA+VaUCyPQTv3WUoZ9AVB29eroAsd1Wg5VWE2Eo9mgmySeJUYeYM2WyuXypF27dv2UiAizZ8++f0dPzz9YY8yIteo+AJ8qawy6RVYbA3vQQfAuvhjeouNAXROB4REEL72E0p13IFi1CiQV2Giob16FzJITgKAMSIrFidmwCSMP3IeR3/wm5GQQBAHaWrQsXoy2z30WmSOPhujogBkYQPDXlzDyi19gZOVKCCFhrUH79d9G5pgPQUiB4VWPoHjTTSAA3tKlaPnc50DWggcH0PsPZyB/xRVoOeN0wBqYHT3Ydfb/Bg0PgQG03nwLskcdDQajtO419F/8eZBUMFqD9pyN9n/6InJLToA3cyaICOX3tqD42GMY+I//gH53I6AUrNaYeMstyB59FBAEIKEq4s8yyPOh31mP4IIL0W4MtigfCz2JQUHwSMDPZMqHH374EVi5cuWsadOm7cz6PsP37QIvwwUpeQjEfVJwD8Dbl57P5eERTr5s4ur70U/4Pc/n9UTc98gqbvZ6/9Zb+XUheJ3n8SsAb/3Od9imlBu93/6zn/LrfobfIOLB3z8b37fr7rt5PcDrAX7/um/F3wflEq/zMrzrrv+Kvyv3DfBbHRN5I8BvAzz4h9/Hv42sW8dvCMlvALzh1NO42NNT18/oVXy/h9/++Cf4NYBfBXj4+Rea9rWwcRNvyfjcAzALxZ/PZRi5HLfl87q9vZ3322+/y8Vtt912YKFQmEgAg5lOgkXWAgUpoI2FXrQIE+64A14+C1suVS2IZBkol9Hxhc9DXX0VBpgRFIYBY2BLxWoL11pwEGDKl76E3PnnoxgEaP3qldjj618H6wCsdRV8zMaAy2VMvugzmHjjjSgyQw8XAGMAY6BHhlEGEADQ5VJ4vzGw/QMog6GLlXvNYD8CyShJiaKUMMlyhgsoWgM+4gjsec89yEyaBFsq1S38tlRCZsokzL7vXogFh0ID0IWRsM5yOX2xVwqBs58CGJyoGWRCUWy0RqlU+ohav379fB0EYGstwPIokqHsYsBIic4bvwMlCLZcBvkZ7Lz/Poz8eiXUnPmYdMXl8Do7AACTr7oKvT/6D4hiCZASJASKmzZh69XXIDN7FqZ+7UqollbAWrSccjJ2rHwQe1x1FTjC71mg+/s/QOnZZ5E78ghMu/xykJRgrdH15S/h/VtvBQoFQMrYrgqEAISAFRTeCwBShIukEJV7CSj098MzFkGEY7nfSBBKBMy88SbIjA9bKkNkMuh/+in0/OdtgFSY8k9fQPvffQi2VILK5zH52mV457R/CI24qK/vbsaWq6+CiLR7wbAD/bCBhgQwYhn7EaFVASVAkDYYHh7eV2lrDzDGwDq1aiqAkhDQRkMcfjhyRx8F1hrC99H70EPYcsaZoYUHoPiX/8Ee/3YLONBAPgveZ3/oko7Ned29DQMr7kQZgLf/fph67rmhBZzLo+XUU+F3dMKWShCZDN655lpsW74MrQB677sXI9u2Ye9bbol/z5/2vxAUCxXEcI8ZCKwFrEVQKFZxXpkiEzMcKeFnkVnycfgjw/DZQnVNigE0WxiGt89+aF/0EbAxEL6H/uf+iPUnngAuhyhA/wP3Yf4f/4j2gw8BW4v2JSdCTZ0KHhmJ9VpbKmLk+eehrIUlQJAE3lkPaYFAEIYs0MYBOiCxlQU8MIwxU9XI0NAk63ASxQzfdUADyB28AEII2CAAKYX+O+6EIIL1fShrUHhkFd5e86RTPyVKhQJwyRcrU7ClBd6MmfBnzUTr0QvB1oIABEPDaDnwwBADUhKmXMLQijuRkxKB50EFAYbuvhv6uusg83mAGa0H7gfuHwSshTUGE5YcD3PnnSi9+SYmnH02mG2IJzE5UCwcAas1/EmTcOBvHqm29YwBSQlb0vAOPgjK82BLJVAmg+3/5w6YsoaXyYEJCEYK2HHXL9H+nQXgcgCVy8E76EDYUih62Bjk5u+Ng197NbZCBIDNX/wC+n78E0ihEFgDjwDPAFYwhfgXdShB1ApjwRQ6Esnp1mUA2ZYWVKwVoLRzJzQRhHZqoyToYsGBD7EdEzZKa+T33w/7vPwyVGdHOHDFIiibxeDDD6LliCPDm4WAHRoGjYQqrQ0CCGuBUhl6aASytTUkZMbHznsewJTPfQbQGsSEKeefn1hjTCywLdcCR9wYcWKGbMlX9VPu7IUUAsZoEIX+b2zfkbCmGbKtPbT2Izg6BUZiY6Bd7cYNS+xqDZFkJXp37RoIYYNKMeyMFt23KwSs3GLqz5kLshbw/VDXhULrSScg97ElyJx0Avzp04GgAneT58Gf0BkjmiKbRc+jj2H7f90FU9KhwRVoqLZ2YM+Z0MxQvg/NDJ45A17XRCAIwpkyXEJx1UPo/fVDEL4PUioV4uAIhIgUABKAtSh2d6O0ZStKW7fBFksVC5sAvavXmbXhM2qf+ShbC/IkSEpoY6D2ne9kX2jgUU8PKHKZEoGDAOWeHQh6diDY9j7KvbsQDI9AIzIknd0TBR24qaI6Ozvbdm7vgaAQctJMziYESn/9C4wJIJQCmDH1a1dg4LHVKHe/D4+ASTdcj5lf+1rMX2+ceCJ4eKSC9AQBSv0DkGCU3nsPO391N/p+cCtyhlF4/rkYcCNBmHrtcrx79tnQfX0wnZ2Y950bIT0FUypBEiH403PIMPDeWWdgaOlStJ56KvwZM6C394AmdaH9qKNiDpUJVhRKorhtG1498miogQEEYMx75BFMWHRsyO25LMp/fQVBoQDl+2BrMfFzF2Pnr36F4J13YAFkDzoEUy+6CGwNhJQo79qF0ssvg3w/rENKDL26Dq8tOBQ+DAgCgQPxFAFsNABCgYGiJMgIBiVATZgwobPn/e1QJKgMwk4Kow9YCpTWrcPg0/+NzsWLYctltBx4EPb90wsY+MPv0TJvDlqPPAq6WIL0FQpbtmLoqacw6cKLXMcVBl78C94+6SRkCNA9PTDMyDgYYeS3v8XIO++gZc4c2CDA5BNOQNtfXsLQK68gf/BByM+eDRMEEBkfxS3d6Hvw1xBE8IzG0O23Y+D2211khEXH17+BjqOPdgxt4bMNUc9oSLQB9fVCjIyE4tJU1EaRy8Ns2oiBVavRdcanYEsltM6ZjQP/+By2378S5AtMPuMM+J0TYIpFyGwWu+6+G3ZgANSSi1Vsf+Z0zPzRrQ51BUhKlN9/H73fug7QGoIYOyExIAQUQi1YKQVVKBRGSApIxzJrmfH3DneBsej+6tfR8vvfwcvnYUsl5GbNQO7ss2LdWGUzYAA7r7gSmSAAKYp1elEswu/ZHod4eErBWgMICRoawravXI65D/0awvPA5QDZvWYju9fsuGyZyQAAei7/CuSuXZBKAoYhlISKoGUAmVy2Ykdog5yQkMxhLwGQ1fCVCtchAGQYiO8PkCHCjn/+Z7R99Dj4XV2w5TL8qVMw85KLY3+ACcqQ2SwKb29A/7LlIdhW1mAdXt6ETkz/wherhGLx/fex/cZvgwINXxBeEMAIgBaHUQGA2LZtW4+UEiBiAvCYAEokYLSBFQL6pRex8ZRTUXj7bQhHkJh7MhmUt2/He0vPw9B990IBoHwbSCmQUhAdnaFnSIrYuCIOh18oiZGHH8TGc/4Rpa1bQb5XV3apuxvvnXsuivfeC09KwNgw3sdYsGGwIAhrQdlcpc6uLijrPGlSAlJCdHRCAfCZkWWG6ugElAKUgmhvgw8Cv/0WNp5wEob/8lcIJ1qS2KvwfAz97llsOekEiO3bIADI1vawzmw29uihZhG2JtQoDQk8IkJ0lRIIsers7Gzr7e0FEyFLhD8AWCUIi22AXrbwpMTwk0/grSOOwISzzkD+2MWgSV3g/n6U/vwcBn75K9ht3YDnQQQaIyt+Ab3uNbAFyuvXQzHDcr3b0hoLoRSG7/4VNjyxBq2nnob8hz4EntAB0T+M4p/+gIGVK4Ht2yGkhLGR143jkEZ2HF58Yg12tbSAtUWw4R14poyRf/suSr9dDSl92JEiZKEAEMFnRvFXvwS/9ipgGeX1G+AxYJSCffF/sOVDC9F6xhnIHn8C/NkzwSCYdzZhaPUjGPn1r0HWQCoJoQ2KD9wH/dbrsOUyWKjQBRq5FqSH0pbNCIzBVABPSIVniZBDyDjEYbQg7bvvvs++8847H/ZIWoBFkYC9SOCXQRmdWqOPACVkZTo7LYNi3xdCTjMGkgiCq/1bIAHDNvazWgoj5QSHXi04a5dr9Jn4Uh7YaqclOi9Yom4iQNoQIo6eka5OkXAVaVe/IoJ09kiks1sHk7MUgDZV/Uv2RRDAQkJYV7aDpo0LdYjuiz4bAB0EbFUKn5UK3ULAc1qT1hqTJ0+GYmYrRehStEzIEvAOES5WPr4LwhyrMWANyiTASoTqk2WQCNUqtjY0sJxGI5R0em5k8NiEz4+cC89pP2zBRoOFCE16dt6lpJPcBBUvCjvXI7G71znfhACkiKe2NTpcZ0RCKzcGBEbAHAYQE8UOHGtM6FMwIbQO4VZEa53PMLT9yZoQca140UNrmtn5Fsg58xgtAHwQXpIS/ywl3gWj1bkwCWBPShocGOhXnueBhICg0FfKAFrA+KtknCcVPhcIHG80upghtXExlwQyzhEXRZQhDEwibaPwSTATmDj2V4VeKAvBVO1stwy2AazzYgqLqmiFyAsZWjGR55CqgT4OIQDDkcfSgIyrmQEihnDtJcuhxy2OynDOHHevdWpj6PEM4WUR9TH2bHLIIBRFRjg1HgJDgvEyKTwqJR4WhAIYrSRgwJDOdmA2MNZqFYabAJAOQOHQEs4zoRfAdUriDiVwgLXY2wITrYWfCHKNAwMSBGUnagwziMOoA46j4jh2H1LClWsji5EJUAQDC7YEKyrhJZaSXlg3a8k5RkAImEKnCFkwOXAOBsTCOeRDzSmMm7BgFm5yhT7dKHrDRkEALrhAJAN7Ce5ZgLgySBYO82Fgq1B4lwglAHkAWYT9EK7NUeiKlJJUhM+EuquI9Vhmhu+wofdBeE9IPCpc1IPlaitfJCQqiYRbNhEvIxJCMilUk8Y718aMcYL9U+6NsY9E2AsqsQBO6sfxPtUVyOr3NM6ofq7M3jjUXkQ1Aj6ANueiRBRZXRuCKASUdRgIO4czCaqLavaZkYkXV4oriqZiKJfDWBxGUrwkg6oimifihygRA2QdZ0UCy7UnJivVIC0iEe+TCHVBVVQRXNAUj07bMRMf1TFQgqrGg+P+OcKPEt+qqmQsNQiKdZpPXfxkDZFjLInqR7q2n7U7Bkg6sZIYu6g8S5EcT4nndJ20KfBbKBrqA4SFEFU7eJJxrtFvsdbmwigbjVlF4eCGAcdpsabReyWioSRKnYbJQmIM3VqUa7xAYaMRq4vNoqLHEqw72n3MDLdbpW5LU9qzwu2YKRaL0FpXMYfv+5BSxr8HQZAMF0Qul4NSKtzt0yTMpRHhm/VJGWPrWDYtjDzenMAMKSWmTZtWdV+z0Y46P95o6bSBTP4+MDCAIAiqZljd1h4pobXG8PAwiAh77bUXjjzySBx+2OGYv898TJ06Fe3t7ZAuImJoeBg7d+7Exo0b8fLLL+PFF1/EunXr0NfXh0wmg3w+HwcoV4lR5nGHuxNRKIIq8ZrNw7KFEBgYGMBpp52GO+64I9zvVdP58YZ2787LWgulFJYuXYqHH34YnZ2dMXdyTQDx4OAgWltbsXTpUpx33nlYuHAhOjo6xlXX2pfXYuUDK3HXXXdh/fr1aGtrC7czWVsXJDeWQUhuXlQkXeQv0Zg2jDEz2trawk7wOLf5/Y1fmUwmNbRdCIFSqYRSqYRzzjkH3/zmN3HQQQfF92mtU7cwJYOKYwIphUMXHIpDFxyKSy+9FN///vdx8803o6zL8WwYC+HT9h9Ya6HCRtcvws1e0RQ0WkMI+f98EKy1kFLWcX0kHgcHB9HV1YUf/OAHOOecc2KiR7NYSlkvDpKzl6rrCvcAWHR1deHaa6/FiSeeiPPPPx+bN29GPp+HdUjAaLM+bb+cICYRP5eyiSFtT1ZFC3LW7/+nC4kORUTo7+/H/vvvj6effhrnnHMOtNsqK6WEdNABM8ffRzOGhIBF9ffJBVwpBWstgnKAD3/4w3j88ccxa9YsjIyMVK1xabRqRE8pJVRrW2ubDR0YNBbxE/2NGlq7u6TZYthsmrpdJWOSoRW1UcS6viBCoVDAvvvui0cffRQzZsxAEARQNa5LY0y4obxmB2ZEEOGLKlEVzZZI5VSeQrlcxty5c3HXXXdhyZIlMMZUKSppsr6hFtQ/0D9AgmDD/aU0lg1znueF3pw6v+zub3SLOHQ8LyFFbBcZY5HNZvHLX/6yIfHdpm/09PTgoYcewu9//3usX78eg4ODsNZiQucE7LvfvliyZAlOOeUU+L5fNQjRy/M8lMtlLFy4EF/+8pfx7W9/GxMmTKhSb5ttwaoanHnz5v331q1bPyKlTAa5N1xYotE/+eSTUxegtOlWLpdxxZVXYt7cuXWaUyTPn3zySdx1113wfT/mqEaaQ/T+iSeeQHd3N7LZLPr7+3HNNddg2bJlVcSPwsstGFJI3HzzzfjXf/1XdHd31+1yTO6wPOSQQ3DzzTdj8eLFqdqetRYkCNu6t+Gwww7D4OBgU4as3spr2RhDHR0dvdh7773/O5fLcWtrq2ltbeXk1dbWFl/R5/b2ds5kMpyA08d0Pf3002HsZhCwtTa+yuUyMzPfdNNN4y4zm81yW1sbZ7NZnjJlCm/fvp2tsay1rqpDa83MzJdddhkDYN/3ub29Pe5XbZ9bW1sZAHuex6tWhbGutWUmyz3ttNMYAHd0dNTRrfZqaWnhlpYWm8lkeNq0aTtVNOrNtonW6ve+7yObzTYVKUluKheLyNS4+Wpf2WwWSim0tLTUcVyj3fXRfcViEeeeey4mT55cJzIimX/PPffge9/7Htrb22Gthda66fbWtrY2DA8P4zOf+QxefvlldHV11clzay2EEDjqqKPw4IMPjksVjRf4NNExWjqB5CJsjAkTYhgDrXV8Rb8ZY1DWOt7COVqZWuuYQLG668qOFuqovmSHlixZEi6m1oYIZcImCIIA3/3ud2O4ISJcqmblXkEQIJfLYdu2bbj//vvjxB5pjDlr1qx4sKP2NdKEOLlb03nWuNmG5kabqWsbParKOEasJ7o/uShHqmDdznQhYIxBW1sbDjvsMAgh4Pl+CKs7AgshsG7dOqxduxbZbDZ1fUkD0ZLt+fOf/pwqHaLPfs3sbrSjP/FFiEADUJ7n+WOFDRrlcBht13nEbWPSbBxR05DUtPZYa9HZ2YlsNotCoRCLJQZgtIbv+3j++edRLpeRy+UaAmrNZmaxVGwqUvr7+8cFLCIBXStKxFMktYxGxB3LoOwOFkSo58Cq2ZOw1JOorJQSw8PDWLx4MZRSdbKciLBz587dIn7EOHvssUfTPr311ltj4/wacaSkhCoUCsVGhGuWXGMss2UsCT3qHCgplmTa5unaWbh58+aqxTtZxlhsjGZ6+4knnJja/wgOefLJJ5sivmnlRmuKklJSIzn/QV6NsJHdKjUKgWgCm/u+33TQ09rSLLOKn/HR39ePJUuWYPHHFsM6OCNpJXueh9/+5rd46aWX4hk2aoocrtDAGAPVqBFJw2c0iLn29zRj7AO9mMYsr8dSb8StabOCXMxOf18/DjjgAPz0pz+tG9hIiwqCAFddfVVMo9p7Uttowx381mloajz5dRrNjGayjzkMwqIGjE1jIORYROBYkUgAGBgYaHpvS0sLLrroItxwww2YMmWKs3pFFWGllPjKV76CF154IYalxyQ1BMVqqJQSSkqpxtr4JAzQTDtJynWJZOaRGr8tNfaFN0v2tLszyloLz/Nw/PHHw/f9qnJ838eUKVOwYMECLFmyBPvtt1+VsRfp954XxrBeccUV+Pd///emoqfpOLiUDIqZTRWRk87m5nhGw5xsSXlnXewOiXGqaE2UgbFwf1pbgyDArFmz8Oijj44KJEZEjRgtWsjXr1+PSy/9ClavXoVcLheXPR4rmDnMKmCZoay1jCRsOg7HTDN5W/VbAz6nNGUnDn/hMYeKjHVGRGkli8VilSMlzaOW1KastXj99dexYsUK3Hbbbejt7a3i/N3xBcdwtLXWhRdWR7f9rWBmBtfHjKSsrRXx4hrZKHVlTSfGk1aMbQ2BuX5m1iYIiWCJNWvW4IEHHkBvb2/DNjTU/BoMUOiXiB7mdI784BpMHJI7NmcPpawVKdpVQ3uhiVqcNOqYG6QjS3Gy53I5XHbZZXjzzTfx5JNP4hOf+EQc3pLmDWuGAyU/h0lspYyDYqMGNVIxGxU+FpM7TZNM04JqA5yaETpKpTYWtTRpWSulYrwpkWQvJmYyNx5x6HGLHPkf/ehHsWrVKqxYsQKdnZ0oFosxyNeM6Gl9t1EWYU7huFE7vhvWcZoI4loogtOJ2AhGsON0hGut0burF0NDQxgYGMDg4GB8FYvF2P8buS2NCTcsRjZDhNiee+65eOqpp7DnnnvGz6Uxby3IWHESuUU4KbvSIIndTfM4mlN/NCgibWCbGY2jzUZrLXzfx7Zt27Bw4cI6yEIIAc/z0NXVhQMOOACLFy/GyZ88GW3tbaGooIo2RBx6Bg8++GA89NBDWLRoUZ1zvjZorYoeLrGelBLKaB1vuOBxRnd9UK1krNrC37I+ay22bNmSCjxG7//4xz/iZz/7GebOnYt/+Zd/wQUXXBDbA9E6GfmFDznkENx00034/Oc/XxUnlLZIJzXNqMkCkXHVhFuTBlgj8Go0XfwDYUG7QXxuEGITGV2ZTCb+G125XA7ZbBbZbBa5bBYbNmzAhRdeiGXLloWhizUzUHlhvOhFF12EI444AoVCAYJEQ6UhpqP7F2qgyZvHYAmP5iYcFaYYB6bTNDI50blkItikR6oZY6Rd0XPGGOgwrT2y2SyuvfZaPPzww2GcqTVVEHoEiV9wwQVOxaUxz2YhnGCLNBTaDdWvEYGTWWk/iAU8lvuT7sVarSbyGzQbzEYLZjJs/YYbbojr4hpgD0AMb5QTkdXN1kgpJYaGhvpUbVr42oV4vOBbFKjFaeDP31DMJFMWF4vFps9navY3jwadJz9HquLatWvx3nvvYc8996xalCP67LXXXpi+x3Rs3LQxjlltppw41LWsGh0z0uhzs6kVIZ+c3DUkxi/1iaPct43dnVG7fd/HMccckxqoK6XEwMAAXnjhhdRQ+qZrVWJtJOd127JlC/bcc8/UwWppaUHXpC5s3LSxQhsQaiFLk4C8J06c2KWSmPh4iN1Qy0jkVgXvxhTgmg1/DdokhECpWMTUqVPx2GOP1TnGo9e27m3YZ799MDI8UgXANewPV9IwR82w7t4ICU0bwOTvSYWDG+w9cyH2SmitbZ3sddZf09CKJuZ3ZUFPJLYeo5hJHsLQUNRxuP9YSYW+vj5s2bKlKpQleXVN6sL8efOrIpiTmd9rryjoN2p3tNBOmDABs2fPrhuAaF2w1mJ4eLh6ZjhDkynaCcpVzwwNDfWJfD7fVocKujzQxLuHv8RljRMprEzd5rI6CjUUnsLg4CDeeOONtPz9MX5/6mmn1oU1NqzfhmVH2XKFs4+OP/54TJ48OUxtmdKnvr4+vP/++zGUPZqyQkQol8slYa3VyYZVoZKJacjjVCUrEMdurMLcGJJIdj7a+rlmzZpUJDLCaC655BJMnz4dxWKxIoY4Be7m2q1VEkEQwPd8XH311e43qgIto9n05ptvYseOHYnyEW5Ab4YHEZEoFUsFqtGlIy6LRTFX1ElKKbjZoQt23E5+rgLZmsILJpy5Dz74IAqFQh0oFqmSkydPxh133IFMJoNCoeDOO5OV05WSSKigyFWIUrkEbS1u++ltOOSQQ0LDSYo6GJ2IsGbNmtgmiDcsNrE/YlGklKzarF37gI22eiY71kQFrVUTG4oTrtX1K2KrFpmNyoodJm4npmWLbCaLt99+G/fdd19dUFckkrQxWLJkCR599FEceOCBKBQKKBaLKAdlmISuz273Z7FYRKFYxN7z5uGRRx7B+eefH0PPaTZIqVTCihUrQAm8Kpr9UaoDWK6D+ynMv6cHG+HvqQYWNQhS4HQCcwPi1+PuCf8BNy6faiSHZQspJK655hoM9A+kQgZSCGitceyxx+L555/H7bffjpM/eTJmzJwJpUIxUy6XoZTCzJkzceKJJ+InP/4JXnjxRXzyk59M3SMQyXopJe644w688cYb8Hx/1EOEkjTOZrOkJIlel/GjSn2PZCxXY791nqx0NQ6V1P4YmydsNFCOCal1W2Z4vocNGzbgy5d+GXfeeSeCIKja9U9cCaLK5XL49Kc/jU9/+tPoHxjAtu5u9A/0Awx0dHRg2rRpVbsoa4kf7aXTxsDzPGzatAlXX311KP4iSVLj1q1tM4dTmYhol/KymffY5eGpFS3R8SKVMw2okvGJquOl0mKnaJzajyOpywEqE5zPcd11C7vDbrLZLH7+859j9uzZuPbaa0NNxHCVzE5GNxAROtrb0dHensrZkXip29BHgA40PN/D0NAQzjrrLPT09MBXHqw1YVBwzcxPzngbnsXDFIKC3SKfz7/p8A0CUZgvJwkr1KziFpVDGpLiqE6kcLXHa3cRierOcOylSiNaJpPBddddhyuvvDIknpJxWHtS7kaeMDYWVhuYREh9FHRVt6fNDbS1Fp7vYdu2bfjEJz6BP//5z+GuHrZhSstG4pZjh3fMDLlc7g2x1157rfV93zBzmPY4MkBq9VYXz46ac1TqPFyxVmGrOLV2/0DtFRHJIkpoV+Mjdilh6jZGu3+R2zDj+bj55ptxwseW4JVXXoHnebH4ierhSAUVBJICwoWcxFHcXNGOjDEwgQZR6CmTUmLlypU45phj8Lvf/S7eUhUrFAlxmUwqVXX8omVSysOkSZP+JFavXv2y53kbwAyy1lbkPMWEjyzbZN63WFWsOc8LbKuhbTeQEzo7oZRCNpuF53nxFeVhaGlprWguzTAaTvEvRAfyADBskfV9rHnyCfzdwoW48sor8dZbb0EpFQ9GKIpME2YIT6SN3ZO+h7IOsHr1apz08Y/j9NNPx8aNG6uI38iciYy6+NQRgA1YKN8bOPbYY58jIsLMGTP+c8vmLZ8FYAhQTAkr1o0aU/qpXQLpx+VE9winmi1duhRz582rU+einYtPPfUUnn76aXhKhYmeanbux27TSFVNMAInxGWcz8JpPpYZLfk8Tvr4x3Hqqafiwx/+MObMmTOmyL7t27dj7dq1ePzxx7Fq1Sq8+uqrTquSsQcRiXWyVgTFJ8RGRmK4McMYa8WUKVMe27Fjx0kEAIsXLT752eeefbhcKlkRppAOU8IjcWBbIrfyeCzhKOxFj0E9k0JUcnsm8fnR6kyEmcRYDnOUlQrlUil+Pp/PY+7cuZg7dy5mzZqFiRMnIpPJgIhQLBbR19eHrVu34t1Nm7B+w4Y4DiiK4yGQOzK3ojtTDWMymqx9zEZKKffZd9/PvPLKK7eHufOYc1OmTHl5R0/PHHdalqjkSBIuDU2NIRYRqua7alCvIs5SN2rXWLzGndaHBJZUm+8ycWBWnZjj2rITDpaI4wN37vFYX0pKSBGeG8NsURvEUJuOM5lngqtEJIVnVxtDEydM2PWt66/f+5JLLtmlAEgiGjnssMO+17dr1w+MNgYEUTGkXCKPpAhKWLmNRrt2ETdRroYkzl7zvEiKFtTH1TeBiupU31rDMpLVkgjkeU1nWHLnKDPHbkjhcnrFB0/XzHaqsSopUqEtR/GxVkqpps+Y8eMvfelLuwBI4YJzafXq1bdPmjx5Y5iUviLWw9BCW6VGRcdJJfN7MkUhhQmujs9y48p9kcwmiq+oPE7I90aOfE4qBolyk6KAUoxDgUquUU7u6gwCBEFQt8MzzYWZPBQiWncocVW119gq24pC7pcTJkzY8o1vfOM71loKJX14tqCYPn368N57731ZNpsly5VzAGPVim2dXcAJAkaLNtcQtYrIiWfS5GPtTmwkO1kTaRdvikjhRFszCNF9tkabS/YvFU5vMJCU7F+KSOWISeNQH8CytblcjubPn3/Z0qVLB6JJJBPtlps3b143c+bMGQODg0cxs3YZGytnwDOqToioGKnUVBzUAz67E0VH47KuKaU+TvluPC2ilDKiTMKWage9AnkzISAhvGnTpv1s3bp1NzJzfLhz2nG2asaMGX/o3rr1cBJCw7JyAjoWScJh4hZcLyIiQlmOMwiiyUKVunMmRe1JJrKoXWzjZFPuIJzo8Fmu4WhKGVSOfdBJ5MOtUSI8/AEJFZNteMRimC2RElzvPib6H8FJBqymTp36wnPPPff3c+bMCZCIFxe1EoCISuedd95pXZMmvWOtVSyg4wXRholYEbsrQyvUxiKGqrmPGvtZKHGWLxNViyAX0R6KvupMi7ZWVBFVc2Z0il1C/KWJN5vwOyQNzXhW1/qo4zOVq5koqXZaoDbKWhuwmrbHtI1fuPDC0+fMmVNctmzZqIddCgA4++yz502ZMmUDASyIAkFkiYhFdIFYuiv6XoJYUuWi5CUqz8b3C8FSCBZChJ+pUmbVFZfh7hWCBQmWFD4nEt/HZSTvTbmo5jnh6hFCxHXG7xNX3P9EOUk6uL5ZIgoI4KlTprz21a9+dR4QHhs8JlkX3Xj55ZfPmDp16uNKqWh2aKolrLtSCVc1QAnCRcRKuVfUd6aqHoHKlfZ97eeoXEWCFYm6diXbLhJ/RRpzpbSz5r2VCAnveR7vtddeq2+99dauyM4c77onnC5M8+fPX57P50sUHvJg3EDYqKNO9MXcEXFhNFMEEask9ySIW3vVDmyYVC190KOyU3+rma1VV2KG1g1kCmOJmkFI9issS1jhCC+F4LbW1v4DDjjgyiggbNmyZWJ3lQ8RrkUCixYtOnT69Omr2/ItLEW4x0+AtAQFgoQWQhg3KFYQWQmyksiSqP7spueYLxFyVd33UXlpv8X1uUu4dpBIv1fUfE6rJ/4u7I+RFPbdaTOshOTW1tbyzJkz7zz99NPn15gmH/glo6jiU0455fg5c+b8vKOzc0cum2MlRGoyJarsv6j6vDuXcFft90ipI3qffCbtN4zynKgpQ9TcLwBWUnI+n+dJkya9t+8++9561llnLUiAfHLM6vI4ZkPYSCHwjW98Y/KTTz557K6dO48bHB4+WGs9W2vdoYNAhqCYqMZonEFCLrs6oybzbK3rhatVdm4QZRcbitZB0kSJiLzo1PeKRmasDcNZajYBViLwKrt1Ir9BiHyGf4loOJfJ9Pl+dn02n31hjz32+N3dd9/9p2nTpg25MmRCYfubDkC8QN97772IDQm356pcLuevv/76jnXr1smRkRHk8/nRC8vlkANQAMKDOgHkcjkUCoW6+xr9nsuFR0ntLBSQT3wuFArhc0B44hGAAgphZXGljZqVKCNR58SJE3H44YcPXXjhhUOe5+lkkj4AatmyZXb58uV2PPT8vx+Sbpada/QwAAAAAElFTkSuQmCC";
 const STANDALONE = true;
-const APP_VERSION = "2.0.148";
-const BUILD_STAMP = "10.11 22:30";
+const APP_VERSION = "2.0.151";
+const BUILD_STAMP = "11.11 10:46";
 const UPDATE_URL = "https://slavahoh1976-ops.github.io/-tz/download/version.json";
 const QS = new URLSearchParams(location.search);
 let PLATFORM = window.AndroidBridge ? "android" : window.LEDMASK_PLATFORM || QS.get("platform") || (window.pywebview ? "windows" : "web");
@@ -4089,31 +4124,33 @@ const PDF_CLIPS = {
   Vol3: [[378719, 2350429, 3257276, 1723060], [378719, 4070845, 3257276, 905336], [400230, 5177969, 3257276, 700906], [400230, 7818079, 3257276, 2131921]]
 };
 const CATALOG = [
+  // 2.0.150: все цвета приглушены (не ярче luminance ~70) и разведены между собой (мин. разница ~26),
+  // чтобы серая нумерация читалась на любом кабинете и ни один цвет не совпадал с другим.
   ["ROE MC-7H - (80x80)", 80, 80, 600, 600, [15, 38, 18]],
-  ["ROE MC-12 - (48x48)", 48, 48, 600, 600, [112, 77, 0]],
+  ["ROE MC-12 - (48x48)", 48, 48, 600, 600, [92, 63, 0]],
   ["ROE Carbon CB-3 - (136x136)", 136, 136, 600, 600, [37, 51, 0]],
   ["ABSEN  D2V - (168x168)", 168, 168, 500, 500, [55, 6, 11]],
-  ["ABSEN  D3V/A3 Pro - (128x128)", 128, 128, 500, 500, [162, 34, 31]],
+  ["ABSEN  D3V/A3 Pro - (128x128)", 128, 128, 500, 500, [135, 28, 26]],
   ["ABSEN A5 - (96x96)", 96, 96, 500, 500, [38, 34, 89]],
   ["Diamond 20mm - (32x32)", 32, 32, 640, 640, [48, 55, 59]],
   ["Dicolor UC-260 - (192x192)", 192, 192, 500, 500, [0, 20, 70]],
-  ["Dicolor 3.9 - (128x128)", 128, 128, 500, 500, [154, 52, 18]],
+  ["Dicolor 3.9 - (128x128)", 128, 128, 500, 500, [116, 49, 14]],
   ["Dicolor 4.8 - (104x104)", 104, 104, 500, 500, [87, 16, 111]],
-  ["Dicolor UT-390 - (128х128) сетка", 128, 128, 500, 500, [183, 0, 21]],
-  ["Esdlumen PH8 - (64x64)", 64, 64, 640, 640, [89, 70, 35]],
-  ["Infiled ARmk-2 (5.95mm) - (84x84)", 84, 84, 500, 500, [12, 96, 73]],
-  ["Uniview Beon пол (6.25mm) - (80x80)", 80, 80, 500, 500, [21, 85, 28]],
-  ["StarColor 1.8 - (172x86)", 172, 86, 320, 160, [81, 90, 28]],
+  ["Dicolor UT-390 - (128х128) сетка", 128, 128, 500, 500, [142, 0, 16]],
+  ["Esdlumen PH8 - (64x64)", 64, 64, 640, 640, [83, 65, 33]],
+  ["Infiled ARmk-2 (5.95mm) - (84x84)", 84, 84, 500, 500, [10, 78, 59]],
+  ["Uniview Beon пол (6.25mm) - (80x80)", 80, 80, 500, 500, [19, 78, 26]],
+  ["StarColor 1.8 - (172x86)", 172, 86, 320, 160, [59, 66, 20]],
   ["NIC 2.6 - (96x48)", 96, 48, 250, 125, [47, 9, 93]],
-  ["Unilumin 1.9 - (256x256)", 256, 256, 500, 500, [11, 88, 108]],
-  ["Yestech MT P3.9x7.8 - (128х128) сетка", 128, 128, 500, 500, [0, 141, 141]],
+  ["Unilumin 1.9 - (256x256)", 256, 256, 500, 500, [9, 76, 93]],
+  ["Yestech MT P3.9x7.8 - (128х128) сетка", 128, 128, 500, 500, [110, 19, 26]],
   // 2.0.117: без названия, 50×50 см, у каждого кабинета свой цвет (цвета в списке не повторяются)
   // 2.0.134: цвета темнее, в тон остальной библиотеке, и подобраны так, чтобы не совпадать ни с одним кабинетом
-  ["(120x120)", 120, 120, 500, 500, [140, 0, 90]],
-  ["(144x144)", 144, 144, 500, 500, [0, 110, 0]],
-  ["(160x160)", 160, 160, 500, 500, [90, 90, 130]],
-  ["(200x200)", 200, 200, 500, 500, [140, 70, 60]],
-  ["(240x240)", 240, 240, 500, 500, [140, 80, 110]],
+  ["(120x120)", 120, 120, 500, 500, [136, 0, 87]],
+  ["(144x144)", 144, 144, 500, 500, [0, 81, 0]],
+  ["(160x160)", 160, 160, 500, 500, [67, 67, 96]],
+  ["(200x200)", 200, 200, 500, 500, [106, 53, 45]],
+  ["(240x240)", 240, 240, 500, 500, [98, 56, 77]],
   ["(320x320)", 320, 320, 500, 500, [130, 10, 50]]
 ];
 const TYPES = CATALOG.slice().sort((a, b) => a[1] * a[2] - b[1] * b[2] || a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
@@ -4173,6 +4210,7 @@ function defaultScreen(name = "screen 1") {
     cornerCabinets: {},
     shapedCols: {},
     shapedRows: {},
+    cabShift: {},
     uid: newUid(),
     kind: "led",
     proj: defProj()
@@ -4196,6 +4234,29 @@ function grid(st) {
   for (let r = 0; r < rows; r++) ys.push(ys[r] + (sr[r] > 0 ? sr[r] : Math.max(1, st.cabHpx)));
   return { xs, ys };
 }
+// 2.0.150: смещение ОТДЕЛЬНЫХ кабинетов (под конструкцию/каше). cabShift["c,r"] = [dx, dy] в пикселях маски
+// (dy — вверх по оси маски, может быть отрицательным). Двигаются только выделенные кабинеты; разрешение растёт само.
+const cof = (st, c, r) => (st.cabShift || {})[key(c, r)] || [0, 0];
+const hasShift = (st) => st.cabShift && Object.keys(st.cabShift).length > 0;
+// габаритная рамка всех кабинетов с учётом их личных сдвигов (в координатах маски)
+function shiftBox(st) {
+  const g = grid(st), C = Math.max(1, st.cabCols), R = Math.max(1, st.cabRows);
+  let mnX = Infinity, mxX = -Infinity, mnY = Infinity, mxY = -Infinity;
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+    const o = cof(st, c, r), l = g.xs[c] + o[0], rt = g.xs[c + 1] + o[0], bt = g.ys[r] + o[1], tp = g.ys[r + 1] + o[1];
+    if (l < mnX) mnX = l;
+    if (rt > mxX) mxX = rt;
+    if (bt < mnY) mnY = bt;
+    if (tp > mxY) mxY = tp;
+  }
+  if (!isFinite(mnX)) { mnX = 0; mxX = g.xs[C]; mnY = 0; mxY = g.ys[R]; }
+  return { ox: -mnX, oy: -mnY, w: mxX - mnX, h: mxY - mnY };
+}
+// сдвиг левого-нижнего угла кабинета (c,r) в координатах маски (y вверх, с учётом нормализации к 0)
+function cabShift(st) {
+  const sb = shiftBox(st);
+  return { dx: (c, r) => cof(st, c, r)[0] + sb.ox, dy: (c, r) => cof(st, c, r)[1] + sb.oy, sb };
+}
 const dims = (st) => {
   if (st.kind === "proj") {
     const g2 = projGeom(st);
@@ -4214,8 +4275,8 @@ const dims = (st) => {
     const g2 = volGeom(st);
     return [g2.W, g2.H];
   }
-  const g = grid(st);
-  return [g.xs[g.xs.length - 1], g.ys[g.ys.length - 1]];
+  const sb = shiftBox(st);
+  return [sb.w, sb.h];
 };
 const PJ_PRESETS = [["Full HD 1920×1080", 1920, 1080], ["WUXGA 1920×1200", 1920, 1200], ["4K UHD 3840×2160", 3840, 2160], ["WQXGA 2560×1600", 2560, 1600], ["HD 1280×720", 1280, 720], ["WXGA 1280×800", 1280, 800], ["XGA 1024×768", 1024, 768], ["SXGA+ 1400×1050", 1400, 1050]];
 const PJ_COLORS = ["#FF3B30", "#34C759", "#0A84FF", "#FFCC00", "#FF2D92", "#32D7E6", "#FF9500", "#AF52DE"];
@@ -6208,13 +6269,24 @@ function drawMask(ctx, st, s, guides) {
   const [W, H] = dims(st), cols = st.cabCols, rows = st.cabRows, { xs, ys } = grid(st);
   const Wp = Math.max(1, Math.round(W * s)), Hp = Math.max(1, Math.round(H * s));
   const fx = (x) => Math.round(x * s), fy = (y) => Math.round((H - y) * s);
+  const sh = cabShift(st);
+  const shifted = hasShift(st);
   const cell = (c, r) => {
-    const x0 = fx(xs[c]), x1 = fx(xs[c + 1]), y0 = fy(ys[r + 1]), y1 = fy(ys[r]);
+    const dx = sh.dx(c, r), dy = sh.dy(c, r);
+    const x0 = fx(xs[c] + dx), x1 = fx(xs[c + 1] + dx), y0 = fy(ys[r + 1] + dy), y1 = fy(ys[r] + dy);
     return [x0, y0, x1 - x0, y1 - y0];
   };
   ctx.save();
-  ctx.fillStyle = css(st.pixelColor);
-  ctx.fillRect(0, 0, Wp, Hp);
+  // 2.0.150: при сдвиге фон «ступенек» (где нет кабинетов) — чёрный, цветом маски заливаем только сами кабинеты
+  if (shifted) {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, Wp, Hp);
+    ctx.fillStyle = css(st.pixelColor);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) ctx.fillRect(...cell(c, r));
+  } else {
+    ctx.fillStyle = css(st.pixelColor);
+    ctx.fillRect(0, 0, Wp, Hp);
+  }
   for (const [k, c] of Object.entries(st.cabinetColors || {})) {
     const p = parseKey(k);
     if (!p || p[0] < 0 || p[1] < 0 || p[0] >= cols || p[1] >= rows) continue;
@@ -6300,15 +6372,71 @@ function drawMask(ctx, st, s, guides) {
   }
   ctx.fillStyle = "rgb(64,64,64)";
   const bw = Math.max(1, Math.round(2 * s));
-  for (let c = 1; c < cols; c++) ctx.fillRect(fx(xs[c]) - Math.floor(bw / 2), 0, bw, Hp);
-  for (let r = 1; r < rows; r++) ctx.fillRect(0, fy(ys[r]) - Math.floor(bw / 2), Wp, bw);
-  ctx.fillStyle = "#fff";
   const ow = Math.max(1, Math.round(s));
-  ctx.fillRect(0, 0, Wp, ow);
-  ctx.fillRect(0, Hp - ow, Wp, ow);
-  ctx.fillRect(0, 0, ow, Hp);
-  ctx.fillRect(Wp - ow, 0, ow, Hp);
-  if (st.showPersistentContour !== false) {
+  if (shifted) {
+    // 2.0.150: при сдвиге рядов/столбцов рисуем сетку «ступеньками». Линии центрируем по границам,
+    // чтобы у соседних кабинетов они совпадали в одну линию (та же толщина и яркость, что без сдвига),
+    // а белым подсвечиваем только внешний контур крайних рядов/столбцов.
+    const half = Math.floor(bw / 2);
+    ctx.fillStyle = "rgb(64,64,64)";
+    // убранные (чёрные) кабинеты — это «дыры»: сетку по ним не рисуем, а внешний контур их обведёт
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (black.has(key(c, r))) continue;
+      const [x, y, w, h] = cell(c, r);
+      ctx.fillRect(x - half, y, bw, h);
+      ctx.fillRect(x + w - half, y, bw, h);
+      ctx.fillRect(x, y - half, w, bw);
+      ctx.fillRect(x, y + h - half, w, bw);
+    }
+    // внешний контур по «ступенчатому» силуэту: белым только открытые края (где нет соседнего кабинета).
+    // Край может граничить сразу с несколькими кабинетами соседнего ряда/столбца (из-за сдвига),
+    // поэтому вычитаем покрытие всех кабинетов, чей край лежит на этой же линии.
+    ctx.fillStyle = "#fff";
+    const cellAt = (c, r) => c < 0 || r < 0 || c >= cols || r >= rows ? null : cell(c, r);
+    const EPS = Math.max(1, ow) + 0.5;
+    const subAll = (a0, a1, covers) => {
+      let segs = [[a0, a1]];
+      for (const [b0, b1] of covers) {
+        const next = [];
+        for (const [s0, s1] of segs) {
+          const o0 = Math.max(s0, b0), o1 = Math.min(s1, b1);
+          if (o1 <= o0) { next.push([s0, s1]); continue; }
+          if (o0 > s0) next.push([s0, o0]);
+          if (o1 < s1) next.push([o1, s1]);
+        }
+        segs = next;
+      }
+      return segs;
+    };
+    // в силуэт берём только «живые» кабинеты — тогда белый контур обведёт и внешний край, и дыры от убранных
+    const rects = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (!black.has(key(c, r))) rects.push(cell(c, r));
+    for (const [x, y, w, h] of rects) {
+      // каждый край может граничить с любыми кабинетами (сдвиг у кабинетов личный), поэтому
+      // вычитаем покрытие всех, чей противоположный край лежит на этой же линии и пересекается
+      const leftCov = [], rightCov = [], topCov = [], botCov = [];
+      for (const [x2, y2, w2, h2] of rects) {
+        if (x2 === x && y2 === y && w2 === w && h2 === h) continue;
+        if (Math.abs(x2 + w2 - x) <= EPS) leftCov.push([y2, y2 + h2]);
+        if (Math.abs(x2 - (x + w)) <= EPS) rightCov.push([y2, y2 + h2]);
+        if (Math.abs(y2 + h2 - y) <= EPS) topCov.push([x2, x2 + w2]);
+        if (Math.abs(y2 - (y + h)) <= EPS) botCov.push([x2, x2 + w2]);
+      }
+      for (const [p0, p1] of subAll(y, y + h, leftCov)) ctx.fillRect(x, p0, ow, p1 - p0);
+      for (const [p0, p1] of subAll(y, y + h, rightCov)) ctx.fillRect(x + w - ow, p0, ow, p1 - p0);
+      for (const [p0, p1] of subAll(x, x + w, topCov)) ctx.fillRect(p0, y, p1 - p0, ow);
+      for (const [p0, p1] of subAll(x, x + w, botCov)) ctx.fillRect(p0, y + h - ow, p1 - p0, ow);
+    }
+  } else {
+    for (let c = 1; c < cols; c++) ctx.fillRect(fx(xs[c]) - Math.floor(bw / 2), 0, bw, Hp);
+    for (let r = 1; r < rows; r++) ctx.fillRect(0, fy(ys[r]) - Math.floor(bw / 2), Wp, bw);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, Wp, ow);
+    ctx.fillRect(0, Hp - ow, Wp, ow);
+    ctx.fillRect(0, 0, ow, Hp);
+    ctx.fillRect(Wp - ow, 0, ow, Hp);
+  }
+  if (st.showPersistentContour !== false && !shifted) {
     const lw = Math.max(1, Math.round(2 * s));
     const edgeSet = new Set(st.borders || []);
     if (st.autoContour) {
@@ -6399,7 +6527,7 @@ function drawMask(ctx, st, s, guides) {
       tw = ctx.measureText(label).width;
       nm = measure("0", fsz);
     }
-    const left = xs[c] * s, top = (H - ys[r + 1]) * s;
+    const left = (xs[c] + sh.dx(c, r)) * s, top = (H - ys[r + 1] - sh.dy(c, r)) * s;
     let x = left + (cW - tw) / 2, y = top + (cH - nm.h) / 2;
     const o = cornerAt.get(key(c, r));
     let p = pos;
@@ -6715,6 +6843,13 @@ function normalizeScreen(d) {
       const w = pint(v, 0);
       if (w > 0 && w <= 2e4) st[f][i] = w;
     }
+  }
+  // 2.0.150: личный сдвиг кабинетов cabShift["c,r"] = [dx, dy] в px (может быть отрицательным)
+  st.cabShift = {};
+  if (d.cabShift && typeof d.cabShift === "object") for (const [k, v] of Object.entries(d.cabShift)) {
+    if (!/^\d+,\d+$/.test(String(k).trim()) || !Array.isArray(v)) continue;
+    const dx = pint(v[0], 0), dy = pint(v[1], 0);
+    if ((dx !== 0 || dy !== 0) && Math.abs(dx) <= 2e4 && Math.abs(dy) <= 2e4) st.cabShift[String(k).trim()] = [dx, dy];
   }
   keepRest(st, d);
   return st;
@@ -7144,8 +7279,8 @@ function textSnap(self, x, y, e) {
   return [nx, ny];
 }
 function cellRect(c, r) {
-  const s = L.scale, { xs, ys } = L.G;
-  return [L.ox + xs[c] * s, L.oy + (L.H - ys[r + 1]) * s, (xs[c + 1] - xs[c]) * s, (ys[r + 1] - ys[r]) * s];
+  const s = L.scale, { xs, ys } = L.G, st = L.st, sh = cabShift(st), dx = sh.dx(c, r), dy = sh.dy(c, r);
+  return [L.ox + (xs[c] + dx) * s, L.oy + (L.H - ys[r + 1] - dy) * s, (xs[c + 1] - xs[c]) * s, (ys[r + 1] - ys[r]) * s];
 }
 function textHoverAt(x, y, e) {
   const st = S();
@@ -7174,6 +7309,15 @@ function pointToCell(x, y) {
   const st = L.st, s = L.scale;
   if (x < L.ox || x >= L.ox + L.gw || y < L.oy || y >= L.oy + L.gh) return null;
   const px = (x - L.ox) / s, py = (L.oy + L.gh - y) / s, { xs, ys } = L.G;
+  // 2.0.150: при сдвиге рядов/столбцов кабинет ищем перебором с учётом смещения
+  if (hasShift(st)) {
+    const sh = cabShift(st);
+    for (let r = st.cabRows - 1; r >= 0; r--) for (let c = st.cabCols - 1; c >= 0; c--) {
+      const dx = sh.dx(c, r), dy = sh.dy(c, r);
+      if (px >= xs[c] + dx && px < xs[c + 1] + dx && py >= ys[r] + dy && py < ys[r + 1] + dy) return [c, r];
+    }
+    return null;
+  }
   let c = 0, r = 0;
   while (c < st.cabCols - 1 && px >= xs[c + 1]) c++;
   while (r < st.cabRows - 1 && py >= ys[r + 1]) r++;
@@ -8714,6 +8858,80 @@ $("btnCornerDel").onclick = () => {
   changed();
   status(ui.selected.size ? "Обычными стали кабинетов: ".concat(n) : "Все угловые кабинеты экрана убраны: ".concat(n), true);
 };
+// 2.0.150 СМЕЩЕНИЕ — сдвиг рядов по горизонтали / столбцов по вертикали
+ui.shiftMode = { type: "frac", val: 0.5 };
+function shiftAmt(st, axis) {
+  const m = ui.shiftMode;
+  if (m.type === "px") return Math.max(1, Math.round(m.val));
+  if (m.type === "cm") {
+    const [wmm, hmm] = typeMM(st), mm = axis === "x" ? wmm : hmm, px = axis === "x" ? st.cabWpx : st.cabHpx;
+    return Math.max(1, Math.round(m.val * 10 * px / Math.max(1, mm)));
+  }
+  const base = axis === "x" ? st.cabWpx : st.cabHpx;
+  return Math.max(1, Math.round(base * m.val));
+}
+function shiftSel(axis, sign) {
+  const st = S();
+  if (st.kind !== "led") return;
+  if (!ui.selected.size) return status("Сначала выделите кабинеты на холсте", true);
+  const amt = shiftAmt(st, axis) * sign;
+  st.cabShift = st.cabShift || {};
+  let n = 0;
+  for (const k of ui.selected) {
+    const p = parseKey(k);
+    if (!p || p[0] < 0 || p[1] < 0 || p[0] >= st.cabCols || p[1] >= st.cabRows) continue;
+    const o = (st.cabShift[k] || [0, 0]).slice();
+    if (axis === "x") o[0] += amt; else o[1] += amt;
+    if (o[0] === 0 && o[1] === 0) delete st.cabShift[k]; else st.cabShift[k] = o;
+    n++;
+  }
+  changed({ forcePhys: true });
+  const [W, H] = dims(st);
+  status("Сдвиг ".concat(axis === "x" ? "по горизонтали" : "по вертикали", " на ").concat(amt, " px: ").concat(n, " каб. · разрешение ").concat(W, "×").concat(H), true);
+}
+$("shiftL").onclick = () => shiftSel("x", -1);
+$("shiftR").onclick = () => shiftSel("x", 1);
+$("shiftU").onclick = () => shiftSel("y", 1);
+$("shiftD").onclick = () => shiftSel("y", -1);
+$("shiftReset").onclick = () => {
+  const st = S();
+  let n = 0;
+  if (ui.selected.size) {
+    for (const k of ui.selected) if (st.cabShift && k in st.cabShift) {
+      delete st.cabShift[k];
+      n++;
+    }
+  } else {
+    n = Object.keys(st.cabShift || {}).length;
+    st.cabShift = {};
+  }
+  changed({ forcePhys: true });
+  status(ui.selected.size ? "Сдвиг снят: ".concat(n, " каб.") : "Весь сдвиг экрана снят: ".concat(n), true);
+};
+function shiftFracBtns() {
+  return [...document.querySelectorAll(".seg.shiftFrac button")];
+}
+shiftFracBtns().forEach((b) => b.onclick = () => {
+  ui.shiftMode = { type: "frac", val: +b.dataset.f };
+  shiftFracBtns().forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  const st = S();
+  if (st.kind === "led") $("shiftPx").value = Math.round(st.cabWpx * ui.shiftMode.val);
+  $("shiftCm").value = "";
+  status("Величина сдвига = ".concat(b.textContent, " кабинета"), true);
+});
+$("shiftPx").oninput = () => {
+  const v = Math.max(1, +$("shiftPx").value || 0);
+  ui.shiftMode = { type: "px", val: v };
+  $("shiftCm").value = "";
+  shiftFracBtns().forEach((x) => x.setAttribute("aria-pressed", "false"));
+};
+$("shiftCm").oninput = () => {
+  const v = Math.max(0, +$("shiftCm").value || 0);
+  ui.shiftMode = { type: "cm", val: v };
+  $("shiftPx").value = "";
+  shiftFracBtns().forEach((x) => x.setAttribute("aria-pressed", "false"));
+};
+$("shiftRefLoad").onclick = () => $("refFile").click();
 function selBox(st) {
   const cells = [...ui.selected].map(parseKey).filter((p) => p && p[0] < st.cabCols && p[1] < st.cabRows);
   if (!cells.length) return null;
@@ -8995,7 +9213,7 @@ $("screens").addEventListener("change", (e) => {
 });
 $("btnAddScreen").onclick = () => {
   const base = JSON.parse(JSON.stringify(S()));
-  Object.assign(base, { borders: [], name: base.kind && base.kind !== "led" ? "".concat({ proj: "projection", tv: "tv", pix: "pixel drop", tube: "led tube", vol: "volumetric" }[base.kind], " ").concat(project.screens.filter((x) => x.kind === base.kind).length + 1) : "screen ".concat(project.screens.length + 1), blackCabinets: [], cabinetColors: {}, persistentContours: [], showPersistentContour: true, extraLabels: [], cacheShapes: [], cornerCabinets: {}, shapedCols: {}, shapedRows: {} });
+  Object.assign(base, { borders: [], name: base.kind && base.kind !== "led" ? "".concat({ proj: "projection", tv: "tv", pix: "pixel drop", tube: "led tube", vol: "volumetric" }[base.kind], " ").concat(project.screens.filter((x) => x.kind === base.kind).length + 1) : "screen ".concat(project.screens.length + 1), blackCabinets: [], cabinetColors: {}, persistentContours: [], showPersistentContour: true, extraLabels: [], cacheShapes: [], cornerCabinets: {}, shapedCols: {}, shapedRows: {}, cabShift: {} });
   delete base.field;
   base.uid = newUid();
   project.screens.push(base);
@@ -10685,6 +10903,19 @@ async function exportTZ(label) {
     status("В ТЗ ничего не отмечено", true);
     return;
   }
+  // 2.0.150: если ТЗ с таким именем в этом браузере уже выгружали — предложить поднять версию (v2, v3 …)
+  const tzBase0 = "".concat(safeName(project.name, "Проект"), " ТЗ_").concat(tzTag(label)).concat(verSfx());
+  if (tzWasSaved(tzBase0)) {
+    const r = await askBump("Такая версия ТЗ уже сохранялась", "Файл «".concat(tzBase0, ".zip» в этом браузере уже выгружался. Если сохраняете в ту же папку, поднимите версию, чтобы не затереть предыдущую — или оставьте имя как есть."), nextVer(project.ver));
+    if (r === null) return;
+    if (r.ver != null) {
+      let v = String(r.ver).trim().slice(0, 20);
+      if (/^\d+$/.test(v)) v = "v" + v;
+      project.ver = v;
+      if ($("projVer")) $("projVer").value = project.ver;
+      scheduleAutosave();
+    }
+  }
   try {
     const project_ = safeName(project.name, "Проект"), tag = tzTag(label), folder = "".concat(project_, " ТЗ_").concat(tag).concat(verSfx(), "/"), pngs = [], uniq = uniqueNamer();
     for (let n = 0; n < items.length; n++) {
@@ -10717,7 +10948,10 @@ async function exportTZ(label) {
     const z = await zip(files);
     busy("");
     const zok = await save("".concat(project_, " ТЗ_").concat(tag).concat(verSfx(), ".zip"), z);
-    if (zok !== false) recentAdd("ТЗ " + tzName(label) + (project.tz.projZip !== false ? " (проект в архиве)" : ""));
+    if (zok !== false) {
+      tzMarkSaved("".concat(project_, " ТЗ_").concat(tag).concat(verSfx()));
+      recentAdd("ТЗ " + tzName(label) + (project.tz.projZip !== false ? " (проект в архиве)" : ""));
+    }
   } catch (e) {
     busy("");
     status("Ошибка экспорта ТЗ: " + e.message, true);
@@ -10766,6 +11000,70 @@ $("btnAuthors").onclick = () => {
 function verSfx() {
   const v = String(project.ver || "").trim();
   return v ? "_" + safeName(v, "v") : "";
+}
+// 2.0.150: следующая версия (поднимаем последнее число; пусто → v2; без числа → _v2)
+function nextVer(v) {
+  const s = String(v || "").trim();
+  if (!s) return "v2";
+  const m = s.match(/^(.*?)(\d+)(\D*)$/);
+  if (m) {
+    const n = +m[2] + 1, w = m[2].length;
+    return m[1] + (m[2][0] === "0" ? String(n).padStart(w, "0") : String(n)) + m[3];
+  }
+  return s + "_v2";
+}
+// 2.0.150: помним выгруженные в этом браузере имена ТЗ, чтобы предложить поднять версию при повторном сохранении в ту же папку
+const TZ_SAVED_KEY = "ledmask.tzSaved";
+function tzSavedList() {
+  try {
+    return JSON.parse(lsGet(TZ_SAVED_KEY) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+const tzWasSaved = (base) => tzSavedList().includes(base);
+function tzMarkSaved(base) {
+  try {
+    const a = tzSavedList().filter((x) => x !== base);
+    a.unshift(base);
+    lsSet(TZ_SAVED_KEY, JSON.stringify(a.slice(0, 200)));
+  } catch (e) {
+  }
+}
+// 2.0.150: диалог с тремя кнопками — поднять версию (поле редактируемое) / оставить имя / отмена
+function askBump(title, text, value) {
+  return new Promise((res) => {
+    $("modalTitle").textContent = title;
+    $("modalText").textContent = text || "";
+    $("modalText").hidden = !text;
+    const inp = $("modalInput");
+    inp.hidden = false;
+    inp.value = value || "";
+    $("modalOk").textContent = "Сохранить с новой версией";
+    const alt = $("modalAlt");
+    alt.hidden = false;
+    alt.textContent = "Оставить имя";
+    $("modalCancel").textContent = "Отмена";
+    $("modal").hidden = false;
+    setTimeout(() => {
+      inp.focus();
+      inp.select();
+    }, 30);
+    const done = (v) => {
+      $("modal").hidden = true;
+      $("modalOk").textContent = "OK";
+      alt.hidden = true;
+      $("modalOk").onclick = $("modalCancel").onclick = alt.onclick = inp.onkeydown = null;
+      res(v);
+    };
+    $("modalOk").onclick = () => done({ ver: inp.value });
+    alt.onclick = () => done({ keep: true });
+    $("modalCancel").onclick = () => done(null);
+    inp.onkeydown = (e) => {
+      if (e.key === "Enter") done({ ver: inp.value });
+      if (e.key === "Escape") done(null);
+    };
+  });
 }
 const projectFile = () => STANDALONE ? { name: "".concat(safeName(project.name, "Проект")).concat(verSfx(), ".ledmask"), data: toPlist(ledmaskData()) } : { name: "".concat(safeName(project.name, "Проект")).concat(verSfx(), ".ledmask.json"), data: JSON.stringify(projectData(), null, 1) };
 // ---- 2.0.74: Сохранить / Сохранить как / Открыть, учёт несохранённых изменений ----
@@ -11111,7 +11409,14 @@ function loadFieldState(d, raw) {
         uid = project.screens[si] ? project.screens[si].uid : "";
       }
       return { uid, x: Math.round(+it.x || 0), y: Math.round(+it.y || 0), rot: (Math.round((+it.rot || 0) / 45) * 45 % 360 + 360) % 360 };
-    }).filter((it) => it.uid && !used.has(it.uid) && used.add(it.uid));
+    }).filter((it) => {
+      // 2.0.149: волюметрик в общее поле не попадает — это другое направление
+      if (!it.uid || used.has(it.uid)) return false;
+      const sc = project.screens.find((x) => x.uid === it.uid);
+      if (sc && sc.kind === "vol") return false;
+      used.add(it.uid);
+      return true;
+    });
     return { id: typeof f.id === "string" && f.id ? f.id : newUid(), name: String(f.name || (k ? "Общее поле ".concat(k + 1) : "Общее поле")), items, title: { on: t.on == null ? true : !!t.on, x: Math.round(+t.x || 0), y: Math.round(+t.y || 0), size: clampI(t.size, INSC.length), meters: !!t.meters }, stack: !!f.stack, file: typeof f.file === "string" ? f.file : "" };
   });
   if (!project.fields.length) project.fields = [freshField(0)];
@@ -11730,8 +12035,10 @@ function refreshFieldPanel() {
   if (fld.sel && !f.items.some((it) => it.uid === fld.sel)) fld.sel = null;
   const list = $("fList");
   list.innerHTML = "";
-  project.screens.forEach((st, i) => {
-    const [w, h] = dims(st), row = document.createElement("div"), it = f.items.find((q) => q.uid === st.uid);
+  let fnum = 0;
+  project.screens.forEach((st) => {
+    if (st.kind === "vol") return; // 2.0.149: волюметрик в общее поле не показываем
+    const i = fnum++, [w, h] = dims(st), row = document.createElement("div"), it = f.items.find((q) => q.uid === st.uid);
     row.className = "fitem" + (st.uid === fld.sel ? " sel" : "");
     const cb = document.createElement("input");
     cb.type = "checkbox";
