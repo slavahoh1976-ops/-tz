@@ -1745,7 +1745,7 @@ html:not([data-page=mask]) .volcom {
 }
 
 /* 2.0.76: «Каше — фигуры» — в LED и в проекции (в проекции без привязки к кабинетам) */
-html[data-kind]:not([data-kind=led]):not([data-kind=proj]) .cache-sec {
+html[data-kind]:not([data-kind=led]):not([data-kind=proj]):not([data-kind=ring]) .cache-sec {
   display: none !important;
 }
 html[data-kind=proj] .cache-sec .refFit [data-f="cab"] {
@@ -1838,8 +1838,8 @@ select.ssel-src { display: none !important; }
 .ssel-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .ssel-btn .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ssel-btn .ar { flex: none; color: var(--muted); }
-.ssel .sw, .paintrow .sw { flex: none; width: 22px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); }
-.ssel .sw.none { background: repeating-linear-gradient(45deg, #444 0 3px, #222 3px 6px); }
+.ssel .sw, .ssel-pop .sw, .paintrow .sw { flex: none; width: 22px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); }
+.ssel .sw.none, .ssel-pop .sw.none { background: repeating-linear-gradient(45deg, #444 0 3px, #222 3px 6px); }
 .ssel-pop { position: absolute; z-index: 40; left: 0; right: auto; top: calc(100% + 4px); min-width: 100%; width: max-content; max-width: min(360px, 88vw); max-height: 340px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--raise); box-shadow: 0 10px 28px rgba(0,0,0,.45); }
 .ssel-it { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 30px; padding: 5px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
 .ssel-it .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1906,6 +1906,13 @@ input.calc { text-align: center; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .stp input.calc { width: 62px !important; }
+
+/* 2.0.157: «Кольцо» */
+html:not([data-kind=ring]) .ring-only { display: none !important; }
+html[data-kind=ring] .no-ring { display: none !important; }
+html[data-kind=ring] .cache-sec .sec-body > :not(.ref-part) { display: none !important; }
+html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !important; }
+#rgPadRow[hidden], #rgSizeRow[hidden] { display: none !important; }
 </style>
 
 </head>
@@ -2048,7 +2055,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
         <div class="row"><span class="lbl">Выход X / Y</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_ox" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Выход X"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_oy" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Выход Y"></div></div>
         <div class="row"><span class="lbl">Выход W × H</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_ow" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" min="1" aria-label="Ширина на выходе"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_oh" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" min="1" aria-label="Высота на выходе"><button class="b" id="oSl11" title="Размер на выходе — как на входе, пиксель в пиксель">1:1</button></div></div>
         <div class="row"><span class="lbl">Пропорции</span><div class="ctl"><div class="seg" id="oSlKeep" role="group" aria-label="Пропорции на выходе"><button data-k="1" aria-pressed="true" title="Меняете ширину — высота меняется сама, и наоборот">сохранять</button><button data-k="0" aria-pressed="false" title="Ширина и высота — независимо">свободно</button></div></div></div>
-        <div class="row"><span class="lbl">Поворот</span><div class="ctl"><div class="seg" id="oSlRot" role="group" aria-label="Поворот"><button data-r="0">0°</button><button data-r="90">90°</button><button data-r="180">180°</button><button data-r="270">270°</button></div></div></div>
+        <div class="row"><span class="lbl">Поворот</span><div class="ctl"><div class="seg" id="oSlRot" role="group" aria-label="Поворот"><button data-r="0">0°</button><button data-r="90">90°</button><button data-r="180">180°</button><button data-r="270">270°</button></div><input type="number" id="oSlRA" class="w-md" step="0.1" min="-180" max="180" inputmode="decimal" title="Точный угол: участок берётся из маски под этим углом и кладётся на выход ровно" aria-label="Точный угол, градусы"><span class="unit">°</span><button class="b sq" id="oSlRA0" title="Сбросить точный угол">0</button></div></div>
         <div class="row"><span class="lbl">Отражение</span><div class="ctl"><button class="b" id="oSlFH" aria-pressed="false" title="Отразить по горизонтали">⇋ по горизонтали</button><button class="b" id="oSlFV" aria-pressed="false" title="Отразить по вертикали">⇵ по вертикали</button></div></div>
         <div class="btns"><button class="b" id="oSlDup">Копия</button><button class="b" id="oSlDel">Удалить</button><button class="b" id="oSlClear">Удалить все</button></div>
       </div>
@@ -2056,6 +2063,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
       <div class="flist" id="oScrList"></div>
       <div class="ctl"><button class="b" id="oScrAdd">+ Выход</button><button class="b" id="oScrDel">− Выход</button><button class="b" id="oScrRename">Переименовать</button></div>
       <div class="row"><span class="lbl">Разрешение</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oScrW" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Ширина выхода"><span class="unit">×</span><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oScrH" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Высота выхода"><select id="oScrPreset" aria-label="Готовые разрешения"><option value="">…</option><option value="3840x2160">3840×2160</option><option value="3840x2400">3840×2400</option><option value="1920x1080">1920×1080</option><option value="2560x1440">2560×1440</option><option value="4096x2160">4096×2160</option><option value="1920x1200">1920×1200</option></select></div></div>
+      <div class="btns"><button class="b" id="oRingCab" title="Кольцо: свой слайс на каждый кабинет, повёрнутый под его угол; на выходе разложить рядами">Разметить кольцо: кабинеты</button><button class="b" id="oRingBlk" title="Кольцо: свой слайс на каждый блок кабинетов; на выходе разложить рядами">по блокам</button></div>
+      <p class="hint">Для маски-кольца кабинеты стоят под углом — эти кнопки сами нарежут слайсы по кабинетам или по блокам, выпрямят каждый и разложат на выходах ровными рядами.</p>
       <div class="btns"><button class="b" id="oPack" title="Разложить все слайсы по выходам слева направо и сверху вниз; не помещается — следующий выход">Разложить по выходам</button></div>
       <div class="tgroup">ИТОГ</div>
       <div class="info" id="oInfo"></div>
@@ -2137,7 +2146,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
       <div class="ctl"><select id="screens" class="grow"></select><button class="b" id="btnAddScreen">+ Экран</button><button class="b sq" id="btnDelScreen" aria-label="Удалить экран">−</button></div>
       <label class="chk"><input type="checkbox" id="scrRenum" checked> переназначать номера экранов после смены порядка</label>
       <div class="seg kind" role="group" aria-label="Вид экрана" style="align-self:flex-start">
-        <button data-kind="led" aria-pressed="true">LED</button><button data-kind="proj" aria-pressed="false">Проекция</button><button data-kind="tv" aria-pressed="false" title="ТВ-панели: настроечная картинка">ТВ-панели</button><button data-kind="pix" aria-pressed="false" title="Pixel drop: Fantaled, палки, бочки">Pixel drop</button><button data-kind="vol" aria-pressed="false">Волюметрик</button>
+        <button data-kind="led" aria-pressed="true">LED</button><button data-kind="proj" aria-pressed="false">Проекция</button><button data-kind="tv" aria-pressed="false" title="ТВ-панели: настроечная картинка">ТВ-панели</button><button data-kind="pix" aria-pressed="false" title="Pixel drop: Fantaled, палки, бочки">Pixel drop</button><button data-kind="ring" aria-pressed="false" title="Кольцо: кабинеты по кругу или эллипсу">Кольцо</button><button data-kind="vol" aria-pressed="false">Волюметрик</button>
       </div>
       <div class="ctl ffile no-vol" id="mFileRow"><span class="ffile-lbl">Имя файла</span><span class="ffile-pre" id="mFilePre" title="Размер маски — подставляется сам">—</span><input type="text" id="mFile" class="grow" spellcheck="false" title="Имя файла маски после размера. Если стереть — снова название экрана" aria-label="Имя файла маски"></div>
     </div></details>
@@ -2149,8 +2158,10 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
       <div class="row"><label for="pixColor">Цвет маски</label><div class="ctl"><input type="color" id="pixColor"><span class="unit num" id="pixRGB"></span></div></div>
       <div class="row"><label for="numColor">Цвет нумерации</label><div class="ctl"><input type="color" id="numColor"><span class="unit num" id="numRGB"></span></div></div>
       <div class="row"><label for="numSize">Размер нумерации</label><div class="ctl"><select id="numSize"></select><button class="b sq" id="numMinus">−</button><button class="b sq" id="numPlus">+</button></div></div>
+      <span id="numFmtHome" hidden></span><div id="numFmtRows">
       <div class="row"><label for="numFmt">Формат нумерации</label><div class="ctl"><select id="numFmt"></select></div></div>
       <div class="row"><label for="numOrigin">Начало нумерации</label><div class="ctl"><select id="numOrigin"></select></div></div>
+      </div>
       <div class="row"><label for="numPos">Расположение номера</label><div class="ctl"><select id="numPos"></select></div></div>
     </div></details>
 
@@ -2194,6 +2205,46 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
         <label class="chk"><input type="checkbox" id="pjInvert"> Инверсия (белый фон)</label>
       </div>
       <p class="hint num" id="pjInfo"></p>
+    </div></details>
+
+    <details class="sec ring-only" open><summary>ДАННЫЕ</summary><div class="sec-body" id="ringData">
+      <p class="hint">Кабинеты по кругу или эллипсу. Задайте кабинет, сколько кабинетов в кольце и диаметр — по центрам кабинетов. Колец может быть несколько, каждое своего цвета. Любой кабинет можно выбрать на холсте, сдвинуть и повернуть на любой угол — например, по картинке-подложке (раздел «ПОДЛОЖКА» ниже).</p>
+      <div class="tgroup">КАБИНЕТ</div>
+      <div class="row"><label for="rgType">Тип кабинета</label><div class="ctl"><select id="rgType" class="grow"></select></div></div>
+      <div class="row"><label for="rgCw">Пиксели кабинета</label><div class="ctl"><input type="number" id="rgCw" min="1" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgCh" min="1" class="w-md" inputmode="numeric"></div></div>
+      <div class="row"><label for="rgMw">Размер кабинета</label><div class="ctl"><input type="number" id="rgMw" min="1" class="w-md" inputmode="decimal"><span class="unit">×</span><input type="number" id="rgMh" min="1" class="w-md" inputmode="decimal"><span class="unit">мм</span></div></div>
+      <div class="tgroup">КОЛЬЦА</div>
+      <div class="ctl"><select id="rgList" class="grow" aria-label="Кольцо"></select><button class="b" id="rgAdd">+ Кольцо</button><button class="b sq" id="rgDel" aria-label="Удалить кольцо">−</button></div>
+      <div class="row"><label for="rgN">Кабинетов</label><div class="ctl"><input type="number" id="rgN" min="1" max="2000" class="w-md" inputmode="numeric"><span class="unit">шт в кольце</span></div></div>
+      <div class="row"><label for="rgBw">Блок кабинетов</label><div class="ctl"><input type="number" id="rgBw" min="1" max="20" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgBh" min="1" max="20" class="w-md" inputmode="numeric"><span class="unit">каб.</span></div></div>
+      <p class="hint">В каждой точке кольца можно поставить не один кабинет, а блок — маленький экран из нескольких кабинетов (ширина × высота). Блок стоит и поворачивается как одно целое; выбор, сдвиг, гашение — на весь блок.</p>
+      <div class="row"><label for="rgDw">Диаметр</label><div class="ctl"><input type="number" id="rgDw" min="2" step="2" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgDh" min="2" step="2" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row"><label for="rgDwCm">Диаметр</label><div class="ctl"><input type="number" id="rgDwCm" min="1" step="1" class="w-md" inputmode="decimal"><span class="unit">×</span><input type="number" id="rgDhCm" min="1" step="1" class="w-md" inputmode="decimal"><span class="unit">см</span></div></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="rgLock"> Сохранять пропорции</label><button class="b" id="rgCircle" title="Сделать круг: высота = ширине">○ Круг</button></div>
+      <p class="hint">Сантиметры считаются по размеру кабинета. С «Сохранять пропорции» ширина и высота меняются вместе, без — кольцо растягивается в эллипс. Мышью — за жёлтые квадратики на холсте (когда не выбран ни один кабинет).</p>
+      <div class="row"><label for="rgA0">Начальный угол</label><div class="ctl"><input type="number" id="rgA0" step="1" class="w-md" inputmode="decimal"><span class="unit">° (0 — сверху)</span></div></div>
+      <div class="row"><label for="rgArc">Дуга</label><div class="ctl"><input type="number" id="rgArc" min="1" max="360" step="1" class="w-md" inputmode="decimal"><span class="unit">° (360 — весь круг)</span></div></div>
+      <div class="row"><span class="lbl">Нумерация</span><div class="ctl"><div class="seg rgdir" role="group" aria-label="Направление"><button data-v="1">По часовой</button><button data-v="-1">Против часовой</button></div></div></div>
+      <div class="row"><span class="lbl">Кабинеты</span><div class="ctl"><div class="seg rgface" role="group" aria-label="Поворот кабинетов"><button data-v="in" title="Каждый кабинет повёрнут по кругу">По кругу</button><button data-v="up" title="Все кабинеты стоят прямо">Все прямо</button></div></div></div>
+      <div class="row"><label for="rgColor">Цвет кольца</label><div class="ctl"><input type="color" id="rgColor"></div></div>
+      <div class="row"><label for="rgOx">Сдвиг центра</label><div class="ctl"><input type="number" id="rgOx" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgOy" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="tgroup">ВЫБРАННЫЕ КАБИНЕТЫ</div>
+      <p class="hint">Инструменты над холстом — как у масок: «Выбор» — щелчок добавляет кабинет (Shift / Ctrl / ⌘ — добавить или убрать), «Диапазон» — обвести рамкой, «Гашение» (или Alt) — погасить / включить кабинет, «Рука» — двигать холст. Тянуть выбранное — сдвинуть, зелёная точка — повернуть (Shift — шагом 15°). Стрелки — сдвиг на 1 px (Shift — 10), [ и ] — поворот на 1° (Shift — 15°), Delete — погасить, Esc — снять выбор. Блок кабинетов выбирается и двигается целиком.</p>
+      <div class="row"><label for="rgRot">Поворот</label><div class="ctl"><input type="number" id="rgRot" step="1" class="w-md" inputmode="decimal"><span class="unit">°</span></div></div>
+      <div class="btns"><button class="b" id="rgRotM15">⟲ 15°</button><button class="b" id="rgRotM1">⟲ 1°</button><button class="b" id="rgRotP1">⟳ 1°</button><button class="b" id="rgRotP15">⟳ 15°</button></div>
+      <div class="row"><label for="rgSelColor">Цвет кабинета</label><div class="ctl"><input type="color" id="rgSelColor"><button class="b" id="rgSelColorReset" title="Вернуть цвет кольца">Как у кольца</button></div></div>
+      <div class="btns"><button class="b" id="rgSelRing">Выбрать всё кольцо</button><button class="b" id="rgOff">Погасить / включить</button><button class="b" id="rgReset">Вернуть на кольцо</button></div>
+      <p class="hint num" id="rgSelInfo"></p>
+      <div class="tgroup">ХОЛСТ И НОМЕРА</div>
+      <label class="chk"><input type="checkbox" id="rgAuto"> Размер маски — по кольцам</label>
+      <div class="row" id="rgPadRow"><label for="rgPad">Отступ от края</label><div class="ctl"><input type="number" id="rgPad" min="0" step="2" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row" id="rgSizeRow"><label for="rgW">Размер маски</label><div class="ctl"><input type="number" id="rgW" min="16" step="2" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgH" min="16" step="2" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <label class="chk"><input type="checkbox" id="rgNums"> Номера кабинетов</label>
+      <div class="row"><label for="rgFmt">Формат номера</label><div class="ctl"><select id="rgFmt"><option value="cr">как в масках: колонка, ряд</option><option value="ring">с номером кольца (2·5,1)</option><option value="seq">сквозной по всей маске</option></select></div></div>
+      <div id="rgNumHost"></div>
+      <p class="hint">Кольцо — это тот же экран, только кабинеты расставлены по кругу: номер кабинета считается как в LED-масках — колонка вдоль кольца (сквозь блоки), ряд — внутри блока.</p>
+      <label class="chk"><input type="checkbox" id="rgOutline"> Контур кабинетов</label>
+      <p class="hint num" id="ringInfo"></p>
     </div></details>
 
     <details class="sec tv-only" open><summary>ДАННЫЕ</summary><div class="sec-body" id="tvData">
@@ -2374,13 +2425,14 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
       <div class="btns"><button class="b" id="shiftRefLoad">Загрузить картинку…</button></div>
     </div></details>
 
-    <details class="sec cache-sec" open><summary>КАШЕ — ФИГУРЫ</summary><div class="sec-body">
+    <details class="sec cache-sec" open><summary><span class="no-ring">КАШЕ — ФИГУРЫ</span><span class="ring-only">ПОДЛОЖКА — КАРТИНКА</span></summary><div class="sec-body">
       <p class="hint">Выберите форму (круг, суперэллипс — у него радиус 0 даёт квадрат, трапеция, пентагон или своя из точек) и нажмите «Добавить фигуру» — она ляжет по центру выделенных кабинетов (или экрана). Кабинеты, которых фигура касается хоть краем, светятся целиком, остальные гаснут без номеров; «Инверсия» — наоборот. «Снаружи фигуры»: «Гасить», «Затемнить» (кабинеты не гаснут, снаружи только темнее) или «Рамка» (одна линия). Выбранная фигура двигается за жёлтый кружок в центре, растягивается за жёлтые квадратики, углы скругляются оранжевой точкой, у трапеции ширина верхнего основания меняется голубой точкой, зелёная точка над фигурой поворачивает её (с Shift — шагом 15°). Снаружи фигуры кабинеты автоматически темнее.</p>
-      <div class="tgroup">ПОДЛОЖКА — КАРТИНКА С КАШЕ</div>
-      <p class="hint">Загрузите картинку с нарисованным каше и обведите её своей фигурой из точек. Картинка растягивается на весь экран или на выделенные кабинеты; с галочкой «Двигать картинку» её можно перетаскивать и растягивать за фиолетовые квадратики — края прилипают к линиям кабинетов (Alt — без прилипания). Подложка видна только на холсте — в PNG и ТЗ не попадает.</p>
-      <input type="file" id="refFile" accept="image/*" hidden>
-      <div class="btns"><button class="b" id="refLoad">Загрузить картинку…</button><button class="b" id="refDel">Убрать</button></div>
-      <div id="refBox" hidden>
+      <div class="tgroup ref-part no-ring">ПОДЛОЖКА — КАРТИНКА С КАШЕ</div>
+      <p class="hint ref-part ring-only">Загрузите фото или схему сцены и выставьте по ней кабинеты кольца: щелчок по кабинету — выбрать, тянуть — сдвинуть, зелёная точка — повернуть. С галочкой «Двигать картинку» подложку можно перетаскивать и растягивать. Видна только на холсте, в PNG и ТЗ не попадает.</p>
+      <p class="hint ref-part no-ring">Загрузите картинку с нарисованным каше и обведите её своей фигурой из точек. Картинка растягивается на весь экран или на выделенные кабинеты; с галочкой «Двигать картинку» её можно перетаскивать и растягивать за фиолетовые квадратики — края прилипают к линиям кабинетов (Alt — без прилипания). Подложка видна только на холсте — в PNG и ТЗ не попадает.</p>
+      <input type="file" id="refFile" accept="image/*" hidden class="ref-part">
+      <div class="btns ref-part"><button class="b" id="refLoad">Загрузить картинку…</button><button class="b" id="refDel">Убрать</button></div>
+      <div id="refBox" class="ref-part" hidden>
         <div class="row"><span class="lbl">Привязка</span><div class="ctl"><div class="seg refFit" role="group" aria-label="Куда растянуть подложку"><button data-f="screen" title="Растянуть на весь экран">Экран</button><button data-f="cab" title="Выделите кабинеты на холсте и нажмите — картинка растянется на них">Кабинеты</button></div></div></div>
         <label class="chk"><input type="checkbox" id="refEdit"> Двигать картинку на холсте</label>
         <div class="row"><label for="refX">Положение</label><div class="ctl"><input type="number" id="refX" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="refY" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
@@ -2623,6 +2675,16 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 <li><strong>Шаг между элементами</strong> в см (по ширине × по высоте) — по умолчанию вплотную. <strong>Колонки × ряды</strong> задаются штуками или через <strong>общий размер в метрах</strong>: элементов = (размер − элемент) / шаг + 1. Физический размер считается сам.</li>
 <li><strong>Маска</strong>: «По пикселям» — элементы вплотную, карта = колонки × пиксели элемента, расстояние между элементами не рисуется; «По размеру» — маска в пропорциях реальных размеров в см: одна плотность пикселей на сантиметр по ширине и высоте (по самой плотной стороне элемента), элементы и чёрные промежутки переводятся из см в пиксели.</li>
 <li>Галочки: номера колонок (все одного размера), ряды чуть разной яркости (видно, где кончается один элемент и начинается следующий).</li>
+</ol>
+<h3>Кольцо</h3>
+<p>Переключатель «Кольцо» — кабинеты по кругу или эллипсу (круглые сцены, кольца вокруг центра). Колец в одном экране может быть несколько, каждое своего цвета; номер кабинета — «кольцо,кабинет» (1,5), просто номер или сквозной.</p>
+<ol>
+<li><strong>Кабинет</strong> — тип из списка или свои пиксели и размер в мм (по ним сантиметры).</li>
+<li><strong>Кольца</strong>: «+ Кольцо» добавляет кольцо снаружи предыдущего. У выбранного кольца — сколько кабинетов, <strong>диаметр</strong> по центрам кабинетов в px или см, начальный угол (0 — сверху), дуга (360 — весь круг, меньше — дуга), направление нумерации, кабинеты «по кругу» или «все прямо», цвет и сдвиг центра.</li>
+<li><strong>Растянуть</strong>: с «Сохранять пропорции» ширина и высота кольца меняются вместе, без — кольцо становится эллипсом (кабинеты поворачиваются по его краю). «○ Круг» возвращает круг. Мышью — за жёлтые квадратики на холсте, когда не выбран ни один кабинет.</li>
+<li><strong>Любой кабинет</strong>: щелчок — выбрать (Shift / Ctrl / ⌘ — добавить, рамкой по пустому месту — несколько), тянуть — сдвинуть, зелёная точка — повернуть на любой угол (Shift — шагом 15°), поле «Поворот» и кнопки ⟲ ⟳ 1° / 15°. Клавиши: стрелки — сдвиг на 1 px (Shift — 10), [ и ] — поворот на 1° (Shift — 15°), Delete — погасить, Esc — снять выбор. «Вернуть на кольцо» сбрасывает сдвиг и поворот.</li>
+<li><strong>По картинке</strong>: в разделе «ПОДЛОЖКА — КАРТИНКА» загрузите фото или схему сцены и выставьте по ней кабинеты. Подложка видна только на холсте.</li>
+<li>Размер маски — по кольцам с отступом (всегда чётный) или свой. На общем поле с «Накладывать маски на маски» у кольца видны только кабинеты — его можно класть поверх других масок.</li>
 </ol>
 <h3>Текст на маске</h3>
 <ul>
@@ -4090,8 +4152,8 @@ if (typeof String !== "undefined" && !String.prototype.matchAll) {
 }
 const ICON_B64 = "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";
 const STANDALONE = true;
-const APP_VERSION = "2.0.156";
-const BUILD_STAMP = "11.11 15:47";
+const APP_VERSION = "2.0.167";
+const BUILD_STAMP = "12.11 09:25";
 const UPDATE_URL = "https://slavahoh1976-ops.github.io/-tz/download/version.json";
 const QS = new URLSearchParams(location.search);
 let PLATFORM = window.AndroidBridge ? "android" : window.LEDMASK_PLATFORM || QS.get("platform") || (window.pywebview ? "windows" : "web");
@@ -4331,6 +4393,10 @@ const dims = (st) => {
   }
   if (st.kind === "pix" || st.kind === "tube") {
     const g2 = pixGeom(st);
+    return [g2.W, g2.H];
+  }
+  if (st.kind === "ring") {
+    const g2 = ringGeom(st);
     return [g2.W, g2.H];
   }
   if (st.kind === "vol") {
@@ -6198,6 +6264,10 @@ function typeMM(st) {
   return t ? [t[3], t[4], true] : [500, 500, false];
 }
 function physM(st) {
+  if (st.kind === "ring") {
+    const g = ringGeom(st);
+    return [g.W * ringMmX(g.R) / 1e3, g.H * ringMmY(g.R) / 1e3, true];
+  }
   if (st.kind === "tv") {
     const g = tvGeom(st), d = +g.T.diag || 0;
     if (!d) return [0, 0, false];
@@ -6242,13 +6312,17 @@ const titleText = (st) => {
   return "".concat(W, "×").concat(H);
 };
 function cabLabel(st, c, r) {
+  return fmtCabLabel(st, c, r, st.cabCols, st.cabRows);
+}
+// 2.0.163: общий формат номера кабинета — одинаковый для LED-масок и для колец
+function fmtCabLabel(st, c, r, cols, rows) {
   let colN = c + 1, rowN = r + 1;
   const o = st.numberOriginIndex;
-  if (o === 1) rowN = st.cabRows - r;
-  else if (o === 2) colN = st.cabCols - c;
+  if (o === 1) rowN = rows - r;
+  else if (o === 2) colN = cols - c;
   else if (o === 3) {
-    colN = st.cabCols - c;
-    rowN = st.cabRows - r;
+    colN = cols - c;
+    rowN = rows - r;
   }
   switch (st.numberFormatIndex) {
     case 1:
@@ -6258,7 +6332,7 @@ function cabLabel(st, c, r) {
     case 3:
       return "C".concat(colN, "-R").concat(rowN);
     case 4:
-      return String((rowN - 1) * st.cabCols + colN);
+      return String((rowN - 1) * cols + colN);
     default:
       return "".concat(colN, ",").concat(rowN);
   }
@@ -6314,10 +6388,233 @@ const numberAuto = (st) => Math.max(1, Math.round(Math.min(st.cabWpx, st.cabHpx)
 const numberFont = (st) => +st.numSize > 0 ? Math.max(1, Math.min(1000, +st.numSize)) : numberAuto(st);
 const NUM_SIZES = [1, 2, 3, 4, 5, 6, 8];
 for (let n = 10; n <= 1000; n += 10) NUM_SIZES.push(n);
+// ===== 2.0.157: «Кольцо» — кабинеты по кругу или эллипсу (несколько колец), каждый кабинет можно сдвинуть и повернуть =====
+const RING_COLORS = ["#7a0f2b", "#0f3d1a", "#5a0a6e", "#0a1f6e", "#6e4a0a", "#0a5a5a", "#6e0a4a", "#3a3a3a"];
+function ringCabDef() {
+  const t = TYPES.find((q) => q[0] === DEFAULT_TYPE) || TYPES[0];
+  return { type: t[0], cw: t[1], ch: t[2], mw: t[3], mh: t[4] };
+}
+const ringEven = (v) => Math.max(2, Math.round(v / 2) * 2);
+// 2.0.163: кабинет можно задать отдельно каждому кольцу; если не задан — берём общий у экрана
+const ringCab = (R, g) => ({
+  type: g && g.type != null ? g.type : R.type,
+  cw: Math.max(1, ((g && g.cw) || R.cw) | 0),
+  ch: Math.max(1, ((g && g.ch) || R.ch) | 0),
+  mw: +((g && g.mw) || R.mw) || 500,
+  mh: +((g && g.mh) || R.mh) || 500
+});
+// цвет типа кабинета — тот же, что в LED-масках (из каталога)
+const typeColor = (name, cw, ch) => {
+  const t = TYPES.find((q) => q[0] === name && q[1] === cw && q[2] === ch) || TYPES.find((q) => q[0] === name);
+  return t ? hex(fromRGB(t[5])).toUpperCase() : null;
+};
+function defRingItem(i, R) {
+  const prev = R && R.rings && R.rings[R.rings.length - 1];
+  const cab = ringCab(R || {}, prev || null), cw = Math.max(1, cab.cw | 0);
+  const cabf = { type: cab.type, cw: cab.cw, ch: cab.ch, mw: cab.mw, mh: cab.mh };
+  const color = typeColor(cab.type, cab.cw, cab.ch) || RING_COLORS[i % RING_COLORS.length];
+  if (!prev) {
+    const n = 12;
+    return { n, dw: ringEven(n * cw * 1.25 / Math.PI), dh: ringEven(n * cw * 1.25 / Math.PI), lock: true, a0: 0, arc: 360, dir: 1, face: "in", color, ox: 0, oy: 0, bw: 1, bh: 1, ...cabf };
+  }
+  const dw = ringEven(prev.dw + cw * 2.6), dh = ringEven(dw * prev.dh / prev.dw);
+  return { n: Math.max(3, Math.round(Math.PI * dw / (cw * 1.25))), dw, dh, lock: prev.lock !== false, a0: +prev.a0 || 0, arc: +prev.arc || 360, dir: prev.dir === -1 ? -1 : 1, face: prev.face === "up" ? "up" : "in", color, ox: +prev.ox || 0, oy: +prev.oy || 0, bw: Math.max(1, prev.bw | 0) || 1, bh: Math.max(1, prev.bh | 0) || 1, ...cabf };
+}
+function defRing() {
+  const R = { ...ringCabDef(), rings: [], mods: {}, auto: true, pad: 40, W: 1920, H: 1080, nums: true, numFmt: "cr", outline: true };
+  R.rings.push(defRingItem(0, R));
+  return R;
+}
+function ringNorm(q) {
+  const R = defRing();
+  if (!q || typeof q !== "object") return R;
+  if (typeof q.type === "string") R.type = q.type;
+  for (const k of ["cw", "ch"]) if (+q[k] >= 1) R[k] = Math.min(16384, Math.round(+q[k]));
+  for (const k of ["mw", "mh"]) if (+q[k] > 0) R[k] = +q[k];
+  R.auto = q.auto !== false;
+  R.pad = q.pad == null ? 40 : Math.max(0, Math.round(+q.pad || 0));
+  for (const k of ["W", "H"]) if (+q[k] >= 16) R[k] = Math.min(32768, Math.round(+q[k]));
+  R.nums = q.nums !== false;
+  R.outline = q.outline !== false;
+  R.numFmt = ["cr", "ring", "seq"].includes(q.numFmt) ? q.numFmt : q.numFmt === "rm" ? "ring" : "cr";
+  if (Array.isArray(q.rings) && q.rings.length) {
+    const out = [];
+    q.rings.slice(0, 50).forEach((r, i) => {
+      if (!r || typeof r !== "object") return;
+      const d = defRingItem(i, null);
+      out.push({ n: Math.max(1, Math.min(2000, Math.round(+r.n || d.n))), dw: Math.max(2, +r.dw || d.dw), dh: Math.max(2, +r.dh || +r.dw || d.dh), lock: r.lock !== false, a0: +r.a0 || 0, arc: r.arc == null ? 360 : Math.max(1, Math.min(360, +r.arc || 360)), dir: +r.dir === -1 ? -1 : 1, face: r.face === "up" ? "up" : "in", color: /^#[0-9a-f]{6}$/i.test(r.color || "") ? r.color : d.color, ox: +r.ox || 0, oy: +r.oy || 0, bw: Math.max(1, Math.min(20, Math.round(+r.bw || 1))), bh: Math.max(1, Math.min(20, Math.round(+r.bh || 1))), type: typeof r.type === "string" ? r.type : d.type, cw: +r.cw > 0 ? Math.min(16384, Math.round(+r.cw)) : d.cw, ch: +r.ch > 0 ? Math.min(16384, Math.round(+r.ch)) : d.ch, mw: +r.mw > 0 ? +r.mw : d.mw, mh: +r.mh > 0 ? +r.mh : d.mh });
+    });
+    if (out.length) R.rings = out;
+  }
+  R.mods = {};
+  if (q.mods && typeof q.mods === "object") for (const [k, v] of Object.entries(q.mods)) {
+    if (!/^\d+,\d+(,\d+)?$/.test(k) || !v || typeof v !== "object") continue;
+    const o = {};
+    if (+v.dx) o.dx = +v.dx;
+    if (+v.dy) o.dy = +v.dy;
+    if (+v.dr) o.dr = +v.dr;
+    if (v.off) o.off = true;
+    if (/^#[0-9a-f]{6}$/i.test(v.color || "")) o.color = v.color;
+    if (Object.keys(o).length) R.mods[k] = o;
+  }
+  return R;
+}
+const ringNormDeg = (d) => {
+  let v = ((+d || 0) % 360 + 540) % 360 - 180;
+  return Math.round(v * 100) / 100;
+};
+function ringGeom(st) {
+  const R = st.ring || (st.ring = defRing()), cw0 = Math.max(1, R.cw | 0), ch0 = Math.max(1, R.ch | 0), list = [];
+  let seq = 0, mx = 0, my = 0;
+  R.rings.forEach((g, ri) => {
+    const gc = ringCab(R, g), cw = gc.cw, ch = gc.ch;
+    const n = Math.max(1, g.n | 0), a = Math.max(1, +g.dw || 2) / 2, b = Math.max(1, +g.dh || 2) / 2, arc = +g.arc || 360, full = arc >= 360;
+    const stepA = full ? 360 / n : n > 1 ? arc / (n - 1) : 0, dir = g.dir === -1 ? -1 : 1;
+    const bw = Math.max(1, g.bw | 0), bh = Math.max(1, g.bh | 0), block = bw * bh > 1;
+    for (let i = 0; i < n; i++) {
+      const th = ((+g.a0 || 0) + dir * i * stepA) * Math.PI / 180, px = a * Math.sin(th), py = b * Math.cos(th);
+      let base = 0;
+      if (g.face !== "up") base = Math.atan2(px / (a * a), py / (b * b)) * 180 / Math.PI;
+      const k0 = ri + "," + i;
+      // сетка блока ориентирована по кольцу (base); центр точки — на эллипсе
+      const br = base * Math.PI / 180, bcr = Math.cos(br), bsr = Math.sin(br);
+      const ox0 = (+g.ox || 0) + px, oy0 = (+g.oy || 0) - py;
+      for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+        const bi = by * bw + bx, ck = bi ? k0 + "," + bi : k0, cm = R.mods[ck] || {};
+        const rot = ringNormDeg(base + (cm.dr || 0));
+        const lx = (bx - (bw - 1) / 2) * cw, ly = (by - (bh - 1) / 2) * ch;
+        const cx = ox0 + lx * bcr - ly * bsr + (cm.dx || 0), cy = oy0 + lx * bsr + ly * bcr + (cm.dy || 0);
+        const rr = rot * Math.PI / 180, cr = Math.cos(rr), sr = Math.sin(rr);
+        const ex = Math.abs(cw / 2 * cr) + Math.abs(ch / 2 * sr), ey = Math.abs(cw / 2 * sr) + Math.abs(ch / 2 * cr);
+        seq++;
+        list.push({ k: ck, ri, i, bi, bx, by, bw, bh, nCols: n * bw, block, cx, cy, w: cw, h: ch, rot, base, color: cm.color || g.color, off: !!cm.off, n: seq, moved: !!(cm.dx || cm.dy || cm.dr) });
+        mx = Math.max(mx, Math.abs(cx) + ex);
+        my = Math.max(my, Math.abs(cy) + ey);
+      }
+    }
+  });
+  let W, H;
+  if (R.auto !== false) {
+    const p = Math.max(0, +R.pad || 0);
+    W = Math.max(16, Math.ceil(mx + p) * 2);
+    H = Math.max(16, Math.ceil(my + p) * 2);
+  } else {
+    W = Math.max(16, R.W | 0);
+    H = Math.max(16, R.H | 0);
+  }
+  for (const m of list) {
+    m.x = W / 2 + m.cx;
+    m.y = H / 2 + m.cy;
+  }
+  return { R, list, W, H, cw: cw0, ch: ch0 };
+}
+// 2.0.163: номер кабинета в кольце — по тем же правилам, что в LED-масках:
+// колонка считается вдоль кольца (сквозь блоки), ряд — внутри блока; формат и точка отсчёта общие
+const ringLabel = (R, m, st) => {
+  if (R.numFmt === "seq") return String(m.n);
+  const lab = fmtCabLabel(st, m.i * m.bw + m.bx, m.by, m.nCols, m.bh);
+  return R.numFmt === "ring" ? "".concat(m.ri + 1, "\xB7").concat(lab) : lab;
+};
+function ringPoly(m, grow) {
+  const a = m.rot * Math.PI / 180, c = Math.cos(a), s = Math.sin(a), hw = m.w / 2 + (grow || 0), hh = m.h / 2 + (grow || 0);
+  return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([x, y]) => [m.x + x * c - y * s, m.y + x * s + y * c]);
+}
+function ringHit(m, x, y) {
+  const a = -m.rot * Math.PI / 180, dx = x - m.x, dy = y - m.y, lx = dx * Math.cos(a) - dy * Math.sin(a), ly = dx * Math.sin(a) + dy * Math.cos(a);
+  return Math.abs(lx) <= m.w / 2 && Math.abs(ly) <= m.h / 2;
+}
+const ringMmX = (R) => (+R.mw || 500) / Math.max(1, R.cw | 0);
+const ringMmY = (R) => (+R.mh || 500) / Math.max(1, R.ch | 0);
+function drawRing(ctx, st, s, guides) {
+  const g = ringGeom(st), R = g.R, Wp = Math.max(1, Math.round(g.W * s)), Hp = Math.max(1, Math.round(g.H * s));
+  ctx.save();
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, Wp, Hp);
+  const fsOf = (m) => (+st.numSize > 0 ? Math.min(1000, +st.numSize) : Math.max(1, Math.round(Math.min(m.w, m.h) * NUM_AUTO_K))) * s;
+  const put = (m, fn) => {
+    ctx.save();
+    ctx.translate(m.x * s, m.y * s);
+    ctx.rotate(m.rot * Math.PI / 180);
+    fn(m.w / 2 * s, m.h / 2 * s);
+    ctx.restore();
+  };
+  for (const m of g.list) {
+    if (m.off) continue;
+    ctx.fillStyle = m.color;
+    put(m, (hw, hh) => ctx.fillRect(-hw, -hh, hw * 2, hh * 2));
+  }
+  // 2.0.163: границы как в LED-масках — внутри блока тёмная сетка, снаружи яркий белый контур
+  if (R.outline !== false) {
+    const bwL = Math.max(1, Math.round(2 * s)), owL = Math.max(1, Math.round(s)), half = Math.floor(bwL / 2);
+    const live = /* @__PURE__ */ new Map();
+    for (const m of g.list) if (!m.off) live.set(m.ri + "|" + m.i + "|" + m.bx + "|" + m.by, m);
+    // граница внутренняя, если рядом в том же блоке есть кабинет и оба не сдвинуты и повёрнуты одинаково
+    const inner = (m, dx, dy) => {
+      if (m.moved) return false;
+      const o = live.get(m.ri + "|" + m.i + "|" + (m.bx + dx) + "|" + (m.by + dy));
+      return !!o && !o.moved && Math.abs(o.rot - m.rot) < 1e-6;
+    };
+    for (const pass of [0, 1]) {
+      ctx.fillStyle = pass ? "#fff" : "rgb(64,64,64)";
+      for (const m of g.list) {
+        if (m.off) continue;
+        const L = inner(m, -1, 0), Rr = inner(m, 1, 0), T = inner(m, 0, -1), B = inner(m, 0, 1);
+        if (pass ? L && Rr && T && B : !(L || Rr || T || B)) continue;
+        put(m, (hw, hh) => {
+          if (!pass) {
+            if (L) ctx.fillRect(-hw - half, -hh, bwL, hh * 2);
+            if (Rr) ctx.fillRect(hw - half, -hh, bwL, hh * 2);
+            if (T) ctx.fillRect(-hw, -hh - half, hw * 2, bwL);
+            if (B) ctx.fillRect(-hw, hh - half, hw * 2, bwL);
+          } else {
+            if (!L) ctx.fillRect(-hw, -hh, owL, hh * 2);
+            if (!Rr) ctx.fillRect(hw - owL, -hh, owL, hh * 2);
+            if (!T) ctx.fillRect(-hw, -hh, hw * 2, owL);
+            if (!B) ctx.fillRect(-hw, hh - owL, hw * 2, owL);
+          }
+        });
+      }
+    }
+  }
+  if (R.nums !== false) {
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const m of g.list) {
+      if (m.off) continue;
+      const fs = fsOf(m);
+      if (fs < 2) continue;
+      ctx.font = "".concat(fs, "px ").concat(FONT);
+      put(m, () => ctx.fillText(ringLabel(R, m, st), 0, 0));
+    }
+  }
+  // 2.0.162: у кольца направляющих (круга и диагоналей) нет
+  ctx.textAlign = "left";
+  if (REF_ON_CANVAS) drawRefImage(ctx, st, s);
+  ctx.textBaseline = "alphabetic";
+  drawPlateTitle(ctx, st, s, g.W, g.H, false, true);
+  drawInfo(ctx, st, s);
+  ctx.restore();
+}
+function ringInfoLines(st) {
+  const g = ringGeom(st), R = g.R, [W, H] = [g.W, g.H], cm = (px, k) => compactM(+(px * k / 10).toFixed(1));
+  const off = g.list.filter((m) => m.off).length;
+  const cabs = [...new Set(R.rings.map((r) => {
+    const q = ringCab(R, r);
+    return (q.type ? q.type + " — " : "") + q.cw + "×" + q.ch + " px · " + compactM(+q.mw) + "×" + compactM(+q.mh) + " мм";
+  }))];
+  const out = [(cabs.length > 1 ? "Кабинеты: " : "Кабинет: ") + cabs.join("; ")];
+  out.push("Колец: ".concat(R.rings.length, " · кабинетов: ").concat(g.list.length - off).concat(off ? " (погашено ".concat(off, ")") : ""));
+  R.rings.forEach((r, i) => out.push("Кольцо ".concat(i + 1, ": ").concat(r.n, " шт · Ø ").concat(Math.round(r.dw), "×").concat(Math.round(r.dh), " px (").concat(cm(r.dw, ringMmX(R)), "×").concat(cm(r.dh, ringMmY(R)), " см)")));
+  out.push("Разрешение: ".concat(W, "×").concat(H, " px"));
+  out.push("Физический размер: ".concat(compactM(W * ringMmX(R) / 1e3), "×").concat(compactM(H * ringMmY(R) / 1e3), " м"));
+  return out;
+}
 const projCircle = (st) => !!(st.proj && st.proj.circleGuide === true);
 function drawMask(ctx, st, s, guides) {
   if (st.kind === "proj") return drawProj(ctx, st, s, { ...guides || {}, circle: projCircle(st) });
   if (st.kind === "tv") return drawTV(ctx, st, s, guides);
+  if (st.kind === "ring") return drawRing(ctx, st, s, guides || {});
   if (st.kind === "pix" || st.kind === "tube") return drawPix(ctx, st, s, guides);
   if (st.kind === "vol") {
     if (VOL_MASK_UI) return drawVol(ctx, st, s);
@@ -6646,6 +6943,7 @@ function infoLines(st) {
     return out;
   }
   if (st.kind === "vol") return volInfoLines(st);
+  if (st.kind === "ring") return ringInfoLines(st);
   if (st.kind === "tube") {
     const g = tubeGeom(st);
     return ["Трубка: ".concat(g.len, " м · 1×").concat(g.eh, " px"), "Трубок: ".concat(g.cols, " × ").concat(g.rows, " (шаг ").concat(g.step, " см)"), "Разрешение: ".concat(W, "×").concat(H, " px"), "Физический размер: ".concat(m(pw), "×").concat(m(ph), " м")];
@@ -6719,7 +7017,7 @@ function cornerList(st, black) {
 }
 let project = { name: "Проект", screens: [defaultScreen()], cur: 0, guides: { circle: true, diag: true }, ...freshFieldState() };
 const S = () => project.screens[project.cur];
-const ui = { shapeType: "circle", bezDraw: null, bezHover: null, bezSel: -1, selShape: -1, corner: 0, selected: /* @__PURE__ */ new Set(), anchor: null, textMode: -1, selLabel: -1, zoom: 1, panX: 0, panY: 0, tool: "select", mod: false, hover: null, paint: { ...DEF_PAINT }, volView: { z: 1, x: 0, y: 0 } };
+const ui = { shapeType: "circle", bezDraw: null, bezHover: null, bezSel: -1, selShape: -1, corner: 0, selected: /* @__PURE__ */ new Set(), anchor: null, textMode: -1, selLabel: -1, zoom: 1, panX: 0, panY: 0, tool: "select", mod: false, hover: null, paint: { ...DEF_PAINT }, volView: { z: 1, x: 0, y: 0 }, ringSel: /* @__PURE__ */ new Set(), ringPri: "", ringCur: 0 };
 let downloads = null;
 // Подложки каше: картинки хранятся отдельно (id → dataURL), в экране — только привязка.
 // Так история отмены не копирует тяжёлые картинки; в файл проекта и автосохранение они попадают через refImages.
@@ -6765,7 +7063,7 @@ function refRect(st) {
 let REF_ON_CANVAS = false;
 function drawRefImage(ctx, st, s) {
   const R = st.cacheRef;
-  if (!R || R.show === false || st.kind && st.kind !== "led" && st.kind !== "proj") return;
+  if (!R || R.show === false || st.kind && st.kind !== "led" && st.kind !== "proj" && st.kind !== "ring") return;
   const im = refImg(R.id);
   if (!im) return;
   const [x, y, w, h] = refRect(st);
@@ -6840,8 +7138,9 @@ function normalizeScreen(d) {
     const o = pint(v, -1);
     if (parseKey(k) && o >= 0 && o <= 7) st.cornerCabinets[k] = o;
   }
-  st.kind = ["proj", "tv", "pix", "tube", "vol"].includes(d.kind) ? d.kind : "led";
+  st.kind = ["proj", "tv", "pix", "tube", "vol", "ring"].includes(d.kind) ? d.kind : "led";
   st.vol = volNorm(d.vol);
+  if (d.ring || st.kind === "ring") st.ring = ringNorm(d.ring);
   {
     const T = defTube(), q = d.tube && typeof d.tube === "object" ? d.tube : {};
     T.len = +q.len === 2 ? 2 : 1;
@@ -6994,6 +7293,7 @@ function syncUI() {
     }
   }
   $("screens").value = project.cur;
+  if (window.screensUI) window.screensUI.sync();
   $("scrRenum").checked = project.renumber !== false;
   const ti = TYPES.findIndex((t) => t[0] === st.cabinetTypeName);
   $("cabType").value = ti >= 0 ? ti : "";
@@ -7047,6 +7347,12 @@ function updateInfo(forcePhys) {
     setTxt($("zLabel"), Math.round(ui.zoom * 100) + "%");
     return;
   }
+  if (st.kind === "ring") {
+    setTxt($("infoCab"), "");
+    setTxt($("ringInfo"), "Итог: ".concat(W, "×").concat(H, " px · ").concat(physText(st)));
+    setTxt($("zLabel"), Math.round(ui.zoom * 100) + "%");
+    return;
+  }
   if (st.kind === "tv" || st.kind === "pix") {
     setTxt($("infoCab"), "");
     setTxt($(st.kind === "tv" ? "tvInfo" : "pxInfo"), "Итог: ".concat(W, "×").concat(H, " px").concat(physM(st)[2] ? " · " + physText(st) : ""));
@@ -7076,6 +7382,7 @@ function changed(opts = {}) {
     const el = $("screens"), o = [...el.options].find((q) => +q.value === project.cur);
     if (o) o.textContent = "".concat(o.index + 1, ". ").concat(S().name || "screen");
     el.__items = "";
+    if (window.screensUI) window.screensUI.sync();
   }
 }
 function refreshTextList() {
@@ -7254,6 +7561,7 @@ function draw() {
     pctx.strokeRect(x + lw / 2 + 1, y + lw / 2 + 1, ww - lw - 2, hh - lw - 2);
   }
   drawCachePreview(st, s);
+  ringOverlay();
   if (ui.textHover && !act) {
     const th = textHoverAt(ui.textHover.f.cx, ui.textHover.f.cy, null), sel = ui.textHover.k === "t" ? ui.textMode === 0 : selExtras().includes(+ui.textHover.k.slice(1));
     if (th && th.k === ui.textHover.k && !sel) {
@@ -7348,7 +7656,7 @@ function cellRect(c, r) {
 function textHoverAt(x, y, e) {
   const st = S();
   if (!L || ui.bezDraw) return null;
-  if (!(st.kind === "proj" || st.kind === "tv" || (!st.kind || st.kind === "led") && (ui.tool || "select") === "select" && !(e && e.altKey))) return null;
+  if (!(st.kind === "proj" || st.kind === "tv" || st.kind === "ring" || (!st.kind || st.kind === "led") && (ui.tool || "select") === "select" && !(e && e.altKey))) return null;
   const hitF = (f) => Math.abs(x - f.cx) <= f.w / 2 + 10 && Math.abs(y - f.cy) <= f.h / 2 + 10;
   for (let i = (st.extraLabels || []).length - 1; i >= 0; i--) if (hitF(labelFrame(i))) return { k: "l" + i, f: labelFrame(i) };
   if (titleLines(st, L.scale).length && hitF(titleFrame())) return { k: "t", f: titleFrame() };
@@ -7454,9 +7762,20 @@ pv.addEventListener("pointerdown", (e) => {
       return;
     }
   }
+  if (st.kind === "ring") {
+    // поворот выбранного кабинета и растяжение кольца — раньше, чем выбор текста
+    const pri = ringGeom(st).list.find((m) => m.k === ui.ringPri && ui.ringSel.has(m.k));
+    if (pri) {
+      const [hx, hy] = ringRotHandle(pri);
+      if (Math.hypot(x - hx, y - hy) <= 11) {
+        act = { kind: "ringRot", k: pri.k };
+        return;
+      }
+    }
+  }
   // 2.0.81: в проекции и ТВ кабинетов нет — текст выбирается и двигается мышью сразу, без «Активного текста»
   // 2.0.94: и в LED (инструмент «Выбор») — щелчок по тексту выбирает его; Alt — выделять кабинеты под текстом
-  if (st.kind === "proj" || st.kind === "tv" || (!st.kind || st.kind === "led") && (ui.tool || "select") === "select" && !e.altKey) {
+  if (st.kind === "proj" || st.kind === "tv" || st.kind === "ring" || (!st.kind || st.kind === "led") && (ui.tool || "select") === "select" && !e.altKey) {
     const hitF = (f) => Math.abs(x - f.cx) <= f.w / 2 + 10 && Math.abs(y - f.cy) <= f.h / 2 + 10;
     for (let i = (st.extraLabels || []).length - 1; i >= 0; i--) if (hitF(labelFrame(i))) {
       const sel = selExtras();
@@ -7520,6 +7839,15 @@ pv.addEventListener("pointerdown", (e) => {
       requestDraw();
       return;
     }
+  }
+  if (st.kind === "ring") {
+    const ra = ringPointerDown(e, x, y);
+    if (ra) {
+      act = ra;
+      return;
+    }
+    if (e.pointerType !== "mouse" || ui.tool === "pan") act = { kind: "pan", x, y, px: ui.panX, py: ui.panY };
+    return;
   }
   const alt = e.altKey, ctrl = e.ctrlKey || e.metaKey, shift = e.shiftKey;
   if (ui.tool === "pan" && !alt && !ctrl && !shift) {
@@ -7616,6 +7944,8 @@ pv.addEventListener("pointermove", (e) => {
     changed();
   } else if (act.kind === "refMove" || act.kind === "refSize") {
     refPointerMove(act, p, e);
+  } else if (/^ring/.test(act.kind)) {
+    ringPointerMove(act, p, e);
   } else if (act.kind === "bezNew") {
     // потянули при постановке точки — плавный узел с симметричными ручками
     const q = act.q, ix = (p[0] - L.ox) / s, iy = (p[1] - L.oy) / s;
@@ -7750,7 +8080,11 @@ function endPointer(e) {
     }
   }
   if (pointers.size < 2) pinch = null;
-  if (pointers.size === 0) act = null;
+  if (pointers.size === 0) {
+    const wasBox = act && act.kind === "ringBox";
+    act = null;
+    if (wasBox) requestDraw();
+  }
 }
 pv.addEventListener("pointerup", endPointer);
 pv.addEventListener("pointercancel", endPointer);
@@ -7818,13 +8152,18 @@ function clearSelection() {
   status("Выделение снято");
 }
 function syncProjUI() {
-  const st = S(), P = st.proj || (st.proj = defProj()), kind = ["proj", "tv", "pix", "tube", "vol"].includes(st.kind) ? st.kind : "led";
+  const st = S(), P = st.proj || (st.proj = defProj()), kind = ["proj", "tv", "pix", "tube", "vol", "ring"].includes(st.kind) ? st.kind : "led";
   if (P.numsN == null) P.numsN = Math.max(1, P.nx | 0) * Math.max(1, P.ny | 0);
   document.documentElement.setAttribute("data-kind", kind);
   {
     // 2.0.45: «Направляющие» — в разделе «ДАННЫЕ» текущего вида (LED, проекция, ТВ); переносим только при смене вида
     const g = $("guidesRow"), box = ["led", "proj", "tv"].includes(kind) ? $(kind + "Data") : null;
     if (g && box && g.parentElement !== box) box.appendChild(g);
+    // 2.0.163: «Формат» и «Начало нумерации» нужны и кольцу — переносим строки в его панель
+    const nr = $("numFmtRows"), nbox = kind === "ring" ? $("rgNumHost") : null, home = $("numFmtHome");
+    if (nr && nbox) {
+      if (nr.parentElement !== nbox) nbox.appendChild(nr);
+    } else if (nr && home && nr.previousElementSibling !== home) home.after(nr);
   }
   document.documentElement.setAttribute("data-pjmode", P.mode === "dome" ? "dome" : "grid");
   document.querySelectorAll(".seg.pjmode button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === (P.mode === "dome" ? "dome" : "grid"))));
@@ -7884,6 +8223,7 @@ function syncProjUI() {
 }
 function syncTVPixUI() {
   if ($("vlModel")) syncVolUI();
+  if (S().kind === "ring") syncRingUI();
   const st = S(), T = st.tv || (st.tv = defTV()), X = st.pix || (st.pix = defPix()), set = (id, v) => {
     if (document.activeElement !== $(id)) setVal($(id), v);
   };
@@ -8200,6 +8540,7 @@ document.querySelectorAll(".seg.kind button").forEach((b) => b.onclick = () => {
     st.vol.view = "com";
     st.vol.side = "top";
   }
+  if (st.kind === "ring" && !st.ring) st.ring = defRing();
   if (!st.proj || st.kind === "proj" && !st.proj.used) st.proj = defProj();
   if (st.kind === "proj") st.proj.used = true;
   // У pixel drop — свои галочки строк текста и положение надписи (по умолчанию строки выключены);
@@ -8218,8 +8559,8 @@ document.querySelectorAll(".seg.kind button").forEach((b) => b.onclick = () => {
   }
   if (st.kind !== was) {
     const nm = String(st.name || "").trim();
-    const DEF = { led: "screen", proj: "projection", tv: "tv", pix: "pixel drop", tube: "led tube", vol: "volumetric" };
-    if (!nm || /^(screen|projection|projector|tv|pixel drop|led tube|volumetric) \d+$/i.test(nm)) st.name = st.kind === "led" ? "screen ".concat(project.cur + 1) : "".concat(DEF[st.kind], " ").concat(project.screens.filter((x) => x.kind === st.kind).length);
+    const DEF = { led: "screen", proj: "projection", tv: "tv", pix: "pixel drop", tube: "led tube", vol: "volumetric", ring: "ring" };
+    if (!nm || /^ring$/i.test(nm) || /^(screen|projection|projector|tv|pixel drop|led tube|volumetric|ring) \d+$/i.test(nm)) st.name = st.kind === "led" ? "screen ".concat(project.cur + 1) : st.kind === "ring" ? "ring" : "".concat(DEF[st.kind], " ").concat(project.screens.filter((x) => x.kind === st.kind).length);
     $("scrName").value = st.name;
     $("screens").__items = ""; // список перестроится в syncUI (и с учётом режима)
   }
@@ -8232,7 +8573,7 @@ document.querySelectorAll(".seg.kind button").forEach((b) => b.onclick = () => {
   $("gCircle").checked = st.kind === "proj" ? projCircle(st) : project.guides.circle;
   changed({ forcePhys: true });
   fitAuto && fitAuto();
-  status({ proj: "Экран — проекция: задайте проекторы и полотно", tv: "Экран — ТВ-панели: настроечная картинка", pix: "Экран — pixel drop: элементы, колонки и ряды", tube: "Экран — LED tube: размер в метрах и шаг трубок", vol: "Экран — волюметрик: модель, кабинеты, раскладка маски; справа внизу — 3D-вид" }[st.kind] || "Экран — LED", true);
+  status({ proj: "Экран — проекция: задайте проекторы и полотно", tv: "Экран — ТВ-панели: настроечная картинка", pix: "Экран — pixel drop: элементы, колонки и ряды", tube: "Экран — LED tube: размер в метрах и шаг трубок", vol: "Экран — волюметрик: модель, кабинеты, раскладка маски; справа внизу — 3D-вид", ring: "Экран — кольцо: кабинет, количество и диаметр; кабинеты можно выбрать и повернуть мышью" }[st.kind] || "Экран — LED", true);
 });
 var fitAuto = null;
 const projNum = (id, k, float, min = 0) => $(id).addEventListener("input", () => {
@@ -9277,7 +9618,7 @@ $("screens").addEventListener("change", (e) => {
 });
 $("btnAddScreen").onclick = () => {
   const base = JSON.parse(JSON.stringify(S()));
-  Object.assign(base, { borders: [], name: base.kind && base.kind !== "led" ? "".concat({ proj: "projection", tv: "tv", pix: "pixel drop", tube: "led tube", vol: "volumetric" }[base.kind], " ").concat(project.screens.filter((x) => x.kind === base.kind).length + 1) : "screen ".concat(project.screens.length + 1), blackCabinets: [], cabinetColors: {}, persistentContours: [], showPersistentContour: true, extraLabels: [], cacheShapes: [], cornerCabinets: {}, shapedCols: {}, shapedRows: {}, cabShift: {} });
+  Object.assign(base, { borders: [], name: base.kind === "ring" ? "ring" : base.kind && base.kind !== "led" ? "".concat({ proj: "projection", tv: "tv", pix: "pixel drop", tube: "led tube", vol: "volumetric" }[base.kind], " ").concat(project.screens.filter((x) => x.kind === base.kind).length + 1) : "screen ".concat(project.screens.length + 1), blackCabinets: [], cabinetColors: {}, persistentContours: [], showPersistentContour: true, extraLabels: [], cacheShapes: [], cornerCabinets: {}, shapedCols: {}, shapedRows: {}, cabShift: {} });
   delete base.field;
   base.uid = newUid();
   project.screens.push(base);
@@ -9370,7 +9711,7 @@ $("btnNewProj").onclick = async () => {
   Object.assign(ui.volView, { z: 1, x: 0, y: 0 });
   // 2.0.127: нарезка и мэппинг — тоже по умолчанию (и их панели, ленты, вид)
   Object.assign(ui_out, { sel: "", drag: null, V: { z: 1, x: 0, y: 0 } });
-  if (window.cabTypeUI) window.cabTypeUI.close();
+  for (const u of [window.cabTypeUI, window.rgTypeUI, window.screensUI, window.rgListUI]) if (u) u.close();
   syncUI();
   if (ui.page === "field") {
     FV.fitted = false;
@@ -9413,6 +9754,7 @@ function histCommit() {
   updateUndoButtons();
 }
 function scheduleHistory() {
+  if (hist.lock) return;
   clearTimeout(hist.timer);
   hist.timer = setTimeout(() => {
     if (pointers.size || fld.pointers.size) scheduleHistory();
@@ -9437,10 +9779,12 @@ function histGo(d) {
   hist.i = j;
   ui.textMode = -1;
   ui.selLabel = -1;
+  hist.lock = true;
   syncUI();
   changed({ forcePhys: true });
   if (ui.page === "cut") refreshCutPanel();
   if (ui.page === "out") refreshOutPanel();
+  hist.lock = false;
   updateUndoButtons();
   status(d < 0 ? "Отменено · осталось шагов назад: ".concat(hist.i) : "Возвращено · шагов вперёд: ".concat(hist.stack.length - 1 - hist.i));
 }
@@ -11519,7 +11863,10 @@ function loadFieldState(d, raw) {
   if (typeof tz.tpl === "string" && TPL[tz.tpl]) project.tz.tpl = tz.tpl;
   keepRest(project.tz, tz);
 }
-const CF = () => project.fields[Math.max(0, Math.min(project.fields.length - 1, project.fieldCur || 0))];
+const CF = () => {
+  if (!Array.isArray(project.fields) || !project.fields.length) project.fields = [freshField(0)];
+  return project.fields[Math.max(0, Math.min(project.fields.length - 1, project.fieldCur || 0))];
+};
 const evenUp = (v) => {
   v = Math.ceil(v - 1e-9);
   return v % 2 ? v + 1 : v;
@@ -11592,6 +11939,17 @@ function maskHoles(st) {
   return out;
 }
 function clipHoles(ctx, st, s, w0, h0) {
+  if (st.kind === "ring") {
+    // кольцо на общем поле поверх других масок: видны только сами кабинеты
+    ctx.beginPath();
+    for (const m of ringGeom(st).list) if (!m.off) {
+      const q = ringPoly(m);
+      q.forEach((p, i) => i ? ctx.lineTo(p[0] * s, p[1] * s) : ctx.moveTo(p[0] * s, p[1] * s));
+      ctx.closePath();
+    }
+    ctx.clip();
+    return;
+  }
   const hs = maskHoles(st);
   ctx.beginPath();
   ctx.rect(0, 0, w0 * s, h0 * s);
@@ -12823,7 +13181,7 @@ function normOut(o, k) {
     src: typeof s.src === "string" ? s.src : "",
     ix: Math.round(+s.ix || 0), iy: Math.round(+s.iy || 0), iw: Math.max(1, Math.round(+s.iw || 1)), ih: Math.max(1, Math.round(+s.ih || 1)),
     ox: Math.round(+s.ox || 0), oy: Math.round(+s.oy || 0), ow: Math.max(0, Math.min(65536, Math.round(+s.ow || 0))), oh: Math.max(0, Math.min(65536, Math.round(+s.oh || 0))),
-    keep: s.keep !== false, rot: [0, 90, 180, 270].includes(+s.rot) ? +s.rot : 0, fh: !!s.fh, fv: !!s.fv, on: s.on !== false
+    keep: s.keep !== false, rot: [0, 90, 180, 270].includes(+s.rot) ? +s.rot : 0, ra: isFinite(+s.ra) ? Math.max(-180, Math.min(180, Math.round(+s.ra * 100) / 100)) : 0, fh: !!s.fh, fv: !!s.fv, on: s.on !== false
   }, s));
   return keepRest({ id: typeof q.id === "string" && q.id ? q.id : d.id, name: typeof q.name === "string" && q.name ? q.name.slice(0, 60) : d.name, src: typeof q.src === "string" ? q.src : "", screens, scr: ids.has(q.scr) ? q.scr : screens[0].id, slices, labels: q.labels !== false, view: ["in", "out", "both"].includes(q.view) ? q.view : "both" }, q);
 }
@@ -12994,12 +13352,23 @@ const sliceScaled = (sl) => {
 function paintSlice(ctx, srcC, sl, k) {
   const [ow, oh] = sliceOutWH(sl), s = srcC.s, r90 = sl.rot === 90 || sl.rot === 270, dw = r90 ? oh : ow, dh = r90 ? ow : oh;
   ctx.save();
+  // 2.0.167: точный угол — участок вырезается из источника под этим углом и кладётся на выход ровно
+  if (+sl.ra) {
+    ctx.beginPath();
+    ctx.rect(sl.ox * k, sl.oy * k, ow * k, oh * k);
+    ctx.clip();
+  }
   ctx.translate((sl.ox + ow / 2) * k, (sl.oy + oh / 2) * k);
   ctx.rotate(sl.rot * Math.PI / 180);
   ctx.scale(sl.fh ? -1 : 1, sl.fv ? -1 : 1);
-  ctx.imageSmoothingEnabled = k < 1 || sliceScaled(sl);
+  ctx.imageSmoothingEnabled = k < 1 || sliceScaled(sl) || !!+sl.ra;
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(srcC.cv, sl.ix * s, sl.iy * s, sl.iw * s, sl.ih * s, -dw * k / 2, -dh * k / 2, dw * k, dh * k);
+  if (+sl.ra) {
+    ctx.scale(dw * k / (sl.iw * s), dh * k / (sl.ih * s));
+    ctx.rotate(-sl.ra * Math.PI / 180);
+    ctx.translate(-(sl.ix + sl.iw / 2) * s, -(sl.iy + sl.ih / 2) * s);
+    ctx.drawImage(srcC.cv, 0, 0);
+  } else ctx.drawImage(srcC.cv, sl.ix * s, sl.iy * s, sl.iw * s, sl.ih * s, -dw * k / 2, -dh * k / 2, dw * k, dh * k);
   ctx.restore();
 }
 function paintOutScreen(ctx, o, scr, k, srcC, labels) {
@@ -13022,7 +13391,7 @@ function paintOutScreen(ctx, o, scr, k, srcC, labels) {
       ctx.strokeStyle = "rgba(255,213,74,0.95)";
       ctx.lineWidth = Math.max(1, 2 * k);
       ctx.strokeRect(sl.ox * k + ctx.lineWidth / 2, sl.oy * k + ctx.lineWidth / 2, ow * k - ctx.lineWidth, oh * k - ctx.lineWidth);
-      const t = "".concat(sl.name, "  ").concat(sl.iw, "×").concat(sl.ih).concat(sliceScaled(sl) ? " → " + ow + "×" + oh : "").concat(sl.rot ? "  ↻" + sl.rot + "°" : "").concat(sl.fh ? " ⇋" : "").concat(sl.fv ? " ⇵" : "");
+      const t = "".concat(sl.name, "  ").concat(sl.iw, "×").concat(sl.ih).concat(sliceScaled(sl) ? " → " + ow + "×" + oh : "").concat(sl.rot ? "  ↻" + sl.rot + "°" : "").concat(+sl.ra ? "  ∠" + (+sl.ra).toFixed(1) + "°" : "").concat(sl.fh ? " ⇋" : "").concat(sl.fv ? " ⇵" : "");
       pill(ctx, t, sl.ox * k + fs * 0.4, sl.oy * k + fs * 0.4, fs, "left", "rgba(0,0,0,0.75)", "#FFD54A", ow * k - fs * 0.8);
       ctx.restore();
     }
@@ -13044,6 +13413,27 @@ function outAutoSlices(o, mode) {
   } else if (mode === "mask" && o.src[0] === "c") {
     const c = project.cuts.find((q) => "c:" + q.id === o.src), G = cutGeom(c);
     for (const p of G.parts) out.push({ x: p.dx, y: p.dy, w: p.w, h: p.h, name: "Часть ".concat(p.i + 1) });
+  } else if (mode === "ringCab" || mode === "ringBlk") {
+    // 2.0.167: кольцо — свой слайс на каждый кабинет (или на блок), повёрнутый под его угол
+    const st = o.src[0] === "m" ? project.screens.find((q) => q.uid === o.src.slice(2)) : null;
+    if (!st || st.kind !== "ring") return status("Источник не кольцо — выберите маску-кольцо", true);
+    const G = ringGeom(st);
+    if (mode === "ringCab") {
+      for (const m of G.list) if (!m.off) out.push({ x: m.x - m.w / 2, y: m.y - m.h / 2, w: m.w, h: m.h, a: m.rot, name: ringLabel(G.R, m, st) });
+    } else {
+      const by = /* @__PURE__ */ new Map();
+      for (const m of G.list) {
+        const k = m.ri + "," + m.i;
+        if (!by.has(k)) by.set(k, []);
+        by.get(k).push(m);
+      }
+      for (const arr of by.values()) {
+        if (arr.every((m) => m.off)) continue;
+        const f = arr[0], cx = arr.reduce((t, m) => t + m.x, 0) / arr.length, cy = arr.reduce((t, m) => t + m.y, 0) / arr.length;
+        const w = f.bw * f.w, h = f.bh * f.h;
+        out.push({ x: cx - w / 2, y: cy - h / 2, w, h, a: f.rot, name: "".concat(f.ri + 1, "-").concat(f.i + 1) });
+      }
+    }
   } else {
     // ряды или столбцы кабинетов: соседние кабинеты одной полосы — один слайс
     // соседние кабинеты одной маски; длинная полоса делится по кабинетам, чтобы влезть в выход
@@ -13072,7 +13462,7 @@ function outAutoSlices(o, mode) {
   if (!out.length) return status("Нет кабинетов для слайсов", true);
   // 2.0.154: новые слайсы берут участок с активного источника; старые слайсы других источников сохраняем
   const keepOther = o.slices.filter((s) => sliceSrc(o, s) !== o.src);
-  o.slices = keepOther.concat(out.map((r, i) => ({ id: newUid(), name: r.name || (mode === "rows" ? "Ряд " : mode === "cols" ? "Столбец " : "Slice ").concat(i + 1), scr: o.screens[0].id, src: o.src, ix: r.x, iy: r.y, iw: r.w, ih: r.h, ox: 0, oy: 0, ow: 0, oh: 0, keep: true, rot: 0, fh: false, fv: false, on: true })));
+  o.slices = keepOther.concat(out.map((r, i) => ({ id: newUid(), name: r.name || (mode === "rows" ? "Ряд " : mode === "cols" ? "Столбец " : "Slice ").concat(i + 1), scr: o.screens[0].id, src: o.src, ix: Math.round(r.x), iy: Math.round(r.y), iw: Math.max(1, Math.round(r.w)), ih: Math.max(1, Math.round(r.h)), ox: 0, oy: 0, ow: 0, oh: 0, keep: true, rot: 0, ra: +(+r.a || 0).toFixed(2), fh: false, fv: false, on: true })));
   outPack(o, true);
   ui_out.sel = o.slices[0] ? o.slices[0].id : "";
   status("Слайсов: ".concat(o.slices.length), true);
@@ -13314,6 +13704,7 @@ function syncOutSel() {
   $("oSl11").disabled = !sliceScaled(s);
   document.querySelectorAll("#oSlKeep button").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.k === "1") === (s.keep !== false))));
   document.querySelectorAll("#oSlRot button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.r === s.rot)));
+  if (document.activeElement !== $("oSlRA")) $("oSlRA").value = +(+s.ra || 0).toFixed(2);
   $("oSlFH").setAttribute("aria-pressed", String(s.fh));
   $("oSlFV").setAttribute("aria-pressed", String(s.fv));
   updateOutInfo();
@@ -13441,6 +13832,10 @@ $("oAddSlice").onclick = () => outAddSlice(OC());
 // 2.0.136: кнопки «Весь источник / По маскам / По рядам / По столбцам» убраны по просьбе (outAutoSlices остаётся)
 $("oPack").onclick = () => {
   outPack(OC());
+  outChanged(true);
+};
+for (const [id, mode] of [["oRingCab", "ringCab"], ["oRingBlk", "ringBlk"]]) $(id).onclick = () => {
+  outAutoSlices(OC(), mode);
   outChanged(true);
 };
 $("oScrAdd").onclick = () => {
@@ -13610,6 +14005,19 @@ document.querySelectorAll("#oSlRot button").forEach((b) => b.onclick = () => {
   s.rot = r;
   outChanged(true);
 });
+// 2.0.167: точный угол слайса (не только кратно 90°)
+$("oSlRA").addEventListener("input", () => {
+  const s = curSlice(), v = parseFloat(String($("oSlRA").value).replace(",", "."));
+  if (!s || !isFinite(v)) return;
+  s.ra = Math.max(-180, Math.min(180, Math.round(v * 100) / 100));
+  outChanged(true);
+});
+$("oSlRA0").onclick = () => {
+  const s = curSlice();
+  if (!s || !+s.ra) return;
+  s.ra = 0;
+  outChanged(true);
+};
 $("oSlFH").onclick = () => {
   const s = curSlice();
   if (s) {
@@ -13717,11 +14125,20 @@ function drawOutPane(c, o, P, srcOf) {
     // слайсы на входе — только те, что с активного источника (у остальных координаты в другой маске)
     o.slices.filter((s) => sliceSrc(o, s) === o.src).forEach((s) => {
       const sel = s.id === ui_out.sel, scrI = o.screens.findIndex((q) => q.id === s.scr);
+      // 2.0.167: слайс с точным углом показываем повёрнутой рамкой — так видно, что участок берётся под углом
+      const ra = +s.ra || 0;
+      c.save();
+      if (ra) {
+        c.translate((s.ix + s.iw / 2) * P.k, (s.iy + s.ih / 2) * P.k);
+        c.rotate(ra * Math.PI / 180);
+        c.translate(-(s.ix + s.iw / 2) * P.k, -(s.iy + s.ih / 2) * P.k);
+      }
       c.fillStyle = sel ? "rgba(25,197,181,0.28)" : "rgba(25,197,181,0.12)";
       c.fillRect(s.ix * P.k, s.iy * P.k, s.iw * P.k, s.ih * P.k);
       c.strokeStyle = sel ? "#19C5B5" : "rgba(25,197,181,0.8)";
       c.lineWidth = sel ? 2.5 : 1.2;
       c.strokeRect(s.ix * P.k + 0.5, s.iy * P.k + 0.5, s.iw * P.k - 1, s.ih * P.k - 1);
+      c.restore();
       if (s.iw * P.k > 40) pill(c, "".concat(s.name, " → ").concat(o.screens[scrI] ? o.screens[scrI].name : "?"), s.ix * P.k + 4, s.iy * P.k + 4, 11, "left", "rgba(0,0,0,0.7)", s.on ? "#fff" : "#888", s.iw * P.k - 8);
       if (sel) {
         c.fillStyle = "#19C5B5";
@@ -16247,6 +16664,13 @@ fillSelect($("cabType"), TYPES.map((t) => t[0]));
 }
 // 2.0.117: список типов кабинетов — с цветным прямоугольником перед названием (цвет кабинета)
 window.cabTypeUI = swatchSelect($("cabType"), (v) => v === "" || !TYPES[+v] ? null : "rgb(".concat(TYPES[+v][5].join(","), ")"));
+// 2.0.164: такие же списки с жирной цветной точкой — у экранов, у типа кабинета кольца и у списка колец
+window.rgTypeUI = swatchSelect($("rgType"), (v) => v === "" || !TYPES[+v] ? null : "rgb(".concat(TYPES[+v][5].join(","), ")"));
+window.screensUI = swatchSelect($("screens"), (v) => screenDotColor(+v));
+window.rgListUI = swatchSelect($("rgList"), (v) => {
+  const st = S(), R = st && st.kind === "ring" ? st.ring : null, g = R && R.rings && R.rings[+v];
+  return g ? g.color || typeColor(ringCab(R, g).type, ringCab(R, g).cw, ringCab(R, g).ch) : null;
+});
 fillSelect($("inscSize"), INSC);
 fillSelect($("exSize"), INSC);
 fillSelect($("txSize"), INSC);
@@ -16398,6 +16822,18 @@ $("autoContour").addEventListener("change", (e) => {
   changed();
   status(st.autoContour ? "Автоконтур включён: выключите кабинет — контур его обойдёт" : "Автоконтур выключен", true);
 });
+// цвет кабинета экрана — для точки слева от названия в списке экранов
+function screenDotColor(i) {
+  const s = project.screens[i];
+  if (!s) return null;
+  if (s.kind === "ring") {
+    const R = s.ring, g0 = R && R.rings && R.rings[0];
+    if (!R) return null;
+    const cab = ringCab(R, g0 || null);
+    return g0 && g0.color || typeColor(cab.type, cab.cw, cab.ch) || null;
+  }
+  return s.pixelColor ? hex(s.pixelColor) : null;
+}
 function swatchSelect(sel, colorOf) {
   const box = document.createElement("div"), btn = document.createElement("button"), pop = document.createElement("div");
   box.className = "ssel" + (sel.classList.contains("grow") ? " grow" : "");
@@ -16436,6 +16872,26 @@ function swatchSelect(sel, colorOf) {
     pop.hidden = true;
     box.classList.remove("open");
   };
+  // 2.0.165: список открывается поверх страницы (fixed), чтобы не растягивать панель и не сдвигать её содержимое
+  const place = () => {
+    const r = btn.getBoundingClientRect(), gap = 4, pad = 8;
+    if (r.bottom < 0 || r.top > innerHeight) return close();
+    pop.style.position = "fixed";
+    pop.style.left = "0px";
+    pop.style.top = "0px";
+    pop.style.minWidth = r.width + "px";
+    pop.style.maxHeight = Math.max(120, Math.min(340, Math.max(r.top, innerHeight - r.bottom) - pad - gap)) + "px";
+    const ph = pop.offsetHeight, pw = pop.offsetWidth;
+    let top = r.bottom + gap;
+    if (top + ph > innerHeight - pad) {
+      const up = r.top - gap - ph;
+      top = up >= pad ? up : Math.max(pad, innerHeight - pad - ph);
+    }
+    let left = r.left;
+    if (left + pw > innerWidth - pad) left = Math.max(pad, innerWidth - pad - pw);
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+  };
   const open = () => {
     pop.replaceChildren();
     for (const o of sel.options) {
@@ -16452,15 +16908,24 @@ function swatchSelect(sel, colorOf) {
         sel.dispatchEvent(new Event("change", { bubbles: true }));
         close();
         sync();
-        btn.focus();
+        btn.focus({ preventScroll: true });
       };
       pop.appendChild(it);
     }
+    if (pop.parentElement !== document.body) document.body.appendChild(pop);
     pop.hidden = false;
     box.classList.add("open");
+    place();
+    // прокручиваем только сам список: scrollIntoView сдвинул бы и панель со страницей
     const on = pop.querySelector(".on");
-    if (on) on.scrollIntoView({ block: "nearest" });
+    if (on) pop.scrollTop = Math.max(0, on.offsetTop - (pop.clientHeight - on.offsetHeight) / 2);
   };
+  addEventListener("scroll", () => {
+    if (!pop.hidden) place();
+  }, true);
+  addEventListener("resize", () => {
+    if (!pop.hidden) place();
+  });
   btn.onclick = () => pop.hidden ? open() : close();
   btn.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -16472,7 +16937,7 @@ function swatchSelect(sel, colorOf) {
     sync();
   });
   document.addEventListener("pointerdown", (e) => {
-    if (!box.contains(e.target)) close();
+    if (!box.contains(e.target) && !pop.contains(e.target)) close();
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !pop.hidden) close();
@@ -17142,6 +17607,10 @@ for (const [id, d] of [["shapeRotCCW", -15], ["shapeRot0", 0], ["shapeRotCW", 15
 // ---- подложка ----
 // Прилипание краёв подложки к линиям кабинетов (в пикселях маски)
 function refSnapLines(st) {
+  if (st.kind === "ring") {
+    const [W2, H2] = dims(st);
+    return { vx: [0, W2 / 2, W2], vy: [0, H2 / 2, H2] };
+  }
   const { xs, ys } = grid(st), [, H] = dims(st);
   return { vx: xs.slice(), vy: ys.map((y) => H - y) };
 }
@@ -17154,7 +17623,7 @@ function snapTo(v, lines, tol) {
 const REF_HANDLES = [["nw", 0, 0], ["n", 0.5, 0], ["ne", 1, 0], ["e", 1, 0.5], ["se", 1, 1], ["s", 0.5, 1], ["sw", 0, 1], ["w", 0, 0.5]];
 function refPointerDown(x, y) {
   const st = S(), R = st.cacheRef;
-  if (!ui.refEdit || !R || !L || st.kind && st.kind !== "led" && st.kind !== "proj") return null;
+  if (!ui.refEdit || !R || !L || st.kind && st.kind !== "led" && st.kind !== "proj" && st.kind !== "ring") return null;
   const s = L.scale, [rx, ry, rw, rh] = refRect(st), X = L.ox + rx * s, Y = L.oy + ry * s, W = rw * s, H = rh * s;
   for (const [m, fx, fy] of REF_HANDLES) if (Math.abs(x - (X + W * fx)) <= 9 && Math.abs(y - (Y + H * fy)) <= 9) {
     refToFree(st);
@@ -17447,6 +17916,602 @@ if (!STANDALONE) (async () => {
   }
   if (!downloads) $("exportNote").textContent += " Сохранение файлов доступно, когда страница открыта по ссылке Claude.";
 })();
+// ===== 2.0.157: «Кольцо» — панель, выбор и поворот кабинетов мышью =====
+ui.ringSel = /* @__PURE__ */ new Set();
+ui.ringPri = "";
+ui.ringCur = 0;
+ui.ringUid = "";
+function ringCtx() {
+  const st = S();
+  if (st.kind !== "ring") return null;
+  const R = st.ring || (st.ring = defRing());
+  if (ui.ringUid !== st.uid) {
+    ui.ringUid = st.uid;
+    ui.ringSel.clear();
+    ui.ringPri = "";
+    ui.ringCur = 0;
+  }
+  if (ui.ringCur >= R.rings.length) ui.ringCur = R.rings.length - 1;
+  if (ui.ringCur < 0) ui.ringCur = 0;
+  return { st, R, g: R.rings[ui.ringCur] };
+}
+function ringMod(R, k) {
+  return R.mods[k] || (R.mods[k] = {});
+}
+function ringClean(R) {
+  for (const [k, v] of Object.entries(R.mods)) {
+    for (const f of ["dx", "dy", "dr"]) if (v[f] != null && Math.abs(v[f]) < 1e-6) delete v[f];
+    if (!v.off) delete v.off;
+    if (!Object.keys(v).length) delete R.mods[k];
+  }
+}
+function ringSelMods(st) {
+  return ringGeom(st).list.filter((m) => ui.ringSel.has(m.k));
+}
+function syncRingUI() {
+  const c = ringCtx();
+  if (!c) return;
+  const { R, g } = c, set = (id, v) => {
+    if (document.activeElement !== $(id)) setVal($(id), v);
+  };
+  const sel = $("rgType");
+  if (!sel.options.length) sel.innerHTML = TYPES.map((t, i) => '<option value="'.concat(i, '">').concat(xmlEsc(t[0]), "</option>")).join("") + '<option value="">Своё разрешение</option>';
+  const cab = ringCab(R, g);
+  const ti = TYPES.findIndex((t) => t[0] === cab.type && t[1] === cab.cw && t[2] === cab.ch);
+  setVal(sel, ti >= 0 ? ti : "");
+  if (window.rgTypeUI) window.rgTypeUI.sync();
+  set("rgCw", cab.cw);
+  set("rgCh", cab.ch);
+  set("rgMw", compactM(+cab.mw));
+  set("rgMh", compactM(+cab.mh));
+  const lst = $("rgList"), items = R.rings.map((r, i) => {
+    const q = ringCab(R, r), nb = Math.max(1, r.bw | 0) * Math.max(1, r.bh | 0);
+    return "Кольцо ".concat(i + 1, " · ").concat(q.type || q.cw + "×" + q.ch, " · ").concat(r.n, nb > 1 ? "×" + nb : "", " шт · Ø ").concat(Math.round(r.dw), r.dw !== r.dh ? "×" + Math.round(r.dh) : "", " px");
+  });
+  if (lst.__items !== items.join("|")) {
+    lst.__items = items.join("|");
+    lst.innerHTML = items.map((t, i) => '<option value="'.concat(i, '">').concat(xmlEsc(t), "</option>")).join("");
+  }
+  setVal(lst, ui.ringCur);
+  if (window.rgListUI) window.rgListUI.sync();
+  $("rgDel").disabled = R.rings.length < 2;
+  set("rgN", g.n);
+  set("rgDw", Math.round(g.dw));
+  set("rgDh", Math.round(g.dh));
+  set("rgDwCm", compactM(+(g.dw * ringMmX(R) / 10).toFixed(1)));
+  set("rgDhCm", compactM(+(g.dh * ringMmY(R) / 10).toFixed(1)));
+  set("rgBw", g.bw || 1);
+  set("rgBh", g.bh || 1);
+  $("rgLock").checked = g.lock !== false;
+  set("rgA0", +(+g.a0 || 0).toFixed(2));
+  set("rgArc", +(+g.arc || 360).toFixed(2));
+  set("rgOx", Math.round(+g.ox || 0));
+  set("rgOy", Math.round(+g.oy || 0));
+  $("rgColor").value = (g.color || "#7a0f2b").toLowerCase();
+  document.querySelectorAll(".seg.rgdir button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.v === (g.dir === -1 ? -1 : 1))));
+  document.querySelectorAll(".seg.rgface button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === (g.face === "up" ? "up" : "in"))));
+  $("rgAuto").checked = R.auto !== false;
+  $("rgPadRow").hidden = R.auto === false;
+  $("rgSizeRow").hidden = R.auto !== false;
+  set("rgPad", R.pad);
+  const gg = ringGeom(c.st);
+  set("rgW", R.auto !== false ? gg.W : R.W);
+  set("rgH", R.auto !== false ? gg.H : R.H);
+  $("rgNums").checked = R.nums !== false;
+  $("rgOutline").checked = R.outline !== false;
+  setVal($("rgFmt"), R.numFmt || "rm");
+  const sm = gg.list.filter((m) => ui.ringSel.has(m.k)), pri = sm.find((m) => m.k === ui.ringPri) || sm[0];
+  for (const id of ["rgRot", "rgRotM15", "rgRotM1", "rgRotP1", "rgRotP15", "rgOff", "rgReset", "rgSelColor", "rgSelColorReset"]) $(id).disabled = !sm.length;
+  if (pri) $("rgSelColor").value = ((pri.color || R.rings[pri.ri] && R.rings[pri.ri].color || "#7a0f2b") + "").toLowerCase();
+  $("rgSelColorReset").disabled = !sm.some((m) => c.R.mods[m.k] && c.R.mods[m.k].color);
+  if (pri) set("rgRot", +pri.rot.toFixed(2));
+  else if (document.activeElement !== $("rgRot")) setVal($("rgRot"), "");
+  setTxt($("rgSelInfo"), sm.length ? "Выбрано: ".concat(sm.length).concat(pri ? " · ".concat(ringLabel(R, pri, c.st), " · угол ").concat(+pri.rot.toFixed(1), "°") : "").concat(sm.some((m) => m.off) ? " · есть погашенные" : "") : "Кабинеты не выбраны — щёлкните по кабинету на холсте или обведите несколько рамкой.");
+}
+function ringChanged(phys) {
+  syncRingUI();
+  changed({ forcePhys: !!phys });
+}
+// --- кабинет ---
+$("rgType").addEventListener("change", (e) => {
+  const c = ringCtx(), t = TYPES[+e.target.value];
+  if (!c || e.target.value === "" || !t) return;
+  const cab = { type: t[0], cw: t[1], ch: t[2], mw: t[3], mh: t[4] };
+  // 2.0.163: тип кабинета — у каждого кольца свой, цвет берём из каталога, как в LED-масках
+  Object.assign(c.g, cab, { color: typeColor(t[0], t[1], t[2]) || c.g.color });
+  Object.assign(c.R, cab);
+  ringChanged(true);
+});
+const ringCabNum = (id, k, float) => $(id).addEventListener("input", () => {
+  const c = ringCtx(), v = float ? parseFloat(String($(id).value).replace(",", ".")) : pint($(id).value, NaN);
+  if (!c || !(isFinite(v) && v > 0)) return;
+  const val = float ? v : Math.min(16384, v);
+  c.g[k] = val;
+  c.R[k] = val;
+  if (k === "cw" || k === "ch") c.g.type = c.R.type = "";
+  ringChanged(true);
+});
+ringCabNum("rgCw", "cw", false);
+ringCabNum("rgCh", "ch", false);
+ringCabNum("rgMw", "mw", true);
+ringCabNum("rgMh", "mh", true);
+// --- кольца ---
+$("rgList").addEventListener("change", (e) => {
+  ui.ringCur = +e.target.value || 0;
+  ui.ringSel.clear();
+  syncRingUI();
+  requestDraw();
+});
+$("rgAdd").onclick = () => {
+  const c = ringCtx();
+  if (!c) return;
+  c.R.rings.push(defRingItem(c.R.rings.length, c.R));
+  ui.ringCur = c.R.rings.length - 1;
+  ui.ringSel.clear();
+  ringChanged(true);
+  status("Добавлено кольцо ".concat(c.R.rings.length, " — снаружи предыдущего"), true);
+};
+$("rgDel").onclick = () => {
+  const c = ringCtx();
+  if (!c || c.R.rings.length < 2) return;
+  const del = ui.ringCur, mods = {};
+  for (const [k, v] of Object.entries(c.R.mods)) {
+    const parts = k.split(","), ri = +parts[0];
+    if (ri === del) continue;
+    parts[0] = ri > del ? ri - 1 : ri;
+    mods[parts.join(",")] = v;
+  }
+  c.R.mods = mods;
+  c.R.rings.splice(del, 1);
+  ui.ringCur = Math.max(0, del - 1);
+  ui.ringSel.clear();
+  ringChanged(true);
+};
+$("rgN").addEventListener("input", () => {
+  const c = ringCtx(), v = pint($("rgN").value, NaN);
+  if (!c || !(v >= 1 && v <= 2000)) return;
+  c.g.n = v;
+  for (const k of Object.keys(c.R.mods)) {
+    const [ri, i] = k.split(",").map(Number);
+    if (ri === ui.ringCur && i >= v) delete c.R.mods[k];
+  }
+  for (const k of [...ui.ringSel]) if (+k.split(",")[1] >= v) ui.ringSel.delete(k);
+  ringChanged(true);
+});
+for (const [id, k] of [["rgBw", "bw"], ["rgBh", "bh"]]) $(id).addEventListener("input", () => {
+  const c = ringCtx(), v = pint($(id).value, NaN);
+  if (!c || !(v >= 1 && v <= 20)) return;
+  c.g[k] = v;
+  const ri = ui.ringCur, cap = Math.max(1, c.g.bw | 0) * Math.max(1, c.g.bh | 0);
+  // убрать правки и выбор кабинетов блока, которых больше нет
+  for (const key of Object.keys(c.R.mods)) {
+    const p = key.split(",");
+    if (+p[0] === ri && p.length === 3 && +p[2] >= cap) delete c.R.mods[key];
+  }
+  for (const key of [...ui.ringSel]) {
+    const p = key.split(",");
+    if (+p[0] === ri && p.length === 3 && +p[2] >= cap) ui.ringSel.delete(key);
+  }
+  ringChanged(true);
+});
+function ringSetD(axis, px) {
+  const c = ringCtx();
+  if (!c || !(px >= 2)) return;
+  const g = c.g, other = axis === "w" ? "dh" : "dw", self = axis === "w" ? "dw" : "dh";
+  if (g.lock !== false) g[other] = Math.max(2, Math.round(px * g[other] / g[self]));
+  g[self] = Math.round(px);
+  ringChanged(true);
+}
+$("rgDw").addEventListener("input", () => ringSetD("w", parseFloat(String($("rgDw").value).replace(",", "."))));
+$("rgDh").addEventListener("input", () => ringSetD("h", parseFloat(String($("rgDh").value).replace(",", "."))));
+$("rgDwCm").addEventListener("input", () => {
+  const c = ringCtx(), v = parseFloat(String($("rgDwCm").value).replace(",", "."));
+  if (c && v > 0) ringSetD("w", v * 10 / ringMmX(c.R));
+});
+$("rgDhCm").addEventListener("input", () => {
+  const c = ringCtx(), v = parseFloat(String($("rgDhCm").value).replace(",", "."));
+  if (c && v > 0) ringSetD("h", v * 10 / ringMmY(c.R));
+});
+$("rgLock").addEventListener("change", (e) => {
+  const c = ringCtx();
+  if (!c) return;
+  c.g.lock = e.target.checked;
+  ringChanged();
+});
+$("rgCircle").onclick = () => {
+  const c = ringCtx();
+  if (!c) return;
+  c.g.dh = c.g.dw;
+  ringChanged(true);
+};
+const ringNum = (id, k, lo, hi) => $(id).addEventListener("input", () => {
+  const c = ringCtx(), v = parseFloat(String($(id).value).replace(",", "."));
+  if (!c || !isFinite(v) || v < lo || v > hi) return;
+  c.g[k] = v;
+  ringChanged(true);
+});
+ringNum("rgA0", "a0", -3600, 3600);
+ringNum("rgArc", "arc", 1, 360);
+ringNum("rgOx", "ox", -1e5, 1e5);
+ringNum("rgOy", "oy", -1e5, 1e5);
+$("rgColor").addEventListener("input", (e) => {
+  const c = ringCtx();
+  if (!c) return;
+  c.g.color = e.target.value;
+  ringChanged();
+});
+document.querySelectorAll(".seg.rgdir button").forEach((b) => b.onclick = () => {
+  const c = ringCtx();
+  if (!c) return;
+  c.g.dir = +b.dataset.v === -1 ? -1 : 1;
+  ringChanged(true);
+});
+document.querySelectorAll(".seg.rgface button").forEach((b) => b.onclick = () => {
+  const c = ringCtx();
+  if (!c) return;
+  c.g.face = b.dataset.v === "up" ? "up" : "in";
+  ringChanged(true);
+});
+// --- холст и номера ---
+$("rgAuto").addEventListener("change", (e) => {
+  const c = ringCtx();
+  if (!c) return;
+  if (!e.target.checked) {
+    const gg = ringGeom(c.st);
+    c.R.W = gg.W;
+    c.R.H = gg.H;
+  }
+  c.R.auto = e.target.checked;
+  ringChanged(true);
+});
+$("rgPad").addEventListener("input", () => {
+  const c = ringCtx(), v = pint($("rgPad").value, NaN);
+  if (!c || !(v >= 0)) return;
+  c.R.pad = v;
+  ringChanged(true);
+});
+for (const [id, k] of [["rgW", "W"], ["rgH", "H"]]) $(id).addEventListener("input", () => {
+  const c = ringCtx(), v = pint($(id).value, NaN);
+  if (!c || !(v >= 16 && v <= 32768) || c.R.auto !== false) return;
+  c.R[k] = v;
+  ringChanged(true);
+});
+$("rgNums").addEventListener("change", (e) => {
+  const c = ringCtx();
+  if (!c) return;
+  c.R.nums = e.target.checked;
+  ringChanged();
+});
+$("rgOutline").addEventListener("change", (e) => {
+  const c = ringCtx();
+  if (!c) return;
+  c.R.outline = e.target.checked;
+  ringChanged();
+});
+$("rgFmt").addEventListener("change", (e) => {
+  const c = ringCtx();
+  if (!c) return;
+  c.R.numFmt = e.target.value;
+  ringChanged();
+});
+// --- выбранные кабинеты ---
+function ringRotateSel(delta, abs) {
+  const c = ringCtx();
+  if (!c || !ui.ringSel.size) return;
+  const seen = new Set();
+  for (const m of ringSelMods(c.st)) {
+    if (seen.has(m.k)) continue;
+    seen.add(m.k);
+    const o = ringMod(c.R, m.k), cur = m.base + (o.dr || 0);
+    o.dr = (abs != null ? abs : cur + delta) - m.base;
+    o.dr = Math.round(((o.dr % 360 + 540) % 360 - 180) * 100) / 100;
+  }
+  ringClean(c.R);
+  ringChanged();
+}
+$("rgRot").addEventListener("input", () => {
+  const v = parseFloat(String($("rgRot").value).replace(",", "."));
+  if (isFinite(v)) ringRotateSel(0, v);
+});
+$("rgRotM15").onclick = () => ringRotateSel(-15);
+$("rgRotM1").onclick = () => ringRotateSel(-1);
+$("rgRotP1").onclick = () => ringRotateSel(1);
+$("rgRotP15").onclick = () => ringRotateSel(15);
+$("rgSelRing").onclick = () => {
+  const c = ringCtx();
+  if (!c) return;
+  ui.ringSel = new Set(ringGeom(c.st).list.filter((m) => m.ri === ui.ringCur).map((m) => m.k));
+  ui.ringPri = ui.ringCur + ",0";
+  syncRingUI();
+  requestDraw();
+};
+$("rgOff").onclick = () => {
+  const c = ringCtx();
+  if (!c || !ui.ringSel.size) return;
+  const sm = ringSelMods(c.st), on = sm.some((m) => !m.off);
+  for (const m of sm) ringMod(c.R, m.k).off = on;
+  ringClean(c.R);
+  ringChanged();
+  status(on ? "Выбранные кабинеты погашены" : "Выбранные кабинеты снова светятся", true);
+};
+$("rgReset").onclick = () => {
+  const c = ringCtx();
+  if (!c || !ui.ringSel.size) return;
+  for (const k of ui.ringSel) if (c.R.mods[k]) {
+    delete c.R.mods[k].dx;
+    delete c.R.mods[k].dy;
+    delete c.R.mods[k].dr;
+  }
+  ringClean(c.R);
+  ringChanged(true);
+  status("Выбранные кабинеты возвращены на кольцо", true);
+};
+$("rgSelColor").addEventListener("input", (e) => {
+  const c = ringCtx();
+  if (!c || !ui.ringSel.size) return;
+  for (const k of ui.ringSel) ringMod(c.R, k).color = e.target.value;
+  ringChanged();
+});
+$("rgSelColorReset").onclick = () => {
+  const c = ringCtx();
+  if (!c || !ui.ringSel.size) return;
+  for (const k of ui.ringSel) if (c.R.mods[k]) delete c.R.mods[k].color;
+  ringClean(c.R);
+  ringChanged();
+  status("Цвет выбранных кабинетов — как у кольца", true);
+};
+// клавиатура для колец (как у масок): стрелки — сдвиг, [ ] — поворот, Delete — погасить, Esc — снять выбор
+window.addEventListener("keydown", (e) => {
+  const c = ringCtx();
+  if (!c || ui.page !== "mask" || !$("modal").hidden) return;
+  const t = e.target;
+  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && t.type !== "checkbox" || t.isContentEditable)) return;
+  if (e.key === "Escape") {
+    if (ui.ringSel.size) {
+      ui.ringSel.clear();
+      ui.ringPri = "";
+      syncRingUI();
+      requestDraw();
+    }
+    return;
+  }
+  if (!ui.ringSel.size) return;
+  if (e.key === "Delete" || e.key === "Backspace") {
+    e.preventDefault();
+    $("rgOff").click();
+    return;
+  }
+  if (e.key === "[" || e.key === "]") {
+    e.preventDefault();
+    ringRotateSel(e.key === "[" ? e.shiftKey ? -15 : -1 : e.shiftKey ? 15 : 1);
+    return;
+  }
+  const d = e.shiftKey ? 10 : 1, mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+  if (!mv || e.ctrlKey || e.metaKey) return;
+  e.preventDefault();
+  for (const k of ui.ringSel) {
+    const o = ringMod(c.R, k);
+    o.dx = Math.round(((o.dx || 0) + mv[0]) * 100) / 100;
+    o.dy = Math.round(((o.dy || 0) + mv[1]) * 100) / 100;
+  }
+  ringChanged();
+});
+// --- холст: выбор, сдвиг, поворот, растяжение кольца ---
+function ringToMask(x, y) {
+  return [(x - L.ox) / L.scale, (y - L.oy) / L.scale];
+}
+function ringRotHandle(m) {
+  const s = L.scale, a = m.rot * Math.PI / 180, d = m.h / 2 * s + 26;
+  const cx = L.ox + m.x * s, cy = L.oy + m.y * s;
+  return [cx + Math.sin(a) * d, cy - Math.cos(a) * d, cx + Math.sin(a) * m.h / 2 * s, cy - Math.cos(a) * m.h / 2 * s];
+}
+function ringHandles(st) {
+  const gg = ringGeom(st), R = gg.R, g = R.rings[ui.ringCur];
+  if (!g) return [];
+  const s = L.scale, cx = L.ox + (gg.W / 2 + (+g.ox || 0)) * s, cy = L.oy + (gg.H / 2 + (+g.oy || 0)) * s, a = g.dw / 2 * s, b = g.dh / 2 * s;
+  return [["nw", -1, -1], ["n", 0, -1], ["ne", 1, -1], ["e", 1, 0], ["se", 1, 1], ["s", 0, 1], ["sw", -1, 1], ["w", -1, 0]].map(([m, fx, fy]) => ({ m, p: [cx + fx * a, cy + fy * b], cx, cy, a, b }));
+}
+function ringPointerDown(e, x, y) {
+  const c = ringCtx();
+  if (!c || !L) return null;
+  const st = c.st, gg = ringGeom(st), [mx, my] = ringToMask(x, y), tool = ui.tool;
+  const add = e.shiftKey || e.ctrlKey || e.metaKey, black = tool === "black" || e.altKey && !add;
+  // «Рука» — только панорама
+  if (tool === "pan" && !add) return null;
+  // зелёная точка — поворот выбранных (не в режиме «Гашение»)
+  const pri = gg.list.find((m) => m.k === ui.ringPri && ui.ringSel.has(m.k));
+  if (pri && !black) {
+    const [hx, hy] = ringRotHandle(pri);
+    if (Math.hypot(x - hx, y - hy) <= 11) return { kind: "ringRot", k: pri.k };
+  }
+  // жёлтые квадратики — растянуть кольцо (когда кабинеты не выбраны, не «Гашение»)
+  if (!ui.ringSel.size && !black) for (const h of ringHandles(st)) if (Math.abs(x - h.p[0]) <= 9 && Math.abs(y - h.p[1]) <= 9) {
+    const g = c.g;
+    return { kind: "ringSize", m: h.m, dw0: g.dw, dh0: g.dh, cx: h.cx, cy: h.cy };
+  }
+  for (let j = gg.list.length - 1; j >= 0; j--) {
+    const m = gg.list[j];
+    if (!ringHit(m, mx, my)) continue;
+    // «Гашение» (или Alt) — погасить / включить кабинет, как у LED-экранов
+    if (black) {
+      const o = ringMod(c.R, m.k);
+      o.off = !o.off;
+      ringClean(c.R);
+      ringChanged();
+      return { kind: "noop" };
+    }
+    if (add || tool === "select") {
+      // как в масках: касание добавляет кабинет, с Ctrl/Shift — добавляет или убирает
+      if (ui.ringSel.has(m.k)) {
+        if (add) ui.ringSel.delete(m.k);
+      } else ui.ringSel.add(m.k);
+    } else if (!ui.ringSel.has(m.k)) {
+      ui.ringSel.clear();
+      ui.ringSel.add(m.k);
+    }
+    ui.ringPri = ui.ringSel.has(m.k) ? m.k : [...ui.ringSel][0] || "";
+    if (ui.ringCur !== m.ri) ui.ringCur = m.ri;
+    if (ui.textMode >= 0) {
+      ui.textMode = -1;
+      ui.selLabel = -1;
+      refreshTextList();
+      syncTextControls();
+    }
+    syncRingUI();
+    requestDraw();
+    return ui.ringSel.has(m.k) ? { kind: "ringMove", x, y } : { kind: "noop" };
+  }
+  if (black) return { kind: "noop" };
+  if (!add && ui.ringSel.size) {
+    ui.ringSel.clear();
+    ui.ringPri = "";
+    syncRingUI();
+    requestDraw();
+  }
+  // «Диапазон» — рамка выделения (пальцем или мышью); в режиме «Выбор» рамка тоже доступна мышью
+  if (tool === "range" || e.pointerType === "mouse" && tool === "select") return { kind: "ringBox", x0: x, y0: y, x, y, add, base: new Set(ui.ringSel) };
+  return null;
+}
+function ringPointerMove(a, p, e) {
+  const c = ringCtx();
+  if (!c || !L) return;
+  const st = c.st, s = L.scale;
+  if (a.kind === "ringMove") {
+    const dx = (p[0] - a.x) / s, dy = (p[1] - a.y) / s;
+    for (const k of ui.ringSel) {
+      const o = ringMod(c.R, k);
+      o.dx = Math.round(((o.dx || 0) + dx) * 100) / 100;
+      o.dy = Math.round(((o.dy || 0) + dy) * 100) / 100;
+    }
+    a.x = p[0];
+    a.y = p[1];
+    a.moved = true;
+    ringChanged();
+  } else if (a.kind === "ringRot") {
+    const pri = ringGeom(st).list.find((m) => m.k === a.k);
+    if (!pri) return;
+    const cx = L.ox + pri.x * s, cy = L.oy + pri.y * s;
+    let ang = Math.atan2(p[0] - cx, -(p[1] - cy)) * 180 / Math.PI;
+    if (e.shiftKey) ang = Math.round(ang / 15) * 15;
+    const delta = ringNormDeg(ang - pri.rot);
+    if (Math.abs(delta) > 0.001) ringRotateSel(delta);
+  } else if (a.kind === "ringSize") {
+    const g = c.g, m = a.m, rx = Math.abs(p[0] - a.cx) / s * 2, ry = Math.abs(p[1] - a.cy) / s * 2;
+    let dw = g.dw, dh = g.dh;
+    if (m.includes("e") || m.includes("w")) dw = Math.max(2, rx);
+    if (m.includes("n") || m.includes("s")) dh = Math.max(2, ry);
+    if (g.lock !== false) {
+      const k = m.length === 2 ? Math.max(dw / a.dw0, dh / a.dh0) : m === "e" || m === "w" ? dw / a.dw0 : dh / a.dh0;
+      dw = a.dw0 * k;
+      dh = a.dh0 * k;
+    }
+    g.dw = ringEven(dw);
+    g.dh = ringEven(dh);
+    ringChanged(true);
+  } else if (a.kind === "ringBox") {
+    a.x = p[0];
+    a.y = p[1];
+    const [x0, y0] = ringToMask(Math.min(a.x0, a.x), Math.min(a.y0, a.y)), [x1, y1] = ringToMask(Math.max(a.x0, a.x), Math.max(a.y0, a.y));
+    const inside = ringGeom(st).list.filter((m) => m.x >= x0 && m.x <= x1 && m.y >= y0 && m.y <= y1).map((m) => m.k);
+    ui.ringSel = new Set([...a.add ? a.base : [], ...inside]);
+    if (!ui.ringSel.has(ui.ringPri)) ui.ringPri = inside[0] || [...ui.ringSel][0] || "";
+    syncRingUI();
+    requestDraw();
+  }
+}
+function ringOverlay() {
+  const c0 = ringCtx();
+  if (!c0 || !L) return;
+  const st = c0.st;
+  const gg = ringGeom(st), s = L.scale, P = (q) => [L.ox + q[0] * s, L.oy + q[1] * s];
+  pctx.save();
+  if (!ui.ringSel.size && !(act && act.kind === "ringBox")) {
+    const hs = ringHandles(st);
+    if (hs.length) {
+      const h = hs[0];
+      pctx.strokeStyle = "rgba(255,219,13,0.8)";
+      pctx.lineWidth = 1;
+      pctx.setLineDash([6, 5]);
+      pctx.beginPath();
+      pctx.ellipse(h.cx, h.cy, Math.max(1, h.a), Math.max(1, h.b), 0, 0, Math.PI * 2);
+      pctx.stroke();
+      pctx.setLineDash([]);
+      pctx.fillStyle = "#ffdb0d";
+      pctx.strokeStyle = "#000";
+      for (const q of hs) {
+        pctx.fillRect(q.p[0] - 5, q.p[1] - 5, 10, 10);
+        pctx.strokeRect(q.p[0] - 5, q.p[1] - 5, 10, 10);
+      }
+    }
+  }
+  pctx.lineWidth = 2;
+  for (const m of gg.list) {
+    if (!ui.ringSel.has(m.k)) continue;
+    const pts = ringPoly(m).map(P);
+    pctx.strokeStyle = m.k === ui.ringPri ? "#ffff00" : "#00f2ff";
+    pctx.beginPath();
+    pts.forEach((q, i) => i ? pctx.lineTo(q[0], q[1]) : pctx.moveTo(q[0], q[1]));
+    pctx.closePath();
+    pctx.stroke();
+  }
+  const pri = gg.list.find((m) => m.k === ui.ringPri && ui.ringSel.has(m.k));
+  if (pri) {
+    const [hx, hy, bx, by] = ringRotHandle(pri);
+    pctx.strokeStyle = "#34c759";
+    pctx.lineWidth = 1.5;
+    pctx.beginPath();
+    pctx.moveTo(bx, by);
+    pctx.lineTo(hx, hy);
+    pctx.stroke();
+    pctx.fillStyle = "#34c759";
+    pctx.beginPath();
+    pctx.arc(hx, hy, 6, 0, Math.PI * 2);
+    pctx.fill();
+    pctx.strokeStyle = "#000";
+    pctx.lineWidth = 1;
+    pctx.stroke();
+  }
+  if (act && act.kind === "ringBox") {
+    pctx.strokeStyle = "#00f2ff";
+    pctx.lineWidth = 1;
+    pctx.setLineDash([4, 3]);
+    pctx.strokeRect(Math.min(act.x0, act.x) + 0.5, Math.min(act.y0, act.y) + 0.5, Math.abs(act.x - act.x0), Math.abs(act.y - act.y0));
+  }
+  pctx.restore();
+}
+// клавиатура: стрелки — сдвиг, [ ] — поворот, Delete — погасить, Esc — снять выбор
+window.addEventListener("keydown", (e) => {
+  if (ui.page && ui.page !== "mask") return;
+  const st = S();
+  if (st.kind !== "ring" || !ui.ringSel.size) return;
+  const t = e.target;
+  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const c = ringCtx(), step = e.shiftKey ? 10 : 1;
+  let done = true;
+  if (e.key === "Escape") {
+    ui.ringSel.clear();
+    ui.ringPri = "";
+    syncRingUI();
+    requestDraw();
+  } else if (/^Arrow/.test(e.key)) {
+    const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+    for (const k of ui.ringSel) {
+      const o = ringMod(c.R, k);
+      o.dx = (o.dx || 0) + dx;
+      o.dy = (o.dy || 0) + dy;
+    }
+    ringClean(c.R);
+    ringChanged();
+  } else if (e.code === "BracketLeft") ringRotateSel(e.shiftKey ? -15 : -1);
+  else if (e.code === "BracketRight") ringRotateSel(e.shiftKey ? 15 : 1);
+  else if (e.key === "Delete" || e.key === "Backspace") $("rgOff").click();
+  else done = false;
+  if (done) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
 </script>
 
 </body>

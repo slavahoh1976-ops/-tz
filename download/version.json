@@ -1,7 +1,15 @@
 {
- "version": "2.0.156",
- "notes": "Контекстное меню по правой кнопке мыши (копировать/вставить/дублировать/удалить и др.) для слайсов мэппинга, кабинетов, доп. текстов и экранов в ленте. При выборе слайса зона Input показывает его маску-источник. Мэппинг поддерживает несколько масок — у каждого слайса свой источник.",
- "mac": { "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip", "sha256": "7e119111cecef50fd4c03929d2a0ea164c4eb906411423ed60cd4973dc46de29" },
- "windows": { "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe", "sha256": "1c796185e20a7b3ac7179fb3d50bd7ff3ce03cfeb6beb56a2b41ab032d0f9ebd" },
- "android": { "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk" }
+ "version": "2.0.167",
+ "notes": "Кольца: блоки из нескольких кабинетов, выбор и нумерация по каждому кабинету как в LED-масках, яркая рамка по краю блока и тёмная сетка внутри, свой тип кабинета и цвет из каталога у каждого кольца. Мэппинг: авторазметка кольца по кабинетам или блокам с выпрямлением и раскладкой рядами, точный угол поворота слайса. Исправлены отмена на всю глубину и смещение панели при открытии списков.",
+ "mac": {
+  "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
+  "sha256": "b0885700e0e61c42d335e1a665705d48d2f9a0672ed505fb3c01f9ca659e138b"
+ },
+ "windows": {
+  "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
+  "sha256": "8a29d324ee30454db8e9b9b482e65e4854d5b9662c5e4c9dda984ea6ffa38e83"
+ },
+ "android": {
+  "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
+ }
 }
