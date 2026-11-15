@@ -51,6 +51,8 @@
     <details class="sec osec oexp" id="oExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
       <label class="chk"><input type="checkbox" id="oLabels" checked> Рамки и названия слайсов на PNG</label>
       <div class="btns"><button class="x" id="oPNG">PNG текущего выхода</button><button class="b" id="oPNGAll">Все выходы (ZIP)</button></div>
+      <div class="btns"><button class="b" id="oResolume" style="border-color:var(--accent)" title="Пресет Advanced Output для Resolume Arena: выходы, слайсы, их участки на композиции и места на выходах">Resolume Arena — Advanced Output (.xml)</button></div>
+      <p class="hint">Для Resolume Arena 7.0 и новее. Положите файл в «Документы / Resolume Arena / Presets / Advanced Output» и выберите его в списке пресетов окна Advanced Output. Размер композиции — как у источника. Выходы приходят виртуальными: назначьте каждому свой реальный выход.</p>
     </div></details>
     <details class="sec fsec fexp" id="fExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
       <div class="btns"><button class="x" id="fPNG">Сохранить PNG поля</button><button class="x" id="fTZgo">Формирование ТЗ →</button></div>
@@ -160,12 +162,28 @@
         <div class="row"><span class="lbl">Отражение</span><div class="ctl"><button class="b" id="oSlFH" aria-pressed="false" title="Отразить по горизонтали">⇋ по горизонтали</button><button class="b" id="oSlFV" aria-pressed="false" title="Отразить по вертикали">⇵ по вертикали</button></div></div>
         <div class="btns"><button class="b" id="oSlDup">Копия</button><button class="b" id="oSlDel">Удалить</button><button class="b" id="oSlClear">Удалить все</button></div>
       </div>
+      <div class="tgroup">МАГНИТ</div>
+      <label class="chk"><input type="checkbox" id="oMagOn" checked> Магнит включён (Alt при перетаскивании — временно без магнита)</label>
+      <div id="oMagBox">
+        <div class="row wide"><span class="lbl">На входе</span></div>
+        <label class="chk"><input type="checkbox" id="oMagCab" checked> к кабинетам — слайс выделяется и двигается по краям кабинетов</label>
+        <label class="chk"><input type="checkbox" id="oMagInSl"> к соседним слайсам на входе</label>
+        <div class="row wide"><span class="lbl">На выходе</span></div>
+        <label class="chk"><input type="checkbox" id="oMagEdge" checked> к краям выхода</label>
+        <label class="chk"><input type="checkbox" id="oMagOutSl" checked> к соседним слайсам на выходе</label>
+        <label class="chk"><input type="checkbox" id="oMagCenter"> к центру выхода</label>
+        <div class="row"><label class="chk" style="margin:0"><input type="checkbox" id="oMagGrid"> к сетке</label><div class="ctl"><input type="text" inputmode="numeric" id="oMagStep" class="num" style="width:70px" aria-label="Шаг сетки, px"><span class="unit">px</span></div></div>
+        <div class="row"><label for="oMagThr">Сила магнита</label><div class="ctl"><select id="oMagThr"><option value="5">слабая</option><option value="10">обычная</option><option value="20">сильная</option></select></div></div>
+      </div>
+      <p class="hint">Без привязки к кабинетам слайс на входе выделяется и двигается попиксельно.</p>
       <div class="tgroup">ВЫХОДЫ (OUTPUTS)</div>
       <div class="flist" id="oScrList"></div>
       <div class="ctl"><button class="b" id="oScrAdd">+ Выход</button><button class="b" id="oScrDel">− Выход</button><button class="b" id="oScrRename">Переименовать</button></div>
       <div class="row"><span class="lbl">Разрешение</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oScrW" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Ширина выхода"><span class="unit">×</span><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oScrH" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Высота выхода"><select id="oScrPreset" aria-label="Готовые разрешения"><option value="">…</option><option value="3840x2160">3840×2160</option><option value="3840x2400">3840×2400</option><option value="1920x1080">1920×1080</option><option value="2560x1440">2560×1440</option><option value="4096x2160">4096×2160</option><option value="1920x1200">1920×1200</option></select></div></div>
       <div class="btns"><button class="b" id="oGroup" title="Объединить выбранные слайсы в группу — двигаются вместе. Добавить слайс к выбору: Ctrl/⌘ + клик по нему в Input">Сгруппировать слайсы</button><button class="b" id="oUngroup" title="Разбить группу выбранного слайса">Разгруппировать</button></div>
       <div class="row wide"><span class="lbl">Авторазметка</span></div>
+      <div class="btns"><button class="b" id="oMapSmart" style="border-color:var(--accent)" title="Программа сама перебирает варианты нарезки (целиком, полосами по рядам и столбцам) и раскладки и выбирает тот, где меньше выходов и слайсов">✦ Умная разметка</button></div>
+      <p class="hint" id="oSmartInfo" hidden></p>
       <div class="btns"><button class="b" id="oMapCab" title="Свой слайс на каждый кабинет">По кабинетам</button><button class="b" id="oMapRows" title="Слайс на каждый ряд кабинетов">По рядам</button><button class="b" id="oMapCols" title="Слайс на каждый столбец кабинетов">По столбцам</button></div>
       <div class="btns"><button class="b" id="oMapGroup" title="Слайс на каждый блок кабинетов кольца или на каждый экран поля">По блокам</button><button class="b" id="oMapScreen" title="Слайс на каждый экран целиком">По экранам</button></div>
       <p class="hint">Работает с любой маской: обычной, кольцом с блоками и экранами в общем поле, повёрнутыми на любой угол. Участок берётся под углом кабинета, выпрямляется и раскладывается по выходам ровными рядами.</p>
@@ -531,7 +549,8 @@
       <div class="row"><label for="cabPosCmX">В сантиметрах</label><div class="ctl"><input type="number" id="cabPosCmX" step="0.1" class="w-md" inputmode="decimal" title="Сдвиг по горизонтали, см (вправо +)"><input type="number" id="cabPosCmY" step="0.1" class="w-md" inputmode="decimal" title="Сдвиг по вертикали, см (вверх +)"><span class="unit">см</span></div></div>
       <p class="hint" id="cabPosInfo"></p>
       <div class="tgroup">ПОВОРОТ КАБИНЕТОВ</div>
-      <div class="row"><label for="cabRotIn">Угол</label><div class="ctl"><input type="number" id="cabRotIn" step="any" min="-180" max="180" class="w-md w-ang" inputmode="decimal" title="Угол выбранного кабинета, ° (до сотых; плюс — по часовой)"><span class="unit">°</span><button class="b" id="cabRotCCW" title="Против часовой на 45°">⟲ −45°</button><button class="b" id="cabRotCW" title="По часовой на 45°">⟳ +45°</button><button class="b" id="cabRot0" title="Угол 0°">0°</button></div></div>
+      <div class="row"><label for="cabRotIn">Угол</label><div class="ctl"><input type="number" id="cabRotIn" step="any" min="-180" max="180" class="w-md w-ang" inputmode="decimal" title="Угол выбранного кабинета, ° (до сотых; плюс — по часовой)"><span class="unit">°</span></div></div>
+      <div class="btns"><button class="b" id="cabRotCCW" title="Против часовой на 45°">⟲ −45°</button><button class="b" id="cabRotCW" title="По часовой на 45°">⟳ +45°</button><button class="b" id="cabRot0" title="Угол 0°">0°</button></div>
       <p class="hint">Можно тянуть зелёную точку на холсте (Shift — шагом 15°). Сгруппированные кабинеты поворачиваются вокруг общего центра как один блок. Двигать выбранные кабинеты можно мышью.</p>
       <div class="btns"><button class="b" id="shiftReset" title="Сбросить сдвиг и поворот выбранных кабинетов (без выделения — всех)">Сбросить сдвиг и поворот</button></div>
       <div class="tgroup">ПОДЛОЖКА — КАРТИНКА</div>
@@ -829,12 +848,15 @@
 <p>Вверху слева — переключатель <strong>LED / Маски</strong> и <strong>Волюметрик</strong>. В режиме «LED / Маски» доступны плоские экраны, нарезка, общее поле, мэппинг и ТЗ для Resolume / D3 / MP4. В режиме «Волюметрик» — только объёмные конструкции (раздел называется «Конструкция») и ТЗ для волюметрика. Список экранов показывает только экраны текущего режима; выбранный режим сохраняется в проекте.</p>
 
 <h2 id="help-sc">Нарезка</h2>
-<p>Для очень длинных или высоких экранов. Маску режут по кабинетам на части и складывают друг под другом (или рядом) — получается удобный кадр для контента и медиасервера. Нажмите «+ Нарезка», выберите маску и число частей (стрелками ▲▼ у каждой части можно задать свой размер в кабинетах). На каждой части подписано, какая это часть и где разрез, а в ТЗ под маской — пояснение для контентщиков. Пока нарезка не создана, настроек нет — только кнопка создания. Колесом и тачпадом окно масштабируется.</p>
+<p>Для очень длинных или высоких экранов. Маску режут по кабинетам на части и складывают друг под другом (или рядом) — получается удобный кадр для контента и медиасервера. Нажмите «+ Нарезка», выберите маску и число частей (стрелками ▲▼ у каждой части можно задать свой размер в кабинетах). На каждой части подписано, какая это часть и где разрез, а в ТЗ под маской — пояснение для контентщиков. Пока нарезка не создана, настроек нет — только кнопка создания. Колесом, тачпадом или кнопками «− + Авто» окно масштабируется, увеличенное — двигается перетаскиванием.</p>
 <p>Второе окно показывает исходную маску с той же разметкой и красными линиями разреза; этот пример идёт в ТЗ (PPTX и PDF) отдельным слайдом. «Крупные метки до нарезки» — номера одного размера в ячейках одной ширины; они режутся вместе с маской. Нарезку можно взять источником в мэппинге.</p>
 
 <h2 id="help-so">Мэппинг выходов</h2>
 <p>Раскладка готовых масок по выходам видеопроцессора, как Advanced Output в Resolume, но слайсы выделяются по кабинетам. Источник (вход) — общее поле, маска или нарезка. Вид по умолчанию «Input + Output» — вход и выход сразу. Протяните мышью по маске во входе — слайс прилипнет к краям кабинетов; на выходе двигайте слайсы и тяните за углы, чтобы менять их размер (прилипают к краям выхода и друг к другу; Alt — без привязки, Shift — без пропорций). Размер слайса на выходе можно задать и числами «Выход W × H», в том числе формулой — 192*6, 3840/2, (192+8)*4. Переключатель «Пропорции: сохранять / свободно». Экспорт — PNG каждого выхода.</p>
 <ul>
+<li><strong>✦ Умная разметка</strong> — программа сама решает, как нарезать маску: перебирает варианты (маска целиком, полосы по 1, 2, 3… ряда или столбца, деление длинных полос поровну или до упора, заполнение выходов кусками разного размера) и берёт тот, где меньше всего выходов, затем меньше слайсов и без поворотов. Режет только по границам кабинетов, в слайс не попадают погашенные кабинеты, ничего не вылезает за край выхода. Размер выхода — как у первого выхода. Под кнопкой написано, что выбрано: например «заполнение выходов · 3 выхода 1920×1080 · 8 слайсов · заполнение 85%».</li>
+<li><strong>Экспорт в Resolume Arena</strong> — кнопка «Resolume Arena — Advanced Output (.xml)» в разделе «Экспорт» сохраняет пресет Advanced Output: каждый выход — экран Resolume своего разрешения, каждый слайс — с участком на композиции (в том числе под углом) и местом на выходе (с поворотом и масштабом). Положите файл в «Документы / Resolume Arena / Presets / Advanced Output» (на Mac — ~/Documents/Resolume Arena/Presets/Advanced Output) и выберите его в списке пресетов вверху окна Advanced Output. Размер композиции в Arena сделайте как у источника — программа пишет его после сохранения. Экраны приходят виртуальными: назначьте каждому реальный выход. В Resolume одна композиция, поэтому выгружаются слайсы текущего источника. Совместимость: Resolume Arena 7.0 и новее (Resolume 8 нет — все версии с 2019 года это 7.x). Формат Resolume официально не описан, поэтому файл собран точно по образцу настоящих пресетов: сверен с 30 файлами Arena 7.13–7.26 и помечен версией 7.13.2 — такие файлы открывают 7.13 и все более новые версии. Выходы записаны с размером (Width / Height), как это делает сама Arena, иначе она ставит 800×600. Отражение слайса (Flip: 1 — по горизонтали, 2 — по вертикали) в настоящих файлах встречается, но какой бит какое направление — не подтверждено; проверьте отражённые слайсы в Arena. Перед шоу откройте пресет в Arena и проверьте.</li>
+<li><strong>Магнит</strong> — галочка «Магнит включён» и что к чему притягивается. На входе: к кабинетам (слайс выделяется целыми кабинетами; без этой галочки — попиксельно) и к соседним слайсам. На выходе: к краям выхода, к соседним слайсам, к центру выхода и к сетке с заданным шагом. «Сила магнита» — с какого расстояния срабатывает. Alt при перетаскивании — временно без магнита. Настройки свои у каждого мэппинга и сохраняются в проекте.</li>
 <li><strong>Авторазметка</strong> — «По кабинетам», «По рядам», «По столбцам», «По блокам», «По экранам», затем «Разложить по выходам». Работает с любой маской: обычной, кольцом с блоками, нарезкой и экранами в общем поле, повёрнутыми на любой угол. Участок берётся под углом кабинета, выпрямляется и ложится на выход ровными рядами. Погашенные кабинеты пропускаются.</li>
 <li><strong>Источник у каждого слайса свой</strong> — поле «Источник (маска)»: выход можно собрать из участков разных масок. Выбранный слайс сам показывает во входе свою маску.</li>
 <li><strong>Поворот</strong> — кнопки 0° / 90° / 180° / 270°, поле точного угла (до сотых) и зелёная точка на входе (Shift — шагом 15°). Несколько выбранных слайсов или группа поворачиваются одним блоком вокруг общего центра.</li>
@@ -993,7 +1015,7 @@
 </tr>
 <tr>
 <td>Масштаб</td>
-<td>Ctrl + колесо (на общем поле — просто колесо)</td>
+<td>Колесо мыши или кнопки «− 100% + Авто» вверху справа — во всех разделах; «Авто» — вписать целиком</td>
 <td>Щипок двумя пальцами</td>
 </tr>
 <tr>

@@ -1125,6 +1125,7 @@ function volComPaint(ctx, st, W, H, opts) {
   return L2;
 }
 function volComDraw() {
+  if (typeof syncZoomLabel === "function") syncZoomLabel();
   const cv = document.getElementById("volCom");
   if (!cv) return;
   const st = S(), on = ui.page === "mask" && st.kind === "vol" && st.vol && st.vol.view === "com";
@@ -3320,31 +3321,31 @@ function updateInfo(forcePhys) {
   if (st.kind === "vol") {
     setTxt($("infoCab"), "");
     setTxt($("vlInfo"), VOL_MASK_UI ? "Итог: ".concat(W, "×").concat(H, " px · ").concat(physText(st)) : "Итог: ".concat(physText(st)));
-    setTxt($("zLabel"), Math.round(ui.zoom * 100) + "%");
+    syncZoomLabel();
     return;
   }
   if (st.kind === "ring") {
     setTxt($("infoCab"), "");
     setTxt($("ringInfo"), "Итог: ".concat(W, "×").concat(H, " px · ").concat(physText(st)));
-    setTxt($("zLabel"), Math.round(ui.zoom * 100) + "%");
+    syncZoomLabel();
     return;
   }
   if (st.kind === "tv" || st.kind === "pix") {
     setTxt($("infoCab"), "");
     setTxt($(st.kind === "tv" ? "tvInfo" : "pxInfo"), "Итог: ".concat(W, "×").concat(H, " px").concat(physM(st)[2] ? " · " + physText(st) : ""));
-    setTxt($("zLabel"), Math.round(ui.zoom * 100) + "%");
+    syncZoomLabel();
     return;
   }
   if (st.kind === "proj") {
     const g = projGeom(st);
     setTxt($("infoCab"), "");
     setTxt($("pjInfo"), g.dome ? "Итог: ".concat(W, "×").concat(H, " px · купол ").concat(+g.P.fov || 180, "°") : g.canvas ? "Полотно ".concat(+g.P.cw, "×").concat(+g.P.ch, " м → ").concat(W, "×").concat(H, " px (").concat(Math.round(W / g.P.cw), " px/м)").concat(g.ovx ? " · перекрытие по горизонтали ".concat(g.ovx, " px (").concat(+(g.ovx / g.pw * 100).toFixed(1), "%)") : "").concat(g.ovy ? " · по вертикали ".concat(g.ovy, " px (").concat(+(g.ovy / g.ph * 100).toFixed(1), "%)") : "") : "Итог: ".concat(W, "×").concat(H, " px").concat(g.ovx ? " · перекрытие по горизонтали ".concat(g.ovx, " px") : "").concat(g.ovy ? " · по вертикали ".concat(g.ovy, " px") : ""));
-    setTxt($("zLabel"), Math.round(ui.zoom * 100) + "%");
+    syncZoomLabel();
     return;
   }
   const total = st.cabCols * st.cabRows, nb = st.blackCabinets.length, nc = cornerList(st, new Set(st.blackCabinets)).length, ns = shapedCount(st);
   setTxt($("infoCab"), "Чёрные: ".concat(nb).concat(nc ? " • Угловые: ".concat(nc) : "").concat(ns ? " • Фигурных столбцов: ".concat(ns) : "", " • Выделено: ").concat(ui.selected.size));
-  setTxt($("zLabel"), Math.round(ui.zoom * 100) + "%");
+  syncZoomLabel();
   if (typeof shapedLabels === "function") shapedLabels();
 }
 function changed(opts = {}) {
@@ -3481,6 +3482,7 @@ function fitStage(wh) {
 }
 function draw() {
   drawQueued = false;
+  syncZoomLabel();
   if (ui.page === "mask") syncPaintUI();
   vol3dDraw();
   if (ui.page === "field") {
@@ -6000,12 +6002,17 @@ document.querySelectorAll(".seg.tools button").forEach((b) => b.onclick = () => 
   ui.tool = b.dataset.tool;
   document.querySelectorAll(".seg.tools button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
 });
-$("zMinus").onclick = () => setZoom(ui.zoom - 0.1);
-$("zPlus").onclick = () => setZoom(ui.zoom + 0.1);
+// 2.0.181: кнопки масштаба работают во всех разделах (маска, нарезка, общее поле, мэппинг, ТЗ, волюметрик)
+$("zMinus").onclick = () => {
+  zoomTarget().step(1 / 1.25);
+  requestDraw();
+};
+$("zPlus").onclick = () => {
+  zoomTarget().step(1.25);
+  requestDraw();
+};
 $("zAuto").onclick = () => {
-  ui.zoom = 1;
-  ui.panX = ui.panY = 0;
-  updateInfo();
+  zoomTarget().auto();
   requestDraw();
 };
 const hist = { stack: [], i: -1, timer: 0 };
@@ -8524,6 +8531,7 @@ pv.addEventListener("pointerdown", (e) => {
   e.stopImmediatePropagation();
   if (ui.page === "tz") return tzPointer(e, "down");
   if (ui.page === "out") return outPointer(e, "down");
+  if (ui.page === "cut") return cutPointer(e, "down");
   if (ui.page !== "field") return;
   pv.setPointerCapture(e.pointerId);
   const p = local(e);
@@ -8560,6 +8568,7 @@ pv.addEventListener("pointermove", (e) => {
   e.stopImmediatePropagation();
   if (ui.page === "tz") return tzPointer(e, "move");
   if (ui.page === "out") return outPointer(e, "move");
+  if (ui.page === "cut") return cutPointer(e, "move");
   if (ui.page !== "field") return;
   const p = local(e);
   if (fld.pointers.has(e.pointerId)) fld.pointers.set(e.pointerId, p);
@@ -8645,6 +8654,7 @@ function fieldUp(e) {
   e.stopImmediatePropagation();
   if (ui.page === "tz") return tzPointer(e, "up");
   if (ui.page === "out") return outPointer(e, "up");
+  if (ui.page === "cut") return cutPointer(e, "up");
   fld.pointers.delete(e.pointerId);
   if (fld.pointers.size < 2) fld.pinch = null;
   if (fld.pointers.size === 0) {
@@ -9535,6 +9545,128 @@ $("cPNG").onclick = async () => {
     status("Ошибка рендера: " + e.message, true);
   }
 };
+// ===== 2.0.181: единая панель масштаба «− 100% + Авто» во всех разделах =====
+ui.cutV = { z: 1, x: 0, y: 0 };
+function cutViewClamp(R) {
+  const V = ui.cutV;
+  R = R || $("wrap").getBoundingClientRect();
+  if (V.z <= 1) return Object.assign(V, { z: 1, x: 0, y: 0 });
+  V.x = Math.min(0, Math.max(R.width - R.width * V.z, V.x));
+  V.y = Math.min(0, Math.max(R.height - R.height * V.z, V.y));
+}
+// масштаб вида {z, x, y} к точке (px, py) экрана
+function viewZoomAt(V, z, px, py) {
+  const ux = (px - V.x) / V.z, uy = (py - V.y) / V.z;
+  V.z = z;
+  V.x = px - ux * z;
+  V.y = py - uy * z;
+}
+let cutDrag = null;
+function cutPointer(e, type) {
+  const p = local(e);
+  if (type === "down") {
+    if (ui.cutV.z <= 1) return;
+    pv.setPointerCapture(e.pointerId);
+    cutDrag = { px: p[0], py: p[1], x0: ui.cutV.x, y0: ui.cutV.y };
+    pv.style.cursor = "grabbing";
+  } else if (type === "move") {
+    if (!cutDrag) {
+      pv.style.cursor = ui.cutV.z > 1 ? "grab" : "default";
+      return;
+    }
+    ui.cutV.x = cutDrag.x0 + p[0] - cutDrag.px;
+    ui.cutV.y = cutDrag.y0 + p[1] - cutDrag.py;
+    requestDraw();
+  } else {
+    cutDrag = null;
+    pv.style.cursor = ui.cutV.z > 1 ? "grab" : "default";
+  }
+}
+pv.addEventListener("wheel", (e) => {
+  if (ui.page !== "cut") return;
+  e.preventDefault();
+  const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+  if (!dy) return;
+  const V = ui.cutV, p = local(e);
+  viewZoomAt(V, Math.max(1, Math.min(8, V.z * Math.max(0.5, Math.min(2, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)))))), p[0], p[1]);
+  cutViewClamp();
+  requestDraw();
+}, { passive: false });
+// какой масштаб у текущего раздела: проценты, «шаг» (к центру окна) и «Авто»
+function zoomTarget() {
+  const R = $("wrap").getBoundingClientRect(), cx = R.width / 2, cy = R.height / 2;
+  if (ui.page === "field") return {
+    pct: () => FV.s / (FV.base || FV.s || 1),
+    step: (f) => zoomFieldAt(FV.s * f, cx, cy),
+    auto: () => fitField()
+  };
+  if (ui.page === "cut") return {
+    pct: () => ui.cutV.z,
+    step: (f) => {
+      viewZoomAt(ui.cutV, Math.max(1, Math.min(8, ui.cutV.z * f)), cx, cy);
+      cutViewClamp(R);
+    },
+    auto: () => Object.assign(ui.cutV, { z: 1, x: 0, y: 0 })
+  };
+  if (ui.page === "out") return {
+    pct: () => ui_out.V.z,
+    step: (f) => {
+      // вид мэппинга смещается от центра окна — при масштабе к центру смещение растёт так же
+      const V = ui_out.V, z = Math.max(1, Math.min(40, V.z * f)), k = z / V.z;
+      V.z = z;
+      V.x = z === 1 ? 0 : V.x * k;
+      V.y = z === 1 ? 0 : V.y * k;
+    },
+    auto: () => Object.assign(ui_out.V, { z: 1, x: 0, y: 0 })
+  };
+  if (ui.page === "tz") return {
+    pct: () => ui.tzView.z,
+    step: (f) => {
+      viewZoomAt(ui.tzView, Math.max(1, Math.min(8, ui.tzView.z * f)), cx, cy);
+      tzViewClamp();
+    },
+    auto: () => {
+      ui.tzView = { z: 1, x: 0, y: 0 };
+      if (ui.tzZoom >= 0) tzZoomTo(-1);
+    }
+  };
+  if (S().kind === "vol") {
+    // волюметрик: масштаб схемы коммутации
+    const cv = $("volCom"), r = cv ? cv.getBoundingClientRect() : R;
+    return {
+      pct: () => ui.volView.z,
+      step: (f) => {
+        const vv = ui.volView;
+        viewZoomAt(vv, Math.max(1, Math.min(12, vv.z * f)), r.width / 2, r.height / 2);
+        if (vv.z === 1) vv.x = vv.y = 0;
+        volComDraw();
+      },
+      auto: () => {
+        Object.assign(ui.volView, { z: 1, x: 0, y: 0 });
+        volComDraw();
+      }
+    };
+  }
+  return {
+    pct: () => ui.zoom,
+    step: (f) => setZoomAt(ui.zoom * f, cx, cy),
+    auto: () => {
+      ui.zoom = 1;
+      ui.panX = ui.panY = 0;
+      updateInfo();
+    }
+  };
+}
+function syncZoomLabel() {
+  const el = $("zLabel");
+  if (!el) return;
+  let v = 1;
+  try {
+    v = zoomTarget().pct();
+  } catch (e) {
+  }
+  setTxt(el, Math.round((isFinite(v) ? v : 1) * 100) + "%");
+}
 function drawCut() {
   const c = CC(), G = c && cutGeom(c);
   const R = prepCanvas(G ? [G.W, G.H] : [16, 9]);
@@ -9546,6 +9678,10 @@ function drawCut() {
     pctx.textAlign = "left";
     return;
   }
+  // 2.0.181: масштаб нарезки — колесо, кнопки «− + Авто», сдвиг перетаскиванием
+  cutViewClamp(R);
+  pctx.translate(ui.cutV.x, ui.cutV.y);
+  pctx.scale(ui.cutV.z, ui.cutV.z);
   // 2.0.174: два окна — сверху исходная маска с разметкой и линиями разреза, снизу результат нарезки
   const pad = R.width < 600 ? 20 : 48, cap = 18, gapY = 14, slotH = (R.height - pad * 2 - gapY) / 2 - cap;
   const win = (title, W, H, y0, paint) => {
@@ -9691,8 +9827,18 @@ function rotRect(x, y, w, h, w0, h0, rot) {
 function maskCells(st) {
   const [w0, h0] = dims(st);
   if (st.kind !== "led") return [{ x: 0, y: 0, w: w0, h: h0 }];
-  const { xs, ys } = grid(st), out = [];
-  for (let r = 0; r < ys.length - 1; r++) for (let c = 0; c < xs.length - 1; c++) out.push({ x: xs[c], y: ys[r], w: xs[c + 1] - xs[c], h: ys[r + 1] - ys[r] });
+  // 2.0.181: кабинеты там, где они нарисованы на маске — ось Y снизу вверх, со сдвигом («ступеньки»);
+  // повёрнутый кабинет — по его габариту; погашенные и вне фигур не берутся (как в авторазметке)
+  const { xs, ys } = grid(st), sh = cabShift(st), off = /* @__PURE__ */ new Set([...st.blackCabinets || [], ...shapeOff(st)]), out = [];
+  for (let r = 0; r < ys.length - 1; r++) for (let c = 0; c < xs.length - 1; c++) {
+    if (off.has(key(c, r))) continue;
+    const ddx = sh.dx(c, r), ddy = sh.dy(c, r), x0 = xs[c] + ddx, x1 = xs[c + 1] + ddx, y0 = h0 - (ys[r + 1] + ddy), y1 = h0 - (ys[r] + ddy);
+    const ra = cabRotOf(st, c, r);
+    if (ra) {
+      const a = ra * Math.PI / 180, w = x1 - x0, h = y1 - y0, bw = Math.abs(w * Math.cos(a)) + Math.abs(h * Math.sin(a)), bh = Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a));
+      out.push({ x: (x0 + x1 - bw) / 2, y: (y0 + y1 - bh) / 2, w: bw, h: bh });
+    } else out.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+  }
   return out;
 }
 const outCellCache = /* @__PURE__ */ new Map();
@@ -9718,12 +9864,13 @@ function outCellsK(srcKey) {
       }
     }
   } else if (srcKey[0] === "c") {
-    const c = (project.cuts || []).find((q) => q.id === id), G = c && cutGeom(c);
-    if (G) {
-      const { xs, ys } = grid(G.st);
-      for (const p of G.parts) {
-        if (G.h) for (let cc = p.a; cc < p.b; cc++) for (let r = 0; r < ys.length - 1; r++) cells.push({ x: p.dx + xs[cc] - p.sx, y: p.dy + ys[r], w: xs[cc + 1] - xs[cc], h: ys[r + 1] - ys[r], g: p.i });
-        else for (let rr = p.a; rr < p.b; rr++) for (let cc = 0; cc < xs.length - 1; cc++) cells.push({ x: p.dx + xs[cc], y: p.dy + ys[rr] - p.sy, w: xs[cc + 1] - xs[cc], h: ys[rr + 1] - ys[rr], g: p.i });
+    // 2.0.181: кабинеты нарезки — по той же геометрии, что и авторазметка (со сдвигом и поворотом кабинетов)
+    for (const g of outGroups(srcKey)) {
+      const a = (+g.a || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+      for (const q of g.cells) {
+        const cx = g.cx + q.dx * ca - q.dy * sa, cy = g.cy + q.dx * sa + q.dy * ca;
+        const bw = Math.abs(q.w * ca) + Math.abs(q.h * sa), bh = Math.abs(q.w * sa) + Math.abs(q.h * ca);
+        cells.push({ x: cx - bw / 2, y: cy - bh / 2, w: bw, h: bh, g: g.g });
       }
     }
   }
@@ -9817,6 +9964,22 @@ function outGroups(srcKey) {
   return out;
 }
 // прямоугольник по кабинетам: все кабинеты, центр которых внутри выделения
+// 2.0.181: прямоугольник слайса на входе по двум точкам: с магнитом «к кабинетам» — целыми кабинетами,
+// без него — попиксельно (с привязкой к соседним слайсам, если она включена); Alt — без привязки
+function outInRect(o, x0, y0, x1, y1, e, P, self) {
+  const M = outMag(o);
+  if (M.on && M.cab && !e.altKey) return snapToCells(o, x0, y0, x1, y1);
+  const S0 = outSrc(o), cl = (v, m) => Math.max(0, Math.min(m, Math.round(v)));
+  let ax = cl(x0, S0 ? S0.w : 1e9), ay = cl(y0, S0 ? S0.h : 1e9), bx = cl(x1, S0 ? S0.w : 1e9), by = cl(y1, S0 ? S0.h : 1e9);
+  if (M.on && M.inSl && !e.altKey) {
+    const [X, Y] = outInLines(o, self), thr = M.thr / P.k;
+    if (S0) X.push(0, S0.w), Y.push(0, S0.h);
+    bx = magPoint(bx, X, 0, thr);
+    by = magPoint(by, Y, 0, thr);
+  }
+  const w = Math.abs(bx - ax), h = Math.abs(by - ay);
+  return w >= 2 && h >= 2 ? { x: Math.min(ax, bx), y: Math.min(ay, by), w, h } : null;
+}
 function snapToCells(o, x0, y0, x1, y1) {
   const L = Math.min(x0, x1), R = Math.max(x0, x1), T = Math.min(y0, y1), B = Math.max(y0, y1);
   let a = null;
@@ -9896,6 +10059,7 @@ async function renderOutPNG(o, scr, onBand) {
 // Режимы: cab — по кабинетам, rows — по рядам, cols — по столбцам, group — по блокам/экранам, screen — экран целиком.
 function outAutoMap(o, mode) {
   if (!o || !o.screens.length) return;
+  o.smartInfo = "";
   const gs = outGroups(o.src);
   if (!gs.length) return status("В источнике нет кабинетов для разметки", true);
   const rad = (d) => d * Math.PI / 180, parts = [];
@@ -9963,6 +10127,323 @@ function outAutoMap(o, mode) {
     ox: 0, oy: 0, ow: 0, oh: 0, keep: true, rot: 0, ra: +(+r.a || 0).toFixed(2), fh: false, fv: false, on: true }));
   outPack(o, true);
   status("Размечено слайсов: " + o.slices.length, true);
+}
+// ---- 2.0.181: УМНАЯ РАЗМЕТКА — программа сама перебирает варианты нарезки и раскладки и берёт тот,
+// где меньше выходов, потом меньше слайсов, без поворотов и плотнее заполнение.
+// Режет только по границам кабинетов; каждый слайс — сплошной прямоугольник живых кабинетов (без чёрных дыр).
+function smartGroupGrid(g) {
+  // кабинеты группы в своих координатах; сетка — если у каждого столбца и ряда одни и те же границы
+  const cells = g.cells.map((q) => ({ q, x0: q.dx - q.w / 2, x1: q.dx + q.w / 2, y0: q.dy - q.h / 2, y1: q.dy + q.h / 2 }));
+  const r2 = (v) => Math.round(v * 100) / 100;
+  const xs = [...new Set(cells.flatMap((c) => [r2(c.x0), r2(c.x1)]))].sort((a, b) => a - b);
+  const ys = [...new Set(cells.flatMap((c) => [r2(c.y0), r2(c.y1)]))].sort((a, b) => a - b);
+  const ci = new Map(xs.map((v, i) => [v, i])), ri = new Map(ys.map((v, i) => [v, i]));
+  const nc = xs.length - 1, nr = ys.length - 1, P = Array.from({ length: nr }, () => new Array(nc).fill(null));
+  for (const c of cells) {
+    const a = ci.get(r2(c.x0)), b = ci.get(r2(c.x1)), u = ri.get(r2(c.y0)), v = ri.get(r2(c.y1));
+    if (b !== a + 1 || v !== u + 1 || P[u][a]) return null; // кабинет не ложится в одну клетку — не сетка
+    P[u][a] = c;
+  }
+  return { xs, ys, nc, nr, P };
+}
+function smartRects(g, G, dir, k, split, W, H) {
+  // dir "h": полосы по k рядов, внутри — куски по ширине ≤ W; "v" — то же по столбцам.
+  // split: "fill" — набивать до упора, "even" — делить поровну.
+  const out = [], { xs, ys, nc, nr, P } = G, rows = dir === "h";
+  const nA = rows ? nr : nc, nB = rows ? nc : nr, A = rows ? ys : xs, B = rows ? xs : ys, LIM = rows ? W : H;
+  const live = (a, b) => rows ? !!P[a][b] : !!P[b][a];
+  let a0 = 0;
+  while (a0 < nA) {
+    // полоса из k линий; если в ней разная «живость» по линиям — укорачиваем полосу
+    let a1 = Math.min(nA, a0 + k);
+    const uniform = (x, y) => {
+      for (let b = 0; b < nB; b++) {
+        const v = live(x, b);
+        for (let a = x + 1; a < y; a++) if (live(a, b) !== v) return false;
+      }
+      return true;
+    };
+    while (a1 - a0 > 1 && !uniform(a0, a1)) a1--;
+    // непрерывные отрезки живых кабинетов вдоль полосы
+    let b = 0;
+    while (b < nB) {
+      if (!live(a0, b)) {
+        b++;
+        continue;
+      }
+      let e = b;
+      while (e < nB && live(a0, e)) e++;
+      // режем отрезок [b, e) по границам кабинетов на куски ≤ LIM
+      const len = B[e] - B[b], n = Math.max(1, Math.ceil(len / LIM - 1e-9));
+      let s0 = b;
+      for (let piece = 0; piece < n && s0 < e; piece++) {
+        let s1 = s0 + 1;
+        const target = split === "even" ? B[b] + len * (piece + 1) / n : Infinity;
+        while (s1 < e && B[s1 + 1] - B[s0] <= LIM && (split !== "even" || piece === n - 1 || B[s1 + 1] <= target + 1e-6)) s1++;
+        out.push(rows ? { x0: B[s0], x1: B[s1], y0: A[a0], y1: A[a1] } : { x0: A[a0], x1: A[a1], y0: B[s0], y1: B[s1] });
+        s0 = s1;
+      }
+      while (s0 < e) { // если поровну не вышло — добиваем остаток
+        let s1 = s0 + 1;
+        while (s1 < e && B[s1 + 1] - B[s0] <= LIM) s1++;
+        out.push(rows ? { x0: B[s0], x1: B[s1], y0: A[a0], y1: A[a1] } : { x0: A[a0], x1: A[a1], y0: B[s0], y1: B[s1] });
+        s0 = s1;
+      }
+      b = e;
+    }
+    a0 = a1;
+  }
+  return out;
+}
+function smartPack(items, scrs) {
+  // упаковка «полками» по убыванию высоты: каждый слайс — в первую полку любого выхода, где он помещается.
+  // Не помещается как есть, но помещается повёрнутым на 90° — поворачиваем. Новые выходы — размером первого.
+  const W0 = scrs[0].w, H0 = scrs[0].h, outs = scrs.map((s) => ({ w: s.w, h: s.h, shelves: [], used: 0 }));
+  const order = items.map((it, i) => i).sort((i, j) => items[j].h - items[i].h || items[j].w - items[i].w || i - j);
+  const res = new Array(items.length);
+  let rotated = 0;
+  const tryPut = (oi, w, h) => {
+    const O = outs[oi];
+    for (const sh of O.shelves) if (h <= sh.h && sh.x + w <= O.w) {
+      const r = { o: oi, x: sh.x, y: sh.y };
+      sh.x += w;
+      return r;
+    }
+    if (O.used + h <= O.h && w <= O.w) {
+      const sh = { y: O.used, h, x: w };
+      O.shelves.push(sh);
+      O.used += h;
+      return { o: oi, x: 0, y: sh.y };
+    }
+    return null;
+  };
+  for (const i of order) {
+    const it = items[i];
+    let r = null, rot = false;
+    for (let oi = 0; oi < outs.length && !r; oi++) r = tryPut(oi, it.w, it.h);
+    if (!r && it.w > W0 && it.h <= W0 && it.w <= H0) {
+      for (let oi = 0; oi < outs.length && !r; oi++) r = tryPut(oi, it.h, it.w);
+      rot = !!r;
+    }
+    if (!r) {
+      outs.push({ w: W0, h: H0, shelves: [], used: 0 });
+      const oi = outs.length - 1, big = it.w > W0 || it.h > H0, canRot = big && it.h <= W0 && it.w <= H0;
+      rot = canRot;
+      r = tryPut(oi, rot ? it.h : it.w, rot ? it.w : it.h) || { o: oi, x: 0, y: 0 };
+      if (!rot && big) outs[oi].used = outs[oi].h; // больше выхода — один на весь выход
+    }
+    if (rot) rotated++;
+    res[i] = { ...r, rot };
+  }
+  const usedOuts = new Set(res.map((r) => r.o));
+  const area = items.reduce((t, it) => t + it.w * it.h, 0), cap = [...usedOuts].reduce((t, oi) => t + outs[oi].w * outs[oi].h, 0);
+  return { res, outs: usedOuts.size, nOuts: outs.length, rotated, fill: cap ? area / cap : 0 };
+}
+function smartFill(gs, grids, scrs) {
+  // заполнение выходов: в свободное место кладётся самый большой прямоугольник оставшихся кабинетов, который туда влезает;
+  // свободное место делится «гильотиной» по короткой стороне. Кабинеты, не лежащие в сетке, кладутся по одному.
+  const W0 = scrs[0].w, H0 = scrs[0].h, outs = scrs.map((s) => ({ w: s.w, h: s.h, free: [{ x: 0, y: 0, w: s.w, h: s.h }] }));
+  const R = grids.map((G) => G ? G.P.map((row) => row.map((c) => !!c)) : null);
+  const loose = [];
+  gs.forEach((g, gi) => {
+    if (!grids[gi]) for (const q of g.cells) loose.push({ gi, r: { x0: q.dx - q.w / 2, x1: q.dx + q.w / 2, y0: q.dy - q.h / 2, y1: q.dy + q.h / 2 }, used: false });
+  });
+  const items = [], res = [];
+  const left = () => R.some((M) => M && M.some((row) => row.some((v) => v))) || loose.some((q) => !q.used);
+  const bestIn = (F) => {
+    let best = null;
+    const take = (cand) => {
+      // больше площадь; при равной — плотнее к свободному месту
+      const k = cand.w * cand.h * 1e6 - Math.min(F.w - cand.w, F.h - cand.h);
+      if (!best || k > best.k) best = { ...cand, k };
+    };
+    R.forEach((M, gi) => {
+      if (!M) return;
+      const { xs, ys, nr, nc } = grids[gi];
+      for (let r = 0; r < nr; r++) for (let c = 0; c < nc; c++) {
+        if (!M[r][c] || c > 0 && M[r][c - 1] && r > 0 && M[r - 1][c]) continue; // только «углы» оставшихся участков
+        let cmax = nc - c;
+        for (let r1 = r; r1 < nr; r1++) {
+          if (ys[r1 + 1] - ys[r] > F.h + 1e-6) break;
+          let cc = 0;
+          while (cc < cmax && M[r1][c + cc] && xs[c + cc + 1] - xs[c] <= F.w + 1e-6) cc++;
+          cmax = cc;
+          if (!cmax) break;
+          take({ gi, r0: r, r1: r1 + 1, c0: c, c1: c + cmax, w: xs[c + cmax] - xs[c], h: ys[r1 + 1] - ys[r] });
+        }
+      }
+    });
+    loose.forEach((q, li) => {
+      const w = q.r.x1 - q.r.x0, h = q.r.y1 - q.r.y0;
+      if (!q.used && w <= F.w + 1e-6 && h <= F.h + 1e-6) take({ li, w, h });
+    });
+    return best;
+  };
+  let guard = 0;
+  while (left() && guard++ < 20000) {
+    let pick = null;
+    for (let oi = 0; oi < outs.length && !pick; oi++) {
+      const fr = outs[oi].free.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+      for (const F of fr) {
+        const b = bestIn(F);
+        if (b && (!pick || b.k > pick.b.k)) pick = { oi, F, b };
+      }
+    }
+    if (!pick) {
+      const fresh = { w: W0, h: H0, free: [{ x: 0, y: 0, w: W0, h: H0 }] };
+      outs.push(fresh);
+      const b = bestIn(fresh.free[0]);
+      if (!b) {
+        // кабинет больше выхода — ставим один на весь выход
+        let one = null;
+        R.forEach((M, gi) => M && M.forEach((row, r) => row.forEach((v, c) => {
+          if (v && !one) one = { gi, r0: r, r1: r + 1, c0: c, c1: c + 1 };
+        })));
+        if (!one) one = { li: loose.findIndex((q) => !q.used) };
+        fresh.free = [];
+        place(outs.length - 1, { x: 0, y: 0 }, one);
+      }
+      continue;
+    }
+    const { oi, F, b } = pick, O = outs[oi];
+    O.free.splice(O.free.indexOf(F), 1);
+    // гильотина: режем по короткой оставшейся стороне
+    const rw = F.w - b.w, rh = F.h - b.h;
+    if (rw < rh) {
+      if (rw > 0) O.free.push({ x: F.x + b.w, y: F.y, w: rw, h: b.h });
+      if (rh > 0) O.free.push({ x: F.x, y: F.y + b.h, w: F.w, h: rh });
+    } else {
+      if (rw > 0) O.free.push({ x: F.x + b.w, y: F.y, w: rw, h: F.h });
+      if (rh > 0) O.free.push({ x: F.x, y: F.y + b.h, w: b.w, h: rh });
+    }
+    place(oi, F, b);
+  }
+  function place(oi, at, b) {
+    if (b.li != null && b.li >= 0) {
+      const q = loose[b.li];
+      q.used = true;
+      items.push({ gi: q.gi, r: q.r });
+    } else {
+      const G = grids[b.gi], M = R[b.gi];
+      for (let r = b.r0; r < b.r1; r++) for (let c = b.c0; c < b.c1; c++) M[r][c] = false;
+      items.push({ gi: b.gi, r: { x0: G.xs[b.c0], x1: G.xs[b.c1], y0: G.ys[b.r0], y1: G.ys[b.r1] } });
+    }
+    const it = items[items.length - 1];
+    it.w = Math.round(it.r.x1 - it.r.x0);
+    it.h = Math.round(it.r.y1 - it.r.y0);
+    res.push({ o: oi, x: Math.round(at.x), y: Math.round(at.y), rot: false });
+  }
+  const usedOuts = new Set(res.map((r) => r.o));
+  const area = items.reduce((t, it) => t + it.w * it.h, 0), cap = [...usedOuts].reduce((t, oi) => t + outs[oi].w * outs[oi].h, 0);
+  return { items, P: { res, outs: usedOuts.size, nOuts: outs.length, rotated: 0, fill: cap ? area / cap : 0 } };
+}
+function outSmartMap(o) {
+  if (!o || !o.screens.length) return;
+  const gs = outGroups(o.src);
+  if (!gs.length) return status("В источнике нет кабинетов для разметки", true);
+  const W = o.screens[0].w, H = o.screens[0].h, rad = (d) => d * Math.PI / 180;
+  // группа не складывается в одну сетку (например, «лесенка» — каждый ряд сдвинут по-своему):
+  // делим её на ровные ряды или столбцы, каждый из которых — своя сетка
+  for (let i = gs.length - 1; i >= 0; i--) {
+    const g = gs[i];
+    if (g.cells.length < 2 || smartGroupGrid(g)) continue;
+    for (const by of ["row", "col"]) {
+      const m = /* @__PURE__ */ new Map();
+      for (const q of g.cells) {
+        const k = by === "row" ? Math.round(q.dy - q.h / 2) + ":" + Math.round(q.h) : Math.round(q.dx - q.w / 2) + ":" + Math.round(q.w);
+        if (!m.has(k)) m.set(k, []);
+        m.get(k).push(q);
+      }
+      const subs = [...m.values()].map((cells) => ({ ...g, cells }));
+      if (subs.length > 1 && subs.every((sg) => smartGroupGrid(sg))) {
+        gs.splice(i, 1, ...subs);
+        break;
+      }
+    }
+  }
+  const grids = gs.map(smartGroupGrid);
+  const toPart = (g, r, name) => {
+    const w = r.x1 - r.x0, h = r.y1 - r.y0, mx = (r.x0 + r.x1) / 2, my = (r.y0 + r.y1) / 2, a = rad(g.a);
+    return { cx: g.cx + mx * Math.cos(a) - my * Math.sin(a), cy: g.cy + mx * Math.sin(a) + my * Math.cos(a), w, h, a: g.a, name };
+  };
+  // варианты для одной группы
+  const variants = (gi) => {
+    const g = gs[gi], G = grids[gi], list = [];
+    if (!G) {
+      // не сетка (кольцо, сдвинутые кабинеты): блок целиком, если влезает, иначе по кабинетам
+      const x0 = Math.min(...g.cells.map((q) => q.dx - q.w / 2)), x1 = Math.max(...g.cells.map((q) => q.dx + q.w / 2));
+      const y0 = Math.min(...g.cells.map((q) => q.dy - q.h / 2)), y1 = Math.max(...g.cells.map((q) => q.dy + q.h / 2));
+      const full = Math.abs(g.cells.reduce((t, q) => t + q.w * q.h, 0) - (x1 - x0) * (y1 - y0)) < 1;
+      if (full && x1 - x0 <= W && y1 - y0 <= H) list.push({ how: "блоки целиком", rects: [{ x0, x1, y0, y1 }] });
+      list.push({ how: "по кабинетам", rects: g.cells.map((q) => ({ x0: q.dx - q.w / 2, x1: q.dx + q.w / 2, y0: q.dy - q.h / 2, y1: q.dy + q.h / 2 })) });
+      return list;
+    }
+    // полосы выше (шире) выхода не нужны: перебираем только те, что в него влезают
+    const med = (arr) => arr.slice().sort((a, b) => a - b)[arr.length >> 1];
+    const rh = med(G.ys.slice(1).map((v, i) => v - G.ys[i])), cw = med(G.xs.slice(1).map((v, i) => v - G.xs[i]));
+    const kr = Math.min(G.nr, 60, Math.max(1, Math.floor(H / rh + 1e-9))), kc = Math.min(G.nc, 60, Math.max(1, Math.floor(W / cw + 1e-9)));
+    const word = (k, one, few, many) => k % 10 === 1 && k % 100 !== 11 ? one : k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 12 || k % 100 > 14) ? few : many;
+    const name = (dir, k, rects) => rects.length === 1 ? (g.cells.length === 1 ? "по кабинетам" : "целиком") : dir === "h" ? "полосы по " + k + " " + word(k, "ряду", "ряда", "рядов") : "полосы по " + k + " " + word(k, "столбцу", "столбца", "столбцов");
+    for (let k = 1; k <= kr; k++) for (const sp of ["fill", "even"]) {
+      const rects = smartRects(g, G, "h", k, sp, W, H);
+      list.push({ how: name("h", k, rects), dir: "h", k, sp, rects });
+    }
+    for (let k = 1; k <= kc; k++) for (const sp of ["fill", "even"]) {
+      const rects = smartRects(g, G, "v", k, sp, W, H);
+      list.push({ how: name("v", k, rects), dir: "v", k, sp, rects });
+    }
+    return list;
+  };
+  const V = gs.map((g, gi) => variants(gi));
+  // общие стратегии: одно и то же правило для всех групп + лучший вариант для каждой группы отдельно
+  const score = (P, n) => P.outs * 1e9 + n * 1e4 + P.rotated * 1e3 + Math.round((1 - P.fill) * 999);
+  const evalPick = (pick) => {
+    const items = [];
+    pick.forEach((v, gi) => v.rects.forEach((r) => items.push({ gi, r, w: Math.round(r.x1 - r.x0), h: Math.round(r.y1 - r.y0) })));
+    const P = smartPack(items, o.screens);
+    return { pick, items, P, sc: score(P, items.length) };
+  };
+  const cands = [];
+  const keys = /* @__PURE__ */ new Set();
+  for (const vs of V) for (const v of vs) keys.add((v.dir || "x") + "|" + (v.k || 0) + "|" + (v.sp || ""));
+  for (const key2 of keys) {
+    const [dir, k, sp] = key2.split("|");
+    cands.push(evalPick(V.map((vs) => vs.find((v) => (v.dir || "x") === dir && String(v.k || 0) === k && (v.sp || "") === sp) || vs.reduce((b, v) => !b || v.rects.length < b.rects.length ? v : b, null))));
+  }
+  // жадно улучшаем выбор по группам
+  let best = cands.reduce((b, c) => !b || c.sc < b.sc ? c : b, null);
+  for (let pass = 0; pass < 2 && gs.length > 1 && gs.length <= 40; pass++) for (let gi = 0; gi < gs.length; gi++) for (const v of V[gi]) {
+    if (v === best.pick[gi]) continue;
+    const pick = best.pick.slice();
+    pick[gi] = v;
+    const c = evalPick(pick);
+    if (c.sc < best.sc) best = c;
+  }
+  // второй способ — заполнение выходов; побеждает тот, где меньше выходов, потом меньше слайсов
+  const F = smartFill(gs, grids, o.screens);
+  F.sc = score(F.P, F.items.length);
+  F.pick = [{ how: "заполнение выходов" }];
+  if (F.sc < best.sc) best = F;
+  // слайсы: порядок — как в источнике (по группе, сверху вниз, слева направо), раскладка — из упаковки
+  const nOld = o.screens.length;
+  while (o.screens.length < best.P.nOuts) o.screens.push({ id: newUid(), name: "Output ".concat(o.screens.length + 1), w: W, h: H, auto: true });
+  const idx = best.items.map((it, i) => i).sort((i, j) => best.items[i].gi - best.items[j].gi || best.items[i].r.y0 - best.items[j].r.y0 || best.items[i].r.x0 - best.items[j].r.x0);
+  o.slices = idx.map((i, n) => {
+    const it = best.items[i], g = gs[it.gi], pr = toPart(g, it.r, ""), pl = best.P.res[i];
+    const nm = (gs.length > 1 ? g.name + " · " : "") + "Slice " + (n + 1);
+    return { id: newUid(), name: nm, scr: o.screens[pl.o].id, src: o.src,
+      ix: Math.round(pr.cx - pr.w / 2), iy: Math.round(pr.cy - pr.h / 2), iw: Math.max(1, Math.round(pr.w)), ih: Math.max(1, Math.round(pr.h)),
+      ox: pl.x, oy: pl.y, ow: 0, oh: 0, keep: true, rot: pl.rot ? 90 : 0, ra: +(+pr.a || 0).toFixed(2), fh: false, fv: false, on: true };
+  });
+  const used = new Set(o.slices.map((q) => q.scr));
+  o.screens = o.screens.filter((q, i) => i === 0 || used.has(q.id) || (!q.auto && i < nOld));
+  if (!o.screens.some((q) => q.id === o.scr)) o.scr = o.screens[0].id;
+  ui_out.sel = o.slices[0] ? o.slices[0].id : "";
+  const hows = [...new Set(best.pick.map((v) => v.how))];
+  const nO = best.P.outs, nS = o.slices.length;
+  const msg = "Умная разметка: ".concat(hows.join(", "), " · ").concat(nO, " ").concat(nO === 1 ? "выход" : nO < 5 ? "выхода" : "выходов", " ").concat(W, "×").concat(H, " · ").concat(nS, " ").concat(nS % 10 === 1 && nS % 100 !== 11 ? "слайс" : nS % 10 >= 2 && nS % 10 <= 4 && (nS % 100 < 12 || nS % 100 > 14) ? "слайса" : "слайсов", " · заполнение ").concat(Math.round(best.P.fill * 100), "%").concat(best.P.rotated ? " · повёрнуто на 90°: " + best.P.rotated : "", ". Проверено вариантов: ").concat(cands.length + 1, ".");
+  o.smartInfo = msg;
+  status(msg, true);
 }
 function outAutoSlices(o, mode) {
   const S0 = outSrc(o);
@@ -10296,6 +10777,21 @@ function updateOutInfo() {
     }
   }
   setHtml($("oInfo"), out.join(""));
+  if (o) {
+    const M = outMag(o);
+    for (const [id, k] of [["oMagOn", "on"], ["oMagCab", "cab"], ["oMagInSl", "inSl"], ["oMagEdge", "edge"], ["oMagOutSl", "outSl"], ["oMagCenter", "center"], ["oMagGrid", "grid"]]) $(id).checked = M[k];
+    if (document.activeElement !== $("oMagStep")) $("oMagStep").value = M.step;
+    $("oMagStep").disabled = !M.grid;
+    $("oMagThr").value = String(M.thr);
+    $("oMagBox").classList.toggle("dim", !M.on);
+    for (const el of $("oMagBox").querySelectorAll("input,select")) if (el.id !== "oMagStep") el.disabled = !M.on;
+  }
+  const smi = $("oSmartInfo");
+  if (smi) {
+    const t = o && o.smartInfo && o.slices.length ? o.smartInfo : "";
+    smi.hidden = !t;
+    setTxt(smi, t);
+  }
 }
 // ---- кнопки панели
 function addOut() {
@@ -10415,6 +10911,28 @@ $("oUngroup").onclick = () => {
   for (const q of o.slices) if (q.grp === g) q.grp = "";
   outChanged(true);
   status("Группа снята, слайсов: " + n, true);
+};
+for (const [id, k] of [["oMagOn", "magOn"], ["oMagCab", "magCab"], ["oMagInSl", "magInSl"], ["oMagEdge", "magEdge"], ["oMagOutSl", "magOutSl"], ["oMagCenter", "magCenter"], ["oMagGrid", "magGrid"]]) $(id).onchange = () => {
+  const o = OC();
+  if (!o) return;
+  o[k] = $(id).checked;
+  outChanged(true);
+};
+$("oMagStep").oninput = () => {
+  const o = OC(), v = Math.round(+String($("oMagStep").value).replace(",", "."));
+  if (!o || !(v >= 1)) return;
+  o.magStep = Math.min(4096, v);
+  outChanged(false);
+};
+$("oMagThr").onchange = () => {
+  const o = OC();
+  if (!o) return;
+  o.magThr = +$("oMagThr").value;
+  outChanged(true);
+};
+$("oMapSmart").onclick = () => {
+  outSmartMap(OC());
+  outChanged(true);
 };
 for (const [id, mode] of [["oMapCab", "cab"], ["oMapRows", "rows"], ["oMapCols", "cols"], ["oMapGroup", "group"], ["oMapScreen", "screen"]]) $(id).onclick = () => {
   outAutoMap(OC(), mode);
@@ -10645,6 +11163,174 @@ async function saveOutPNG(o, scr) {
   });
 }
 const outFileName = (o, scr) => safeName("".concat(scr.w, "x").concat(scr.h, "-").concat(o.name, " ").concat(scr.name), "output").slice(0, 180) + ".png";
+// ===== 2.0.182: экспорт мэппинга в Resolume Arena — пресет Advanced Output (.xml) =====
+// Формат официально не описан. Элементы и атрибуты — только те, что пишет сама Arena 7.x: сверено с 30 настоящими
+// пресетами Arena 7.13–7.26 (у всех корень XmlState, размер композиции — CurrentCompositionTextureSize). Совместимость с 7.0+.
+// Выход = Screen (виртуальное устройство с разрешением выхода), слайс = Slice: InputRect — участок композиции,
+// OutputRect — место на выходе; поворот — атрибут orientation (радианы) и повёрнутые углы.
+function resXmlEsc(t) {
+  return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+function resNum(v) {
+  const r = Math.abs(v) < 1e-9 ? 0 : v;
+  return Number.isInteger(r) ? String(r) : String(+r.toFixed(6));
+}
+// 4 угла прямоугольника w×h с центром (cx, cy), повёрнутого на deg по часовой: левый верхний, правый верхний, правый нижний, левый нижний
+function resQuad(cx, cy, w, h, deg) {
+  const a = deg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+  return [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(([x, y]) => ({ x: cx + x * ca - y * sa, y: cy + x * sa + y * ca }));
+}
+// idHash устройства = String::hashCode64 из JUCE (h = h * 101 + код символа, 64 бита без знака) от deviceId —
+// сверено с 35 настоящими файлами Arena 7.13–7.26. Считаем частями по 16 бит: без BigInt (старый WebKit на Mac).
+function resHash64(str) {
+  const h = [0, 0, 0, 0]; // младшие 16 бит первыми
+  for (const ch of String(str)) {
+    let cp = ch.codePointAt(0);
+    // JUCE считает по символам UTF-32; суррогатные пары собираются в один символ
+    let carry = cp;
+    for (let i = 0; i < 4; i++) {
+      const v = h[i] * 101 + carry;
+      h[i] = v % 65536;
+      carry = Math.floor(v / 65536);
+    }
+  }
+  // в десятичную строку: делим 64-битное число на 10, пока не станет нулём
+  const d = h.slice(), out = [];
+  while (d.some((x) => x)) {
+    let rem = 0;
+    for (let i = 3; i >= 0; i--) {
+      const v = rem * 65536 + d[i];
+      d[i] = Math.floor(v / 10);
+      rem = v % 10;
+    }
+    out.push(rem);
+  }
+  return out.length ? out.reverse().join("") : "0";
+}
+function resVerts(pts, ind) {
+  return pts.map((p) => ind + '<v x="' + resNum(p.x) + '" y="' + resNum(p.y) + '"/>').join("\n");
+}
+function outResolumeXml(o) {
+  const S0 = outSrc(o);
+  if (!S0) return null;
+  const all = o.slices.filter((sl) => sliceSrc(o, sl) === o.src), other = o.slices.length - all.length;
+  let id = Date.now();
+  const T = (k) => "\t".repeat(k);
+  const screens = o.screens.map((scr) => {
+    const list = all.filter((sl) => sl.scr === scr.id), sid = id++;
+    const slices = list.map((sl) => {
+      const [ow, oh] = sliceOutWH(sl), r90 = sl.rot === 90 || sl.rot === 270;
+      const inQ = resQuad(sl.ix + sl.iw / 2, sl.iy + sl.ih / 2, sl.iw, sl.ih, +sl.ra || 0);
+      // на выходе: контент (до поворота) — ширина и высота до перестановки; поворачиваем вокруг центра места на выходе
+      const cw = r90 ? oh : ow, ch = r90 ? ow : oh, outQ = resQuad(sl.ox + ow / 2, sl.oy + oh / 2, cw, ch, +sl.rot || 0);
+      // 2.0.182: деформация — в координатах выхода, как в настоящих файлах Arena: Homography src = dst = углы OutputRect,
+      // сетка Bezier 4×4 — равномерно внутри этих углов (раньше была от 0,0 — Arena рисовала все слайсы в углу выхода)
+      const own = outQ;
+      const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+      const bez = [];
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+        const top = lerp(outQ[0], outQ[1], c / 3), bot = lerp(outQ[3], outQ[2], c / 3);
+        bez.push(lerp(top, bot, r / 3));
+      }
+      const flip = (sl.fh ? 1 : 0) | (sl.fv ? 2 : 0), nm = resXmlEsc(sl.name || "Slice");
+      const rad = (d) => resNum(d * Math.PI / 180);
+      return [
+        T(4) + '<Slice uniqueId="' + id++ + '">',
+        T(5) + '<Params name="Common">',
+        T(6) + '<Param name="Name" T="STRING" default="Layer" value="' + nm + '"/>',
+        T(6) + '<Param name="Enabled" T="BOOL" default="1" value="' + (sl.on === false ? 0 : 1) + '"/>',
+        T(5) + "</Params>",
+        T(5) + '<Params name="Input">',
+        T(6) + '<ParamChoice name="Input Source" default="0:1" value="0:1" storeChoices="0"/>',
+        T(5) + "</Params>",
+        T(5) + '<Params name="Output">',
+        T(6) + '<Param name="Flip" T="UINT8" default="0" value="' + flip + '"/>',
+        T(5) + "</Params>",
+        T(5) + '<InputRect orientation="' + rad(+sl.ra || 0) + '">',
+        resVerts(inQ, T(6)),
+        T(5) + "</InputRect>",
+        T(5) + '<OutputRect orientation="' + rad(+sl.rot || 0) + '">',
+        resVerts(outQ, T(6)),
+        T(5) + "</OutputRect>",
+        T(5) + "<Warper>",
+        T(6) + '<Params name="Warper">',
+        T(7) + '<ParamChoice name="Point Mode" default="PM_LINEAR" value="PM_LINEAR" storeChoices="0"/>',
+        T(7) + '<Param name="Flip" T="UINT8" default="0" value="0"/>',
+        T(6) + "</Params>",
+        T(6) + '<BezierWarper controlWidth="4" controlHeight="4">',
+        T(7) + "<vertices>",
+        resVerts(bez, T(8)),
+        T(7) + "</vertices>",
+        T(6) + "</BezierWarper>",
+        T(6) + "<Homography>",
+        T(7) + "<src>",
+        resVerts(own, T(8)),
+        T(7) + "</src>",
+        T(7) + "<dst>",
+        resVerts(own, T(8)),
+        T(7) + "</dst>",
+        T(6) + "</Homography>",
+        T(5) + "</Warper>",
+        T(4) + "</Slice>"
+      ].join("\n");
+    });
+    const sn = resXmlEsc(scr.name || "Screen");
+    return [
+      T(3) + '<Screen name="' + sn + '" uniqueId="' + sid + '">',
+      T(4) + '<Params name="Params">',
+      T(5) + '<Param name="Name" T="STRING" default="" value="' + sn + '"/>',
+      T(5) + '<Param name="Enabled" T="BOOL" default="1" value="1"/>',
+      T(5) + '<Param name="Hidden" T="BOOL" default="0" value="0"/>',
+      T(4) + "</Params>",
+      T(4) + "<guides>",
+      T(5) + '<ScreenGuide name="ScreenGuide" type="0"/>',
+      T(5) + '<ScreenGuide name="ScreenGuide" type="1"/>',
+      T(4) + "</guides>",
+      T(4) + "<layers>",
+      ...slices,
+      T(4) + "</layers>",
+      T(4) + "<OutputDevice>",
+      // как пишет сама Arena 7.13–7.26: idHash и параметры Width / Height (без них Arena ставит выход 800×600)
+      T(5) + '<OutputDeviceVirtual name="' + sn + '" deviceId="Virtual' + sn + '" idHash="' + resHash64("Virtual" + (scr.name || "Screen")) + '" width="' + scr.w + '" height="' + scr.h + '">',
+      T(6) + '<Params name="Params">',
+      ...[["Width", 800, scr.w], ["Height", 600, scr.h]].flatMap(([pn, def, val]) => [
+        T(7) + '<ParamRange name="' + pn + '" T="DOUBLE" default="' + def + '" value="' + val + '">',
+        T(8) + '<PhaseSourceStatic name="PhaseSourceStatic" phase="0"/>', // phase есть в 7.13–7.22.0, новые версии его читают
+        T(8) + '<BehaviourDouble name="BehaviourDouble"/>',
+        T(8) + '<ValueRange name="defaultRange" min="1" max="16384"/>',
+        T(8) + '<ValueRange name="minMax" min="1" max="16384"/>',
+        T(8) + '<ValueRange name="startStop" min="1" max="16384"/>',
+        T(7) + "</ParamRange>"
+      ]),
+      T(6) + "</Params>",
+      T(5) + "</OutputDeviceVirtual>",
+      T(4) + "</OutputDevice>",
+      T(3) + "</Screen>"
+    ].join("\n");
+  });
+  const name = resXmlEsc(o.name || "LED Mask");
+  const xml = ['<?xml version="1.0" encoding="utf-8"?>',
+    '<XmlState name="' + name + '">',
+    // версия 7.13.2: файл повторяет настоящие пресеты 7.13.2 — их открывают 7.13 и все более новые 7.x
+    '\t<versionInfo name="Resolume Arena" majorVersion="7" minorVersion="13" microVersion="2" revision="17774"/>',
+    '\t<ScreenSetup name="ScreenSetup">',
+    '\t\t<Params name="ScreenSetupParams"/>',
+    '\t\t<CurrentCompositionTextureSize width="' + S0.w + '" height="' + S0.h + '"/>',
+    "\t\t<screens>",
+    ...screens,
+    "\t\t</screens>",
+    "\t</ScreenSetup>",
+    "</XmlState>", ""].join("\n");
+  return { xml, slices: all.length, screens: o.screens.length, other, W: S0.w, H: S0.h };
+}
+$("oResolume").onclick = async () => {
+  const o = OC();
+  if (!o || !outSrc(o)) return status("Сначала выберите источник", true);
+  const r = outResolumeXml(o);
+  if (!r.slices) return status("Нет слайсов для выгрузки — разметьте источник", true);
+  const ok = await save(safeName(o.name, "Advanced Output") + ".xml", new Blob([r.xml], { type: "application/xml" }));
+  if (ok !== false) status("Resolume: ".concat(r.screens, " ").concat(r.screens === 1 ? "выход" : r.screens < 5 ? "выхода" : "выходов", ", слайсов ").concat(r.slices, ". Размер композиции в Arena — ").concat(r.W, "×").concat(r.H).concat(r.other ? ". Не выгружены слайсы других источников: " + r.other + " (в Resolume одна композиция)" : "", "."), true);
+};
 $("oPNG").onclick = async () => {
   const o = OC();
   if (!o || !outSrc(o)) return status("Сначала выберите источник", true);
@@ -10859,11 +11545,49 @@ function outHit(o, x, y, v) {
 }
 // края выхода и других слайсов на нём — для привязки
 function outSnapLines(o, s) {
-  const scr = outScr(o), X = [0, scr.w], Y = [0, scr.h];
-  for (const q of o.slices) if (q !== s && q.scr === scr.id) {
+  const scr = outScr(o), M = outMag(o), X = M.edge ? [0, scr.w] : [], Y = M.edge ? [0, scr.h] : [];
+  if (M.outSl) for (const q of o.slices) if (q !== s && q.scr === scr.id) {
     const [qw, qh] = sliceOutWH(q);
     X.push(q.ox, q.ox + qw);
     Y.push(q.oy, q.oy + qh);
+  }
+  return [X, Y];
+}
+// 2.0.181: настройки магнита мэппинга (хранятся в самом мэппинге плоскими полями, чтобы сохранялись в проекте)
+function outMag(o) {
+  const b = (v, d) => typeof v === "boolean" ? v : d;
+  const step = Math.max(1, Math.min(4096, Math.round(+o.magStep || 16))), thr = [5, 10, 20].includes(+o.magThr) ? +o.magThr : 10;
+  return { on: b(o.magOn, true), cab: b(o.magCab, true), inSl: b(o.magInSl, false), edge: b(o.magEdge, true), outSl: b(o.magOutSl, true), center: b(o.magCenter, false), grid: b(o.magGrid, false), step, thr };
+}
+// привязка по одной оси: левый (верхний) край, правый (нижний) край или центр слайса — к ближайшей линии в пределах порога
+function magAxis(v, len, lines, centers, step, thr) {
+  let b = v, bd = thr;
+  const tryC = (c) => {
+    if (Math.abs(c - v) < bd) {
+      bd = Math.abs(c - v);
+      b = c;
+    }
+  };
+  for (const t of lines) {
+    tryC(t);
+    tryC(t - len);
+  }
+  for (const t of centers) tryC(t - len / 2);
+  if (step) {
+    tryC(Math.round(v / step) * step);
+    tryC(Math.round((v + len) / step) * step - len);
+  }
+  return Math.round(b);
+}
+function magPoint(v, lines, step, thr) {
+  return magAxis(v, 0, lines, [], step, thr);
+}
+// линии на входе: края других слайсов того же источника
+function outInLines(o, s) {
+  const X = [], Y = [];
+  for (const q of o.slices) if (q !== s && sliceSrc(o, q) === o.src && !(+q.ra)) {
+    X.push(q.ix, q.ix + q.iw);
+    Y.push(q.iy, q.iy + q.ih);
   }
   return [X, Y];
 }
@@ -11003,15 +11727,16 @@ function outPointer(e, type) {
     if (d.kind === "pan") {
       ui_out.V.x = d.x0 + px - d.px;
       ui_out.V.y = d.y0 + py - d.py;
-    } else if (d.kind === "new") d.snap = snapToCells(o, d.x0, d.y0, x, y);
+    } else if (d.kind === "new") d.snap = outInRect(o, d.x0, d.y0, x, y, e, P, null);
     else if (d.kind === "resize") {
-      const r = snapToCells(o, d.ax, d.ay, x, y);
+      const r = outInRect(o, d.ax, d.ay, x, y, e, P, d.s);
       if (r) Object.assign(d.s, { ix: r.x, iy: r.y, iw: r.w, ih: r.h });
       syncOutSel();
     } else if (d.kind === "oresize") {
       // размер на выходе: углы прилипают к краям выхода и других слайсов (Alt — без привязки), Shift — без пропорций
-      const thr = 10 / P.k, [X, Y] = outSnapLines(o, d.s);
-      let nx = e.altKey ? Math.round(x) : snapNear(Math.round(x), X, thr), ny = e.altKey ? Math.round(y) : snapNear(Math.round(y), Y, thr);
+      const M = outMag(o), free = e.altKey || !M.on, thr = M.thr / P.k, [X, Y] = outSnapLines(o, d.s), scr = outScr(o);
+      const st = M.grid ? M.step : 0, CX = M.center ? [scr.w / 2] : [], CY = M.center ? [scr.h / 2] : [];
+      let nx = free ? Math.round(x) : magPoint(Math.round(x), X.concat(CX), st, thr), ny = free ? Math.round(y) : magPoint(Math.round(y), Y.concat(CY), st, thr);
       let w = Math.max(1, Math.abs(nx - d.ax)), h = Math.max(1, Math.abs(ny - d.ay));
       if (!e.shiftKey && d.s.keep !== false) {
         if (w / h > d.ar) h = Math.max(1, Math.round(w / d.ar));
@@ -11025,31 +11750,23 @@ function outPointer(e, type) {
       let nx = Math.round(d.a[0] + x - d.px), ny = Math.round(d.a[1] + y - d.py);
       if (Math.abs(x - d.px) * P.k + Math.abs(y - d.py) * P.k > 3) d.moved = true;
       if (!d.moved) return;
-      const thr = 10 / P.k;
+      const M = outMag(o), free = e.altKey || !M.on, thr = M.thr / P.k;
       if (v === "in") {
-        // к краям кабинетов
-        const xsE = /* @__PURE__ */ new Set(), ysE = /* @__PURE__ */ new Set();
-        for (const q of outCells(o)) {
-          xsE.add(q.x);
-          xsE.add(q.x + q.w);
-          ysE.add(q.y);
-          ysE.add(q.y + q.h);
+        // к краям кабинетов и (если включено) к краям соседних слайсов на входе
+        const X = [], Y = [];
+        if (M.cab) for (const q of outCells(o)) X.push(q.x, q.x + q.w), Y.push(q.y, q.y + q.h);
+        if (M.inSl) {
+          const [a, b] = outInLines(o, d.s);
+          X.push(...a);
+          Y.push(...b);
         }
-        d.s.ix = snapNear(nx, xsE, thr);
-        d.s.iy = snapNear(ny, ysE, thr);
+        d.s.ix = free ? nx : magAxis(nx, d.s.iw, X, [], 0, thr);
+        d.s.iy = free ? ny : magAxis(ny, d.s.ih, Y, [], 0, thr);
       } else {
-        // к краям выхода и других слайсов
-        const [w, h] = sliceOutWH(d.s), [X, Y] = outSnapLines(o, d.s);
-        const snap1 = (v1, len, arr) => {
-          let b = v1, bd = thr;
-          for (const t of arr) for (const c of [t, t - len]) if (Math.abs(c - v1) < bd) {
-            bd = Math.abs(c - v1);
-            b = c;
-          }
-          return b;
-        };
-        d.s.ox = e.altKey ? nx : snap1(nx, w, X);
-        d.s.oy = e.altKey ? ny : snap1(ny, h, Y);
+        // к краям выхода, соседним слайсам, центру выхода, сетке
+        const [w, h] = sliceOutWH(d.s), [X, Y] = outSnapLines(o, d.s), scr = outScr(o), st = M.grid ? M.step : 0;
+        d.s.ox = free ? nx : magAxis(nx, w, X, M.center ? [scr.w / 2] : [], st, thr);
+        d.s.oy = free ? ny : magAxis(ny, h, Y, M.center ? [scr.h / 2] : [], st, thr);
       }
       // остальные слайсы группы едут на то же смещение
       if (d.grp && d.grp.length > 1) {

@@ -1,13 +1,13 @@
 {
- "version": "2.0.180",
- "notes": "Исправлено окно «Сохранить изменения в …?»: после повторного сохранения ТЗ на кнопке «Не сохранять» могла стоять надпись «Оставить имя».",
+ "version": "2.0.183",
+ "notes": "Мэппинг: умная разметка — программа сама нарезает маску на слайсы с минимумом выходов; настройки магнита; экспорт в Resolume Arena (Advanced Output, версии 7.0 и новее). Слайсы выделяются по сдвинутым кабинетам. Масштаб «− 100% + Авто» во всех разделах. Элементы панели больше не вылезают за край.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "157a99037685df3f2c7de6be9aa49a1cf78fb55bbf11d41ca854c8e586b3a165"
+  "sha256": "f6841450fcbbf586ad81ddea669b5e4e2f9f3faa212f5f49dcc3e53df82df187"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "e0cbd0d9b1e41c324e283c959171ebb28609486e5be02b5a235197184696bce9"
+  "sha256": "4dbe772b52cb07e1f67769692bcf2b4edc46f71af043083bf7ab85befb84e0f0"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
