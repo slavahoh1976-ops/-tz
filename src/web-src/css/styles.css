@@ -284,8 +284,10 @@ input.w-ang,
 .stp #pjGrid {
   width: 58px;
 }
+/* 2.0.181: раньше nowrap — строки со стрелками ▲▼ и кнопками вылезали за край панели.
+   Теперь переносятся, только если не помещаются (где помещается — как было) */
 .ctl.stp-row {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 .stp input {
   border-top-right-radius: 0;
@@ -444,6 +446,8 @@ button.x:hover {
 }
 .seg {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -565,9 +569,15 @@ button.x:hover {
   align-items: center;
   gap: 4px;
 }
-html:not([data-page=mask]) .seg.tools,
-html:not([data-page=mask]) .toolbar .zoom {
+html:not([data-page=mask]) .seg.tools {
   display: none;
+}
+/* 2.0.181: одна панель масштаба «− 100% + Авто» на всех вкладках; старые кнопки поля спрятаны */
+.toolbar .ftools {
+  display: none !important;
+}
+html[data-page=tz] .toolbar .zoom {
+  margin-left: 8px;
 }
 html[data-page=field] .panel > details.sec:not(.fsec):not(.psec),
 html[data-page=cut] .panel > details.sec:not(.csec):not(.psec),
@@ -1817,6 +1827,9 @@ html:not([data-page=out]) .mstrip.ostrip {
 
 /* 2.0.114: версия проекта */
 #projVer { width: 64px; flex: none; text-align: center; }
+/* 2.0.181: название проекта и версия — в одну строку: название сжимается, у версии место под «версия» и стрелки */
+#projName { flex: 1 1 60px; width: 60px; min-width: 0; }
+.stp #projVer { width: 74px; }
 #tList .fitem[data-key] { cursor: pointer; }
 
 /* 2.0.117: список с цветом (тип кабинета) */
@@ -1902,3 +1915,8 @@ html[data-kind=ring] .no-ring { display: none !important; }
 html[data-kind=ring] .cache-sec .sec-body > :not(.ref-part) { display: none !important; }
 html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !important; }
 #rgPadRow[hidden], #rgSizeRow[hidden] { display: none !important; }
+
+/* 2.0.181: магнит мэппинга выключен — настройки приглушены */
+#oMagBox.dim{opacity:.45}
+#oMagBox{display:flex;flex-direction:column;gap:6px}
+#oMagBox .row.wide{margin-top:4px}
