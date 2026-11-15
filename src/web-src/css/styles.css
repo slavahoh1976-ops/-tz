@@ -1920,3 +1920,9 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
 #oMagBox.dim{opacity:.45}
 #oMagBox{display:flex;flex-direction:column;gap:6px}
 #oMagBox .row.wide{margin-top:4px}
+/* 2.0.185: список масок мэппинга (слои Resolume) */
+.layer-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 7px; border: 1px solid transparent; }
+.layer-row.cur { border-color: var(--accent); background: var(--raise); }
+.layer-row .layer-name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--fg); text-decoration: none; }
+.layer-row .layer-tag { flex: none; font-family: var(--font-num); }
+.layer-sep { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 6px 6px 2px; padding-top: 6px; border-top: 1px solid var(--line); }
