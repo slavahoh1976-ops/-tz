@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-title" content="LED Mask">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1419">
+<link rel="apple-touch-icon" href="data:image/png;base64,{{b64:assets/apple-touch-icon.png}}">
+<link rel="icon" href="data:image/png;base64,{{b64:assets/favicon.png}}">
+<title>LED Pixel Mask Generator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>{{include:css/styles.css}}</style>
+
+</head>
+<body>
+<div class="app">
+  <aside class="panel" id="panel">
+    <div>
+      <div class="brand"><img id="appicon" alt=""><h1>LED Pixel Mask Generator</h1></div>
+      <p class="brand-sub">LED DISPLAY WORKSPACE • ПРОЕКТИРОВАНИЕ МАСОК</p>
+      <p class="brand-copy">© 2026 Khokhryakov Viatcheslav, Nikonov Konstantin</p>
+    </div>
+
+    <details class="sec psec" open><summary>ПРОЕКТ</summary><div class="sec-body">
+      <div class="row"><label for="projName">Название проекта</label><div class="ctl"><input type="text" id="projName" class="grow"><input type="text" id="projVer" class="pver" placeholder="версия" spellcheck="false" aria-label="Версия проекта" title="Версия проекта (v1, v24…) — добавляется в конец имён файлов: Проект_ТЗ_Resolume_v24"></div></div>
+      <div class="btns">
+        <button class="b" id="btnNewProj" title="Новый пустой проект">Новый</button>
+        <button class="b" id="btnRecent">Последние</button>
+        <button class="b" id="btnOpenProj" title="Открыть файл проекта (Ctrl+O)">Открыть</button>
+        <button class="b" id="btnSaveProj" title="Сохранить (Ctrl+S)">Сохранить</button>
+        <button class="b" id="btnSaveAsProj" title="Сохранить в новый файл (Ctrl+Shift+S)">Сохранить как</button>
+        <input type="file" id="fileProj" accept=".ledmask,.json,.plist,application/json,application/xml,text/xml" hidden>
+      </div>
+      <p class="hint" id="projState"></p>
+    </div></details>
+
+    <!-- 2.0.134: «Экспорт» на каждой странице — сразу после «Проект» -->
+    <details class="sec mexp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
+      <div class="btns"><button class="x" id="btnPNG">Сохранить PNG</button><button class="x" id="btnAllPNG">Все PNG (ZIP)</button></div>
+      <div class="btns"><button class="x" id="btnTZgo">Формирование ТЗ →</button></div>
+      <p class="hint" id="exportNote">PNG — в точном разрешении экрана, без потерь. ТЗ — ZIP с папкой: PPTX по шаблону, такой же PDF и PNG каждой маски.</p>
+    </div></details>
+    <details class="sec csec cexp" id="cExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
+      <div class="btns"><button class="x" id="cPNG">Сохранить PNG</button></div>
+    </div></details>
+    <details class="sec osec oexp" id="oExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
+      <label class="chk"><input type="checkbox" id="oLabels" checked> Рамки и названия слайсов на PNG</label>
+      <div class="btns"><button class="x" id="oPNG">PNG текущего выхода</button><button class="b" id="oPNGAll">Все выходы (ZIP)</button></div>
+    </div></details>
+    <details class="sec fsec fexp" id="fExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
+      <div class="btns"><button class="x" id="fPNG">Сохранить PNG поля</button><button class="x" id="fTZgo">Формирование ТЗ →</button></div>
+    </div></details>
+    <!-- 2.0.116: экспорт ТЗ — сразу после «Проект» -->
+    <details class="sec tsec texp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
+      <div class="row"><label for="tTpl">Тип ТЗ</label><div class="ctl"><select id="tTpl" class="grow">
+        <option value="Resolume">Resolume — кодек DXV3</option>
+        <option value="D3">D3 — кодек HAP</option>
+        <option value="MP4">Медиаплееры — MPEG-4 (MP4)</option>
+        <option value="Vol">Волюметрик</option>
+      </select></div></div>
+      <div class="row" id="tTplSubRow" hidden><label for="tTplSub">Нить</label><div class="ctl"><select id="tTplSub" class="grow">
+        <option value="Vol2">2 метра — 32 px</option>
+        <option value="Vol4">4 метра — 64 px</option>
+        <option value="Vol3">3 метра — 36 px</option>
+      </select></div></div>
+      <div class="row" id="tVolWhat" hidden><span class="lbl">Волюметрик в ТЗ</span><div class="ctl" style="row-gap:6px">
+        <label class="chk"><input type="checkbox" id="tVolMask"> Маска</label>
+        <label class="chk"><input type="checkbox" id="tVolCom" checked> Коммутация</label>
+        <label class="chk"><input type="checkbox" id="tVol3d" checked> 3D-вид</label>
+        <label class="chk"><input type="checkbox" id="tVolInfo" checked> Информация</label>
+      </div></div>
+      <div class="row" id="tVolSetRow" hidden><span class="lbl">Адресация</span><div class="ctl" style="row-gap:6px">
+        <label class="chk" title="Патч и сетап .mpz (Art-Net устройства), таблицы CSV: пиксели в 3D и universe"><input type="checkbox" id="tVolMadrix"> MADRIX</label>
+        <label class="chk" title="Файл .clen: патч и Art-Net устройства"><input type="checkbox" id="tVolMadshow"> MAD-SHOW</label>
+        <label class="chk" title="Файл .vmtd: атлас срезов и таблица Art-Net пакетов"><input type="checkbox" id="tVolTd"> TouchDesigner</label>
+        <p class="hint" style="margin:0">Готовые сетапы с координатной адресацией каждого пикселя — как в «Коммутации» (IP, universe, каналы). Отмеченные кладутся в архив ТЗ, в папку «Адресация». По умолчанию выключены.</p>
+        <button class="b" id="tVolSetup">Скачать только адресацию</button>
+      </div></div>
+      <label class="chk"><input type="checkbox" id="tSaveProj" checked> Файл проекта в архив</label>
+      <div class="btns"><button class="x" id="tSave">Сохранить ТЗ Resolume</button></div>
+      <p class="hint" id="tNote">ZIP с папкой: PPTX по шаблону, такой же PDF и PNG каждой маски и поля и файл проекта.</p>
+    </div></details>
+
+    <!-- 2.0.118: нарезка длинной маски -->
+    <details class="sec csec" open><summary>НАРЕЗКА</summary><div class="sec-body">
+      <p class="hint">Для очень длинных (или очень высоких) экранов. Маску режут по кабинетам на части и складывают друг под другом — получается удобный кадр для ТЗ и медиасервера. Номера кабинетов сохраняются, на каждой части подписано, какая это часть и где разрез, а в ТЗ под маской — пояснение для контентщиков.</p>
+      <div class="ctl"><select id="cSel" class="grow" aria-label="Нарезка"></select><button class="b" id="cAdd">+ Нарезка</button><button class="b sq" id="cDel" title="Удалить нарезку" aria-label="Удалить нарезку">−</button></div>
+      <p class="hint" id="cEmpty">Нарезок пока нет. <button class="b" id="cAdd2">+ Нарезать маску</button></p>
+      <div id="cBody">
+      <div class="btns"><button class="b" id="cRename">Переименовать</button></div>
+      <div class="row"><label for="cSrc">Маска</label><div class="ctl"><select id="cSrc" class="grow"></select></div></div>
+      <div class="row"><span class="lbl">Резать</span><div class="ctl"><div class="seg" id="cDir" role="group" aria-label="Как резать">
+        <button data-dir="h" aria-pressed="true" title="Длинный экран: режем по длине, части кладём друг под другом">по длине ⇣</button>
+        <button data-dir="v" aria-pressed="false" title="Высокий экран: режем по высоте, части кладём рядом">по высоте ⇢</button>
+      </div></div></div>
+      <div class="tgroup">ЧАСТИ И КАБИНЕТЫ</div>
+      <div class="row"><label for="cParts">Частей</label><div class="ctl"><input type="number" id="cParts" min="1" max="64" class="num" style="width:70px" aria-label="Частей"><button class="b" id="cEven" title="Первые части одинаковые, последняя — остаток">Авто</button></div></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Кабинетов в каждой части (по длине)</span><div class="csizes" id="cSizes"></div></div>
+      <p class="hint">Первые части одинаковые, последняя — остаток (151 на 3 → 51 + 51 + 49). Меняете часть — разница уходит в последнюю.</p>
+      <div class="tgroup">ПОЛЕ</div>
+      <label class="chk"><input type="checkbox" id="cFit" checked> Поле по краю кабинетов (без лишнего места)</label>
+      <div class="row"><span class="lbl">Размер поля, px</span><div class="ctl"><input type="number" id="cFW" min="1" class="num" style="width:84px" aria-label="Ширина поля"><span class="unit">×</span><input type="number" id="cFH" min="1" class="num" style="width:84px" aria-label="Высота поля"></div></div>
+      <div class="row"><label for="cGap">Отступ между частями, px</label><div class="ctl"><input type="number" id="cGap" min="0" class="num" style="width:84px"></div></div>
+      <div class="tgroup">ПОДПИСИ НА МАСКЕ</div>
+      <label class="chk"><input type="checkbox" id="cSep" checked> Белая линия между частями</label>
+      <label class="chk"><input type="checkbox" id="cMarks" checked> Подписи частей, место разреза и стрелки</label>
+      <div class="tgroup">КРУПНЫЕ МЕТКИ ДО НАРЕЗКИ</div>
+      <label class="chk"><input type="checkbox" id="cBigOn"> Крупные метки во всю длину экрана — режутся вместе с маской, видно, где какая часть с какой соединяется</label>
+      <div class="row"><label for="cBigMode">Метки</label><div class="ctl"><select id="cBigMode" class="grow"><option value="num">Номера 1, 2, 3…</option><option value="text">Свой текст на всю длину</option></select></div></div>
+      <div class="row" id="cBigStepRow"><label for="cBigStep">Шаг, кабинетов</label><div class="ctl"><input type="number" id="cBigStep" min="0" class="num" style="width:84px"><span class="unit">пусто — авто</span></div></div>
+      <div class="row" id="cBigTextRow" hidden><label for="cBigText">Текст</label><div class="ctl"><input type="text" id="cBigText" class="grow" placeholder="Съешь же ещё этих мягких французских булок, да выпей чаю"></div></div>
+      <div class="tgroup">ТЕКСТ В НАЧАЛЕ МАСКИ</div>
+      <label class="chk"><input type="checkbox" id="cInfoOn" checked> Новое разрешение и прежнее название (в первой части)</label>
+      <label class="chk"><input type="checkbox" id="cInfoSrc"> + исходное разрешение экрана</label>
+      <div class="row"><label for="cInfoSize">Размер текста, px</label><div class="ctl"><input type="number" id="cInfoSize" min="6" class="num" style="width:70px" placeholder="авто" aria-label="Размер текста"><button class="b" id="cInfoAuto">Авто</button></div></div>
+      <div class="row"><label for="cInfoColor">Цвет текста</label><div class="ctl"><input type="color" id="cInfoColor"></div></div>
+      <div class="row"><span class="lbl">Положение</span><div class="ctl"><div class="txpos" id="cInfoPos" role="group" aria-label="Положение текста">
+        <button data-pos="tl" title="Слева сверху">↖</button><button data-pos="t" title="По центру сверху">↑</button><button data-pos="tr" title="Справа сверху">↗</button>
+        <button data-pos="l" title="Слева по центру">←</button><button data-pos="c" title="По центру">•</button><button data-pos="r" title="Справа по центру">→</button>
+        <button data-pos="bl" title="Слева снизу">↙</button><button data-pos="b" title="По центру снизу">↓</button><button data-pos="br" title="Справа снизу">↘</button>
+      </div></div></div>
+      <div class="tgroup">ИТОГ</div>
+      <div class="info" id="cInfo"></div>
+      <div class="ctl ffile"><span class="ffile-lbl">Имя файла</span><span class="ffile-pre" id="cFilePre">—</span><input type="text" id="cFile" class="grow" spellcheck="false" aria-label="Имя файла нарезки"></div>
+      </div>
+    </div></details>
+
+    <!-- 2.0.122: выходы (пробно) — как Advanced Output в Resolume, но по кабинетам -->
+    <details class="sec osec" open><summary>МЭППИНГ ВЫХОДОВ</summary><div class="sec-body">
+      <p class="hint">Пробная функция. Раскладка готовых масок по выходам — как Advanced Output в Resolume, но слайсы выделяются по кабинетам, пиксель в пиксель. В ТЗ не входит: сохраняются PNG-маски выходов.</p>
+      <div class="ctl"><select id="oSel" class="grow" aria-label="Мэппинг"></select><button class="b" id="oAdd">+ Мэппинг</button><button class="b sq" id="oDel" title="Удалить" aria-label="Удалить">−</button></div>
+      <p class="hint" id="oEmpty">Пока пусто. <button class="b" id="oAdd2">+ Разложить маски по выходам</button></p>
+      <div id="oBody">
+      <div class="btns"><button class="b" id="oRename">Переименовать</button></div>
+      <div class="row"><label for="oSrc">Источник</label><div class="ctl"><select id="oSrc" class="grow"></select></div></div>
+      <div class="row"><span class="lbl">Вид</span><div class="ctl"><div class="seg" id="oView" role="group" aria-label="Вид">
+        <button data-v="in" aria-pressed="false" title="Input Selection — что берём: выделение слайсов на источнике">Input</button>
+        <button data-v="out" aria-pressed="false" title="Output Transformation — куда кладём: раскладка слайсов на выходе">Output</button>
+        <button data-v="both" aria-pressed="true" title="Input Selection и Output Transformation сразу — рядом">Input + Output</button>
+      </div></div></div>
+      <div class="tgroup">СЛАЙСЫ</div>
+      <div class="btns"><button class="b" id="oAddSlice" title="Новый слайс по кабинетам (размером под выход) — потом тяните за углы или двигайте">+ Слайс</button></div>
+      <p class="hint">Или протяните мышью по маске в Input — слайс прилипнет к краям кабинетов; углы выбранного слайса тянутся.</p>
+      <div class="flist" id="oSliceList"></div>
+      <div id="oSlBox">
+        <div class="row"><label for="oSlName">Слайс</label><div class="ctl"><input type="text" id="oSlName" class="grow"></div></div>
+        <div class="row"><label for="oSlSrc">Источник (маска)</label><div class="ctl"><select id="oSlSrc" class="grow"></select></div></div>
+        <div class="row"><label for="oSlScr">Выход</label><div class="ctl"><select id="oSlScr" class="grow"></select></div></div>
+        <div class="row"><span class="lbl">Вход X / Y</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_ix" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Вход X"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_iy" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Вход Y"></div></div>
+        <div class="row"><span class="lbl">Вход W × H</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_iw" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Ширина"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_ih" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Высота"></div></div>
+        <div class="row"><span class="lbl">Выход X / Y</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_ox" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Выход X"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_oy" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Выход Y"></div></div>
+        <div class="row"><span class="lbl">Выход W × H</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_ow" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" min="1" aria-label="Ширина на выходе"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oSl_oh" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" min="1" aria-label="Высота на выходе"><button class="b" id="oSl11" title="Размер на выходе — как на входе, пиксель в пиксель">1:1</button></div></div>
+        <div class="row"><span class="lbl">Пропорции</span><div class="ctl"><div class="seg" id="oSlKeep" role="group" aria-label="Пропорции на выходе"><button data-k="1" aria-pressed="true" title="Меняете ширину — высота меняется сама, и наоборот">сохранять</button><button data-k="0" aria-pressed="false" title="Ширина и высота — независимо">свободно</button></div></div></div>
+        <div class="row"><span class="lbl">Поворот</span><div class="ctl"><div class="seg" id="oSlRot" role="group" aria-label="Поворот"><button data-r="0">0°</button><button data-r="90">90°</button><button data-r="180">180°</button><button data-r="270">270°</button></div><input type="number" id="oSlRA" class="w-md w-ang" step="any" min="-180" max="180" inputmode="decimal" title="Точный угол: участок берётся из маски под этим углом и кладётся на выход ровно" aria-label="Точный угол, градусы"><span class="unit">°</span><button class="b sq" id="oSlRA0" title="Сбросить точный угол">0</button></div></div>
+        <div class="row"><span class="lbl">Отражение</span><div class="ctl"><button class="b" id="oSlFH" aria-pressed="false" title="Отразить по горизонтали">⇋ по горизонтали</button><button class="b" id="oSlFV" aria-pressed="false" title="Отразить по вертикали">⇵ по вертикали</button></div></div>
+        <div class="btns"><button class="b" id="oSlDup">Копия</button><button class="b" id="oSlDel">Удалить</button><button class="b" id="oSlClear">Удалить все</button></div>
+      </div>
+      <div class="tgroup">ВЫХОДЫ (OUTPUTS)</div>
+      <div class="flist" id="oScrList"></div>
+      <div class="ctl"><button class="b" id="oScrAdd">+ Выход</button><button class="b" id="oScrDel">− Выход</button><button class="b" id="oScrRename">Переименовать</button></div>
+      <div class="row"><span class="lbl">Разрешение</span><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oScrW" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Ширина выхода"><span class="unit">×</span><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oScrH" class="num calc" title="Можно формулой: 192*6, 3840/2, (192+8)*4" style="width:84px" aria-label="Высота выхода"><select id="oScrPreset" aria-label="Готовые разрешения"><option value="">…</option><option value="3840x2160">3840×2160</option><option value="3840x2400">3840×2400</option><option value="1920x1080">1920×1080</option><option value="2560x1440">2560×1440</option><option value="4096x2160">4096×2160</option><option value="1920x1200">1920×1200</option></select></div></div>
+      <div class="btns"><button class="b" id="oGroup" title="Объединить выбранные слайсы в группу — двигаются вместе. Добавить слайс к выбору: Ctrl/⌘ + клик по нему в Input">Сгруппировать слайсы</button><button class="b" id="oUngroup" title="Разбить группу выбранного слайса">Разгруппировать</button></div>
+      <div class="row wide"><span class="lbl">Авторазметка</span></div>
+      <div class="btns"><button class="b" id="oMapCab" title="Свой слайс на каждый кабинет">По кабинетам</button><button class="b" id="oMapRows" title="Слайс на каждый ряд кабинетов">По рядам</button><button class="b" id="oMapCols" title="Слайс на каждый столбец кабинетов">По столбцам</button></div>
+      <div class="btns"><button class="b" id="oMapGroup" title="Слайс на каждый блок кабинетов кольца или на каждый экран поля">По блокам</button><button class="b" id="oMapScreen" title="Слайс на каждый экран целиком">По экранам</button></div>
+      <p class="hint">Работает с любой маской: обычной, кольцом с блоками и экранами в общем поле, повёрнутыми на любой угол. Участок берётся под углом кабинета, выпрямляется и раскладывается по выходам ровными рядами.</p>
+      <div class="btns"><button class="b" id="oPack" title="Разложить все слайсы по выходам слева направо и сверху вниз; не помещается — следующий выход">Разложить по выходам</button></div>
+      <div class="tgroup">ИТОГ</div>
+      <div class="info" id="oInfo"></div>
+      <p class="hint">Колесо мыши — масштаб, Alt или правая кнопка + перетащить — сдвиг, Esc — весь вид. Стрелки двигают выбранный слайс (Shift — по 10 px), Delete — удалить. На выходе слайсы прилипают к краям выхода и друг к другу (Alt — без привязки); углы выбранного слайса меняют его размер на выходе (Shift — без пропорций).</p>
+      </div>
+    </div></details>
+
+    <details class="sec fsec" open><summary>ОБЩЕЕ ПОЛЕ</summary><div class="sec-body">
+      <div class="ctl"><select id="fSel" class="grow" aria-label="Общее поле"></select><button class="b" id="fAdd">+ Поле</button><button class="b sq" id="fDelete" aria-label="Удалить поле">−</button></div>
+      <p class="hint" id="fEmpty">Полей пока нет. <button class="b" id="fAdd2">+ Поле</button></p>
+      <div id="fBody">
+      <div class="btns"><button class="b" id="fRename">Переименовать</button></div>
+      <div class="ctl ffile"><span class="ffile-lbl">Имя файла</span><span class="ffile-pre" id="fFilePre" title="Размер поля — подставляется сам">—</span><input type="text" id="fFile" class="grow" spellcheck="false" title="Имя файла поля после размера. Если стереть — снова номера масок поля (screen 1 / screens 1-2-3)" aria-label="Имя файла поля"></div>
+      <p class="hint">Отметьте экраны этого поля и двигайте их на холсте. С магнитом края притягиваются друг к другу, а также к серединам краёв соседних масок и центр к центру — как в Resolume. Точное положение — в блоке «Положение маски». Alt — без магнита, стрелки — на 1 px (Shift — на 10 px), двойной клик — открыть экран. Надпись поля тоже двигается. Размер поля всегда чётный.</p>
+      <div class="flist" id="fList"></div>
+      <div class="btns"><button class="b" id="fAll">Все на поле</button><button class="b" id="fRow">В ряд</button><button class="b" id="fCol">В столбик</button><button class="b" id="fClear">Убрать все</button></div>
+      <div class="row"><span class="lbl">Магнит</span><div class="ctl"><label class="chk"><input type="checkbox" id="fMagnet" checked> притягивать края и середины краёв</label></div></div>
+      <div class="row"><span class="lbl">Надпись</span><div class="ctl"><label class="chk"><input type="checkbox" id="fTitle" checked> название и разрешение</label><button class="b" id="fTitleCenter">В центр</button></div></div>
+      <div class="row"><span class="lbl">Наложение</span><div class="ctl"><label class="chk" title="Выключенные кабинеты маски станут прозрачными — сквозь них видна маска ниже"><input type="checkbox" id="fStack"> маски на маски</label></div></div>
+      <div class="row"><span class="lbl">Метраж</span><div class="ctl"><label class="chk"><input type="checkbox" id="fMeters"> показывать размер в метрах</label></div></div>
+      <div class="row"><label for="fTitleSize">Размер текста</label><div class="ctl"><select id="fTitleSize"></select><button class="b sq" id="fTitleMinus">−</button><button class="b sq" id="fTitlePlus">+</button></div></div>
+      <div class="tgroup">ПОЛОЖЕНИЕ МАСКИ</div>
+      <div class="row"><label for="fSelPick">Маска</label><div class="ctl"><select id="fSelPick" class="grow"></select></div></div>
+      <div id="fSelBox">
+        <div class="row"><span class="lbl" id="fSelName">Левый верхний угол</span><div class="ctl"><span class="unit">X</span><input type="number" id="fX" class="w-md" inputmode="numeric"><span class="unit">Y</span><input type="number" id="fY" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+        <div class="row"><span class="lbl">Центр</span><div class="ctl"><span class="unit">X</span><input type="number" id="fCX" class="w-md" inputmode="numeric"><span class="unit">Y</span><input type="number" id="fCY" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+        <p class="hint num" id="fSelSize"></p>
+        <div class="row"><span class="lbl">Поворот <span class="num" id="fRotVal">0°</span></span><div class="ctl"><input type="number" id="fRotIn" step="any" min="-180" max="180" class="w-md w-ang" inputmode="decimal" title="Угол поворота маски, ° (плюс — по часовой). Можно тянуть зелёную точку на холсте (Shift — шагом 15°)"><span class="unit">°</span><button class="b" id="fRotCCW" title="Против часовой на 45°">⟲ 45°</button><button class="b" id="fRotCW" title="По часовой на 45°">⟳ 45°</button><button class="b" id="fRot0">0°</button></div></div>
+        <div class="row"><span class="lbl">Слой</span><div class="ctl fz"><button class="b sq" id="fZTop" title="На передний план — поверх всех масок" aria-label="На передний план">⤒</button><button class="b sq" id="fZUp" title="Выше на один слой" aria-label="Выше на один слой">↑</button><button class="b sq" id="fZDown" title="Ниже на один слой" aria-label="Ниже на один слой">↓</button><button class="b sq" id="fZBottom" title="На задний план — под всеми масками" aria-label="На задний план">⤓</button><span class="unit num" id="fZVal"></span></div></div>
+      </div>
+      <div class="info" id="fInfo"></div>
+      </div>
+    </div></details>
+
+    <details class="sec asec" open><summary>АВТОРЫ</summary><div class="sec-body">
+      <p class="hint">Вопросы, идеи и ошибки — пишите в Telegram.</p>
+      <a class="tgcard" href="https://t.me/slavahoh" target="_blank" rel="noopener">
+        <span class="tgicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M9.8 15.6l-.4 4.1c.5 0 .8-.2 1-.5l2.5-2.4 5.2 3.8c1 .5 1.6.3 1.9-.9l3.4-16c.3-1.4-.5-2-1.5-1.6L1.9 9.7C.5 10.2.5 11 1.6 11.4l5.1 1.6L18.6 5.5c.6-.4 1.1-.2.7.2"/></svg></span>
+        <span class="tgtext"><b>Khokhryakov Viatcheslav</b><span class="nick">@slavahoh</span><span class="ru">Вячеслав Хохряков</span></span>
+        <span class="go">Написать →</span>
+      </a>
+      <a class="tgcard" href="https://t.me/NKNVOFFICIAL" target="_blank" rel="noopener">
+        <span class="tgicon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M9.8 15.6l-.4 4.1c.5 0 .8-.2 1-.5l2.5-2.4 5.2 3.8c1 .5 1.6.3 1.9-.9l3.4-16c.3-1.4-.5-2-1.5-1.6L1.9 9.7C.5 10.2.5 11 1.6 11.4l5.1 1.6L18.6 5.5c.6-.4 1.1-.2.7.2"/></svg></span>
+        <span class="tgtext"><b>Nikonov Konstantin</b><span class="nick">@NKNVOFFICIAL</span><span class="ru">Константин Никонов</span></span>
+        <span class="go">Написать →</span>
+      </a>
+      <p class="hint">© 2026 Khokhryakov Viatcheslav, Nikonov Konstantin<br>LED Pixel Mask Generator</p>
+    </div></details>
+
+    <details class="sec tsec" open><summary>ФОРМИРОВАНИЕ ТЗ</summary><div class="sec-body">
+      <p class="hint">Отметьте, что войдёт в ТЗ. По умолчанию — общие поля целиком и маски, которые не стоят на полях. Маски из полей можно добавить галочкой. На холсте — предпросмотр слайдов.</p>
+      <div class="row"><span class="lbl">Порядок</span><div class="ctl fz"><button class="b sq" id="tOrdTop" title="В начало ТЗ (Shift + ↑)" aria-label="В начало">⤒</button><button class="b sq" id="tOrdUp" title="Выше (↑)" aria-label="Выше">↑</button><button class="b sq" id="tOrdDown" title="Ниже (↓)" aria-label="Ниже">↓</button><button class="b sq" id="tOrdBottom" title="В конец ТЗ (Shift + ↓)" aria-label="В конец">⤓</button><span class="hint" style="margin:0 0 0 6px">выберите строку</span></div></div>
+      <div class="flist" id="tList"></div>
+      <div class="row"><label for="tMaskPer">Масок на слайде</label><div class="ctl"><select id="tMaskWhich" class="grow" aria-label="Для какого слайда" title="Можно задать своё число масок для отдельного слайда"></select><select id="tMaskPer">
+        <option value="0">Авто</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+        <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+      </select></div></div>
+      <div class="row" id="tMaskGridRow"><label for="tMaskGrid">Расстановка</label><div class="ctl"><select id="tMaskGrid" class="grow"></select></div></div>
+      <div class="row"><span class="lbl"></span><div class="ctl"><label class="chk" title="Одинаковые по разрешению маски показываются одним размером, даже если они на разных слайдах"><input type="checkbox" id="tEvenSize" checked> одинаковые маски — одного размера</label></div></div>
+      <div class="btns"><button class="b" id="tDefault">По умолчанию</button></div>
+      <div class="tgroup">КАРТИНКИ (СЛАЙДЫ ПОСЛЕ ТРЕБОВАНИЙ)</div>
+      <label class="chk"><input type="checkbox" id="tOverview" checked> Добавить картинки в ТЗ</label>
+      <p class="hint">Номера экранов на картинку общего плана: кнопка «Расставить номера экранов» под картинкой или двойной щелчок по картинке на превью справа.</p>
+      <div class="btns"><button class="b" id="tOvPick">Добавить картинки…</button><button class="b" id="tOvClear">Убрать все</button></div>
+      <div class="row"><label for="tImgPer">Картинок на слайде</label><div class="ctl"><select id="tImgPer">
+        <option value="0">Авто</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+      </select></div></div>
+      <input type="file" id="tOvFile" accept="image/*" multiple hidden>
+      <p class="hint" id="tOvInfo">Картинок нет — слайды не добавятся.</p>
+      <div class="imglist" id="tImgs"></div>
+      <div class="tgroup">ТЕКСТ В ТЗ</div>
+      <p class="hint">Нажмите на слайд или на блок текста справа (или выберите его в списке) — текст откроется здесь. На 1-м слайде каждый блок правится отдельно, по умолчанию выбран последний («Тестовые файлы»). Выделите слова и нажмите <b>Ж</b>, выберите цвет или размер — оформление видно сразу. Текст двигается мышью или пальцем прямо на слайде. Строки шаблона, которые вы не трогали, сохраняют его оформление. Тип шаблона — ниже, в «Сохранить ТЗ».</p>
+      <div class="row"><label for="tTxtSel">Слайд</label><div class="ctl"><select id="tTxtSel" class="grow"></select></div></div>
+      <div class="tzt rte" id="tTxt" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true" aria-label="Текст выбранного слайда"></div>
+      <div class="btns"><button class="b" id="tTxtReset">Вернуть текст шаблона</button><button class="b" id="tTxtPos">Вернуть на место</button></div>
+    </div></details>
+
+    <details class="sec" open><summary>ЭКРАН И КАБИНЕТЫ</summary><div class="sec-body">
+      <div class="ctl"><select id="screens" class="grow"></select><button class="b" id="btnAddScreen">+ Экран</button><button class="b sq" id="btnDelScreen" aria-label="Удалить экран">−</button></div>
+      <label class="chk"><input type="checkbox" id="scrRenum" checked> переназначать номера экранов после смены порядка</label>
+      <div class="seg kind" role="group" aria-label="Вид экрана" style="align-self:flex-start">
+        <button data-kind="led" aria-pressed="true">LED</button><button data-kind="proj" aria-pressed="false">Проекция</button><button data-kind="tv" aria-pressed="false" title="ТВ-панели: настроечная картинка">ТВ-панели</button><button data-kind="pix" aria-pressed="false" title="Pixel drop: Fantaled, палки, бочки">Pixel drop</button><button data-kind="ring" aria-pressed="false" title="Кольцо: кабинеты по кругу или эллипсу">Кольцо</button><button data-kind="vol" aria-pressed="false">Волюметрик</button>
+      </div>
+      <div class="ctl ffile no-vol" id="mFileRow"><span class="ffile-lbl">Имя файла</span><span class="ffile-pre" id="mFilePre" title="Размер маски — подставляется сам">—</span><input type="text" id="mFile" class="grow" spellcheck="false" title="Имя файла маски после размера. Если стереть — снова название экрана" aria-label="Имя файла маски"></div>
+    </div></details>
+    <details class="sec led-only" open><summary>ДАННЫЕ</summary><div class="sec-body" id="ledData">
+      <div class="row"><label for="cabType">Тип кабинета</label><div class="ctl"><select id="cabType" class="grow"></select></div></div>
+      <div class="row"><label for="wpx">Пиксели кабинета</label><div class="ctl"><input type="number" id="wpx" min="1" class="w-md" inputmode="numeric" aria-label="Ширина кабинета, px"><span class="unit">×</span><input type="number" id="hpx" min="1" class="w-md" inputmode="numeric" aria-label="Высота кабинета, px"><span class="unit">px</span></div></div>
+      <div class="row"><label for="cols">Кабинеты</label><div class="ctl"><input type="number" id="cols" min="1" class="w-md" inputmode="numeric" aria-label="Кабинетов по горизонтали"><span class="unit">×</span><input type="number" id="rows" min="1" class="w-md" inputmode="numeric" aria-label="Кабинетов по вертикали"><span class="unit">шт.</span></div></div>
+      <div class="row"><label for="physW">Размер</label><div class="ctl"><input type="text" id="physW" class="num w-md" style="text-align:right" inputmode="decimal" aria-label="Ширина, м"><span class="unit">×</span><input type="text" id="physH" class="num w-md" style="text-align:right" inputmode="decimal" aria-label="Высота, м"><span class="unit">м</span></div></div>
+      <div class="row"><label for="pixColor">Цвет маски</label><div class="ctl"><input type="color" id="pixColor"><span class="unit num" id="pixRGB"></span></div></div>
+      <div class="row"><label for="numColor">Цвет нумерации</label><div class="ctl"><input type="color" id="numColor"><span class="unit num" id="numRGB"></span></div></div>
+      <div class="row"><label for="numSize">Размер нумерации</label><div class="ctl"><select id="numSize"></select><button class="b sq" id="numMinus">−</button><button class="b sq" id="numPlus">+</button></div></div>
+      <span id="numFmtHome" hidden></span><div id="numFmtRows">
+      <div class="row"><label for="numFmt">Формат нумерации</label><div class="ctl"><select id="numFmt"></select></div></div>
+      <div class="row"><label for="numOrigin">Начало нумерации</label><div class="ctl"><select id="numOrigin"></select></div></div>
+      </div>
+      <div class="row"><label for="numPos">Расположение номера</label><div class="ctl"><select id="numPos"></select></div></div>
+    </div></details>
+
+    <details class="sec proj-only" open><summary>ДАННЫЕ</summary><div class="sec-body" id="projData">
+      <p class="hint">Тест-паттерн для проекторов: сетка, рамки и номера проекторов, зоны перекрытия, круги — или полярная сетка для купола. Общее разрешение считается само.</p>
+      <div class="row"><span class="lbl">Паттерн</span><div class="ctl"><div class="seg pjmode" role="group" aria-label="Паттерн проекции">
+        <button data-mode="grid">Сетка проекторов</button><button data-mode="dome" title="Domemaster: полярная сетка для купола (fisheye)">Купол</button>
+      </div></div></div>
+      <div class="row pjd"><span class="lbl">Разрешение купола</span><div class="ctl"><div class="seg pjdsize" role="group" aria-label="Разрешение купола">
+        <button data-d="1024">1K</button><button data-d="2048">2K</button><button data-d="4096">4K</button><button data-d="6144">6K</button><button data-d="8192">8K</button>
+      </div></div></div>
+      <div class="row pjd"><label for="pjDome">Сторона квадрата</label><div class="ctl"><input type="number" id="pjDome" min="256" max="16384" class="w-md" inputmode="numeric" aria-label="Сторона квадрата, px"><span class="unit">px</span></div></div>
+      <div class="row pjd"><label for="pjFov">Угол обзора</label><div class="ctl"><input type="number" id="pjFov" min="60" max="360" step="5" class="w-sm" inputmode="numeric"><span class="unit">°</span></div></div>
+      <div class="row pjd"><label for="pjAz">Шаг азимута / высоты</label><div class="ctl"><input type="number" id="pjAz" min="1" max="90" class="w-sm" inputmode="numeric"><span class="unit">°</span><input type="number" id="pjEl" min="1" max="45" class="w-sm" inputmode="numeric"><span class="unit">°</span></div></div>
+      <div class="row pjg"><label for="pjPreset">Проектор</label><div class="ctl"><select id="pjPreset" class="grow"></select></div></div>
+      <div class="row pjg"><label for="pjW">Пиксели проектора</label><div class="ctl"><input type="number" id="pjW" min="16" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="pjH" min="16" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row pjg"><span class="lbl">Ориентация</span><div class="ctl"><div class="seg pjrot" role="group" aria-label="Ориентация проектора">
+        <button data-rot="0">Обычный</button><button data-rot="90" title="Портрет: проектор повёрнут на 90°, кадр вертикальный">Портрет</button>
+      </div></div></div>
+      <div class="row pjg"><label for="pjNx">Проекторы</label><div class="ctl"><input type="number" id="pjNx" min="1" max="32" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="pjNy" min="1" max="32" class="w-md" inputmode="numeric"><span class="unit">шт.</span></div></div>
+      <div class="row pjg"><label for="pjWm">Размер полотна</label><div class="ctl"><input type="number" id="pjWm" min="0" step="0.01" class="w-md" inputmode="decimal" aria-label="Ширина изображения, м"><span class="unit">×</span><input type="number" id="pjHm" min="0" step="0.01" class="w-md" inputmode="decimal" aria-label="Высота изображения, м"><span class="unit">м</span></div></div>
+      <div class="row pjg"><label for="pjArW">Пропорции</label><div class="ctl"><input type="number" id="pjArW" min="0.01" step="1" class="w-sm" inputmode="decimal" aria-label="Пропорция по ширине"><span class="unit">:</span><input type="number" id="pjArH" min="0.01" step="1" class="w-sm" inputmode="decimal" aria-label="Пропорция по высоте"></div></div>
+      <label class="chk pjg"><input type="checkbox" id="pjArLock"> Соблюдать пропорции</label>
+      <div class="row pjg"><label for="pjCanW">Полотно (итог)</label><div class="ctl"><input type="number" id="pjCanW" min="16" class="w-md" inputmode="numeric" aria-label="Ширина полотна, px"><span class="unit">×</span><input type="number" id="pjCanH" min="16" class="w-md" inputmode="numeric" aria-label="Высота полотна, px"><span class="unit">px</span></div></div>
+      <div class="row pjg"><label for="pjOx">Перекрытие по горизонтали</label><div class="ctl"><input type="number" id="pjOx" min="0" max="50" step="0.5" class="w-sm" inputmode="decimal"><span class="unit">%</span><input type="number" id="pjOxPx" min="0" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row pjg"><label for="pjOy">Перекрытие по вертикали</label><div class="ctl"><input type="number" id="pjOy" min="0" max="50" step="0.5" class="w-sm" inputmode="decimal"><span class="unit">%</span><input type="number" id="pjOyPx" min="0" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <p class="hint pjg">Порядок: проектор → количество → <b>размер полотна в метрах</b> (например 3 × 5) или пропорции. Пока свой размер не вписан, он считается сам — 100 пикселей на метр. «Соблюдать пропорции» — при изменении одной стороны вторая меняется по пропорциям. Разрешение и перекрытие округляются до чётных. Разрешение посчитается само: у одного проектора большая сторона кадра ложится на большую сторону полотна; у нескольких — перекрытие по второй стороне подбирается само, а по первой вы его меняете в % или px. Без размера в метрах можно задать полотно в пикселях.</p>
+      <div class="row pjg"><label for="pjGrid">Шаг сетки</label><div class="ctl"><input type="number" id="pjGrid" min="8" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row"><label for="pjBg">Фон / линии / текст</label><div class="ctl"><input type="color" id="pjBg" title="Фон"><input type="color" id="pjLine" title="Линии"><input type="color" id="pjText" title="Текст"></div></div>
+      <div class="ctl" style="row-gap:6px">
+        <label class="chk pjg"><input type="checkbox" id="pjZones"> Зоны перекрытия</label>
+        <label class="chk pjg"><input type="checkbox" id="pjFrames"> Рамки проекторов</label>
+        <label class="chk pjg"><input type="checkbox" id="pjNums"> Номера проекторов</label>
+        <label class="chk pjg"><input type="checkbox" id="pjCircles"> Круги</label>
+        <label class="chk pjg"><input type="checkbox" id="pjCells"> Подписи клеток (A1, B1…)</label>
+        <label class="chk pjg"><input type="checkbox" id="pjHatch"> Штриховка</label>
+        <label class="chk pjd"><input type="checkbox" id="pjDMinor"> Мелкая сетка (½ шага)</label>
+        <label class="chk pjd"><input type="checkbox" id="pjDLabels"> Подписи градусов</label>
+        <label class="chk pjd"><input type="checkbox" id="pjDSides"> Стороны FRONT / BACK / LEFT / RIGHT</label>
+        <label class="chk"><input type="checkbox" id="pjBar"> Цветовая полоса</label>
+        <label class="chk"><input type="checkbox" id="pjInvert"> Инверсия (белый фон)</label>
+      </div>
+      <p class="hint num" id="pjInfo"></p>
+    </div></details>
+
+    <details class="sec ring-only" open><summary>ДАННЫЕ</summary><div class="sec-body" id="ringData">
+      <p class="hint">Кабинеты по кругу или эллипсу. Задайте кабинет, сколько кабинетов в кольце и диаметр — по центрам кабинетов. Колец может быть несколько, каждое своего цвета. Любой кабинет можно выбрать на холсте, сдвинуть и повернуть на любой угол — например, по картинке-подложке (раздел «ПОДЛОЖКА» ниже).</p>
+      <div class="tgroup">КАБИНЕТ</div>
+      <div class="row"><label for="rgType">Тип кабинета</label><div class="ctl"><select id="rgType" class="grow"></select></div></div>
+      <div class="row"><label for="rgCw">Пиксели кабинета</label><div class="ctl"><input type="number" id="rgCw" min="1" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgCh" min="1" class="w-md" inputmode="numeric"></div></div>
+      <div class="row"><label for="rgMw">Размер кабинета</label><div class="ctl"><input type="number" id="rgMw" min="1" class="w-md" inputmode="decimal"><span class="unit">×</span><input type="number" id="rgMh" min="1" class="w-md" inputmode="decimal"><span class="unit">мм</span></div></div>
+      <div class="tgroup">КОЛЬЦА</div>
+      <div class="ctl"><select id="rgList" class="grow" aria-label="Кольцо"></select><button class="b" id="rgAdd">+ Кольцо</button><button class="b sq" id="rgDel" aria-label="Удалить кольцо">−</button></div>
+      <div class="row"><label for="rgN">Кабинетов</label><div class="ctl"><input type="number" id="rgN" min="1" max="2000" class="w-md" inputmode="numeric"><span class="unit">шт в кольце</span></div></div>
+      <div class="row"><label for="rgBw">Блок кабинетов</label><div class="ctl"><input type="number" id="rgBw" min="1" max="20" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgBh" min="1" max="20" class="w-md" inputmode="numeric"><span class="unit">каб.</span></div></div>
+      <p class="hint">В каждой точке кольца можно поставить не один кабинет, а блок — маленький экран из нескольких кабинетов (ширина × высота). Блок стоит и поворачивается как одно целое; выбор, сдвиг, гашение — на весь блок.</p>
+      <div class="row"><label for="rgDw">Диаметр</label><div class="ctl"><input type="number" id="rgDw" min="2" step="2" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgDh" min="2" step="2" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row"><label for="rgDwCm">Диаметр</label><div class="ctl"><input type="number" id="rgDwCm" min="1" step="1" class="w-md" inputmode="decimal"><span class="unit">×</span><input type="number" id="rgDhCm" min="1" step="1" class="w-md" inputmode="decimal"><span class="unit">см</span></div></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="rgLock"> Сохранять пропорции</label><button class="b" id="rgCircle" title="Сделать круг: высота = ширине">○ Круг</button></div>
+      <p class="hint">Сантиметры считаются по размеру кабинета. С «Сохранять пропорции» ширина и высота меняются вместе, без — кольцо растягивается в эллипс. Мышью — за жёлтые квадратики на холсте (когда не выбран ни один кабинет).</p>
+      <div class="row"><label for="rgA0">Начальный угол</label><div class="ctl"><input type="number" id="rgA0" step="1" class="w-md" inputmode="decimal"><span class="unit">° (0 — сверху)</span></div></div>
+      <div class="row"><label for="rgArc">Дуга</label><div class="ctl"><input type="number" id="rgArc" min="1" max="360" step="1" class="w-md" inputmode="decimal"><span class="unit">° (360 — весь круг)</span></div></div>
+      <div class="row"><span class="lbl">Нумерация</span><div class="ctl"><div class="seg rgdir" role="group" aria-label="Направление"><button data-v="1">По часовой</button><button data-v="-1">Против часовой</button></div></div></div>
+      <div class="row"><span class="lbl">Кабинеты</span><div class="ctl"><div class="seg rgface" role="group" aria-label="Поворот кабинетов"><button data-v="in" title="Каждый кабинет повёрнут по кругу">По кругу</button><button data-v="up" title="Все кабинеты стоят прямо">Все прямо</button></div></div></div>
+      <div class="row"><label for="rgColor">Цвет кольца</label><div class="ctl"><input type="color" id="rgColor"></div></div>
+      <div class="row"><label for="rgOx">Сдвиг центра</label><div class="ctl"><input type="number" id="rgOx" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgOy" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="tgroup">ВЫБРАННЫЕ КАБИНЕТЫ</div>
+      <p class="hint">Инструмент над холстом — как у масок: «Выбор» — касание добавляет или убирает кабинет, «Диапазон» — протяните пальцем (у кольца диапазон идёт вдоль кольца и по рядам блока; пустое место — рамка), «Гашение» — чёрный кабинет (можно протягивать), «Рука» — двигать холст. С мышью: Ctrl/⌘ — добавить или убрать, Shift — диапазон, Alt — чёрный. Тянуть выбранное — сдвинуть, зелёная точка — повернуть (Shift — шагом 15°). Стрелки — сдвиг на 1 px (Shift — 10), [ и ] — поворот на 1° (Shift — 15°), Delete — погасить, Esc — снять выбор. Блок кабинетов выбирается и двигается целиком.</p>
+      <div class="row"><label for="rgRot">Поворот</label><div class="ctl"><input type="number" id="rgRot" step="any" class="w-md w-ang" inputmode="decimal"><span class="unit">°</span></div></div>
+      <div class="btns"><button class="b" id="rgRotM15">⟲ 15°</button><button class="b" id="rgRotM1">⟲ 1°</button><button class="b" id="rgRotP1">⟳ 1°</button><button class="b" id="rgRotP15">⟳ 15°</button></div>
+      <div class="row"><label for="rgSelColor">Цвет кабинета</label><div class="ctl"><input type="color" id="rgSelColor"><button class="b" id="rgSelColorReset" title="Вернуть цвет кольца">Как у кольца</button></div></div>
+      <div class="btns"><button class="b" id="rgGroup" title="Объединить выбранные кабинеты в группу — дальше выбираются, двигаются и крутятся вместе">Сгруппировать</button><button class="b" id="rgUngroup" title="Разбить группы выбранных кабинетов">Разгруппировать</button></div>
+      <div class="btns"><button class="b" id="rgSelRing">Выбрать всё кольцо</button><button class="b" id="rgOff">Погасить / включить</button><button class="b" id="rgReset">Вернуть на кольцо</button></div>
+      <p class="hint num" id="rgSelInfo"></p>
+      <div class="tgroup">ХОЛСТ И НОМЕРА</div>
+      <label class="chk"><input type="checkbox" id="rgAuto"> Размер маски — по кольцам</label>
+      <div class="row" id="rgPadRow"><label for="rgPad">Отступ от края</label><div class="ctl"><input type="number" id="rgPad" min="0" step="2" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row" id="rgSizeRow"><label for="rgW">Размер маски</label><div class="ctl"><input type="number" id="rgW" min="16" step="2" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="rgH" min="16" step="2" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <label class="chk"><input type="checkbox" id="rgNums"> Номера кабинетов</label>
+      <div class="row"><label for="rgFmt">Формат номера</label><div class="ctl"><select id="rgFmt"><option value="cr">как в масках: колонка, ряд</option><option value="ring">с номером кольца (2·5,1)</option><option value="seq">сквозной по всей маске</option></select></div></div>
+      <div id="rgNumHost"></div>
+      <p class="hint">Кольцо — это тот же экран, только кабинеты расставлены по кругу: номер кабинета считается как в LED-масках — колонка вдоль кольца (сквозь блоки), ряд — внутри блока.</p>
+      <label class="chk"><input type="checkbox" id="rgOutline"> Контур кабинетов</label>
+      <p class="hint num" id="ringInfo"></p>
+    </div></details>
+
+    <details class="sec tv-only" open><summary>ДАННЫЕ</summary><div class="sec-body" id="tvData">
+      <p class="hint">Настроечная картинка для телевизоров и видеостен: цветные полосы, градации серого, сетка, круг, зоны безопасности и подпись каждой панели с её разрешением.</p>
+      <div class="row"><label for="tvPreset">Панель</label><div class="ctl"><select id="tvPreset" class="grow"></select></div></div>
+      <div class="row"><label for="tvW">Разрешение панели</label><div class="ctl"><input type="number" id="tvW" min="16" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="tvH" min="16" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row"><span class="lbl">Ориентация</span><div class="ctl"><div class="seg tvrot" role="group" aria-label="Ориентация панели">
+        <button data-rot="0">Горизонтально</button><button data-rot="90">Вертикально</button>
+      </div></div></div>
+      <div class="row"><label for="tvNx">Панели</label><div class="ctl"><input type="number" id="tvNx" min="1" max="32" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="tvNy" min="1" max="32" class="w-md" inputmode="numeric"><span class="unit">шт.</span></div></div>
+      <div class="row"><label for="tvDiag">Диагональ</label><div class="ctl"><input type="number" id="tvDiag" min="0" max="300" class="w-md" inputmode="numeric"><span class="unit">дюймов (0 — не указывать)</span></div></div>
+      <div class="row"><label for="tvLabel">Подпись панелей</label><div class="ctl"><input type="text" id="tvLabel" class="grow" placeholder="TV"><span class="unit">+ номер</span></div></div>
+      <div class="ctl" style="row-gap:6px">
+        <label class="chk"><input type="checkbox" id="tvBars"> Цветные полосы и градации</label>
+        <label class="chk"><input type="checkbox" id="tvGrid"> Сетка и круг</label>
+        <label class="chk"><input type="checkbox" id="tvSafe"> Зоны безопасности 5% / 10%</label>
+        <label class="chk"><input type="checkbox" id="tvCorner"> Подпись панели в углу (TV · разрешение · диагональ)</label>
+      </div>
+      <p class="hint num" id="tvInfo"></p>
+    </div></details>
+
+    <details class="sec pix-only" open><summary>ДАННЫЕ</summary><div class="sec-body">
+      <p class="hint">Fantaled, LED tube, бочки: каждый элемент — свой кусок карты. Каждая вертикаль (колонка) — свой цвет, без рамок; номер колонки сверху. Задайте элементы штуками или общим размером в метрах и расстоянием между элементами (от края одного до края следующего) — остальное посчитается само.</p>
+      <div class="row"><label for="pxPreset">Элемент</label><div class="ctl"><select id="pxPreset" class="grow"></select></div></div>
+      <div class="row"><label for="pxW">Пиксели элемента</label><div class="ctl"><input type="number" id="pxW" min="1" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="pxH" min="1" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row"><label for="pxCols">Колонки × ряды</label><div class="ctl"><input type="number" id="pxCols" min="1" max="500" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="pxRows" min="1" max="100" class="w-md" inputmode="numeric"><span class="unit">шт.</span></div></div>
+      <div class="row"><label for="pxCmW">Размер элемента</label><div class="ctl"><input type="number" id="pxCmW" min="0" step="0.5" class="w-md" inputmode="decimal"><span class="unit">×</span><input type="number" id="pxCmH" min="0" step="0.5" class="w-md" inputmode="decimal"><span class="unit">см</span></div></div>
+      <div class="row"><label for="pxSx">Расстояние между элементами</label><div class="ctl"><input type="number" id="pxSx" min="0" step="1" class="w-md" inputmode="decimal" aria-label="Расстояние между элементами по ширине, см (от края до края)"><span class="unit">×</span><input type="number" id="pxSy" min="0" step="1" class="w-md" inputmode="decimal" aria-label="Расстояние между элементами по высоте, см (от края до края)"><span class="unit">см</span></div></div>
+      <p class="hint num" id="pxGapStep"></p>
+      <div class="row"><label for="pxWm">Общий размер</label><div class="ctl"><input type="number" id="pxWm" min="0" step="0.1" class="w-md" inputmode="decimal" aria-label="Ширина, м"><span class="unit">×</span><input type="number" id="pxHm" min="0" step="0.1" class="w-md" inputmode="decimal" aria-label="Высота, м"><span class="unit">м</span></div></div>
+      <div class="row"><span class="lbl">Маска</span><div class="ctl"><div class="seg pxMode" role="group" aria-label="Как строить маску">
+        <button data-m="px" title="По пикселям: элементы вплотную, карта = колонки × пиксели элемента, расстояние между элементами не рисуется">По пикселям</button><button data-m="m" title="По размеру: пропорции реальных размеров в см — элементы и промежутки переводятся из см в пиксели с одной плотностью">По размеру</button>
+      </div></div></div>
+      <div class="ctl" style="row-gap:6px">
+        <label class="chk"><input type="checkbox" id="pxNums"> Номера колонок</label>
+        <label class="chk"><input type="checkbox" id="pxRowsShade"> Ряды чуть разной яркости</label>
+      </div>
+      <div class="row"><span class="lbl"><label class="chk"><input type="checkbox" id="pxScaleOn"> Масштабировать маску</label></span><div class="ctl"><select id="pxScale" aria-label="Масштаб маски"></select><span class="unit">каждый пиксель → N×N</span></div></div>
+      <p class="hint num" id="pxInfo"></p>
+    </div></details>
+
+
+    <details class="sec vol-only" open><summary>ДАННЫЕ</summary><div class="sec-body" id="volData">
+      <p class="hint">Объёмная LED-матрица из нитей: кабинеты под потолком, из каждого вниз — сетка нитей. Справа внизу холста — 3D-вид (тяните мышью или пальцем).</p>
+      <div class="seg vlView" role="group" aria-label="Что показывать" style="align-self:flex-start"><button data-v="mask">Маска</button><button data-v="com">Коммутация</button></div>
+      <div class="row"><label for="vlModel">Модель</label><div class="ctl"><select id="vlModel" class="grow"></select></div></div>
+      <div class="row"><label for="vlCx">Кабинеты</label><div class="ctl"><input type="number" id="vlCx" min="1" max="64" class="w-md" inputmode="numeric" aria-label="Кабинетов по ширине"><span class="unit">×</span><input type="number" id="vlCz" min="1" max="64" class="w-md" inputmode="numeric" aria-label="Кабинетов в глубину"><span class="unit">шт.</span></div></div>
+      <div class="row"><label for="vlWm">Размер</label><div class="ctl"><input type="text" id="vlWm" class="num" style="text-align:right;width:52px" inputmode="decimal" aria-label="Ширина, м"><span class="unit">×</span><input type="text" id="vlHm" class="num" style="text-align:right;width:52px" inputmode="decimal" aria-label="Высота (длина нити), м"><span class="unit">×</span><input type="text" id="vlDm" class="num" style="text-align:right;width:52px" inputmode="decimal" aria-label="Глубина, м"><span class="unit">м</span></div></div>
+      <p class="hint">Размер: ширина × высота (длина нити) × глубина. Ширина и глубина подбираются кабинетами по 50 см.</p>
+      <div class="row"><label for="vlSx">Нитей в кабинете</label><div class="ctl"><input type="number" id="vlSx" min="1" max="64" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="vlSz" min="1" max="64" class="w-md" inputmode="numeric"><span class="unit">шт.</span></div></div>
+      <div class="row"><label for="vlCw">Кабинет</label><div class="ctl"><input type="number" id="vlCw" min="1" step="1" class="w-md" inputmode="decimal"><span class="unit">×</span><input type="number" id="vlCd" min="1" step="1" class="w-md" inputmode="decimal"><span class="unit">см</span></div></div>
+      <div class="row"><label for="vlPx">Нить</label><div class="ctl"><input type="number" id="vlPx" min="1" max="1024" class="w-md" inputmode="numeric"><span class="unit">px ·</span><input type="number" id="vlLen" min="0.1" step="0.5" class="w-md" inputmode="decimal"><span class="unit">м</span></div></div>
+      <div class="row vlc"><span class="lbl">Вид на кабинеты</span><div class="ctl"><div class="seg vlSide" role="group" aria-label="Вид на кабинеты"><button data-s="top">Сверху</button><button data-s="bottom" title="Снизу — на лицевую сторону, как на листе адресации">Снизу</button></div></div></div>
+      <div class="row vlc"><label for="vlStart">Первый кабинет</label><div class="ctl"><select id="vlStart" class="grow"><option value="fl">Передний левый</option><option value="fr">Передний правый</option><option value="bl">Задний левый</option><option value="br">Задний правый</option></select></div></div>
+      <div class="row vlc"><label for="vlLine">Линии коммутации</label><div class="ctl"><select id="vlLine" class="grow"><option value="round">Прямые</option><option value="arc">Дуги</option></select></div></div>
+      <div class="row vlc"><label for="vlDir">Направление</label><div class="ctl"><select id="vlDir" class="grow"><option value="rows">По рядам (поперёк)</option><option value="cols">По столбцам (в глубину)</option></select><label class="chk"><input type="checkbox" id="vlSnake"> змейкой</label></div></div>
+      <div class="btns vlc"><button class="b" id="vlBlank" aria-pressed="false">Гасить кабинеты</button><button class="b" id="vlAllOn">Включить все</button></div>
+      <div class="btns vlc"><button class="b" id="vlPick">Задать порядок щелчками</button><button class="b" id="vlPickReset">Сбросить ручной порядок</button></div>
+      <p class="hint vlc" id="vlComHint"></p>
+      <div class="row vlm"><span class="lbl">Маска</span><div class="ctl"><div class="seg vlLayout" role="group" aria-label="Раскладка маски">
+        <button data-l="slices" title="Каждый ряд нитей по глубине — отдельный срез (ширина = нити по ширине, высота = пиксели нити); срез 1 — передний ряд">Срезы по глубине</button><button data-l="dmx" title="Все нити подряд — по порядку коммутации кабинетов и адресации нитей внутри кабинета">По адресации</button>
+      </div></div></div>
+      <div class="row vlm" id="vlPerRowRow"><label for="vlPerRow">Срезов в ряд</label><div class="ctl"><input type="number" id="vlPerRow" min="0" class="w-md" inputmode="numeric" placeholder="все"><span class="unit">пусто — все в один ряд</span></div></div>
+      <div class="row"><label for="vlIp">IP первого кабинета</label><div class="ctl"><input type="text" id="vlIp" class="num grow" inputmode="decimal" placeholder="2.0.0.3"></div></div>
+      <p class="hint num" id="vlDmx"></p>
+      <div class="ctl" style="row-gap:6px">
+        <label class="chk vlm"><input type="checkbox" id="vlShade"> Соседние нити чуть разной яркости</label>
+        <label class="chk"><input type="checkbox" id="vl3d"> Показывать 3D-вид</label>
+      </div>
+      <div class="row vlm"><span class="lbl"><label class="chk"><input type="checkbox" id="vlScaleOn"> Масштабировать маску</label></span><div class="ctl"><select id="vlScale" aria-label="Масштаб маски"></select><span class="unit">каждый пиксель → N×N</span></div></div>
+      <p class="hint num" id="vlInfo"></p>
+    </div></details>
+
+    <details class="sec no-vol" open><summary>ТЕКСТ</summary><div class="sec-body">
+      <div class="tgroup">ДОПОЛНИТЕЛЬНЫЕ ТЕКСТЫ</div><!-- 2.0.39: наверху раздела -->
+      <div class="btns"><button class="b" id="btnAddText">+ Добавить</button><button class="b" id="btnCopyText" title="Копия выбранного текста со всеми настройками (Ctrl+D). Ctrl+C / Ctrl+V — скопировать и вставить, в том числе в другую маску">Копировать</button><button class="b" id="btnEditText">Изменить текст</button><button class="b" id="btnDelText" title="Удалить выбранный доп. текст (клавиша Delete)">Удалить</button></div>
+      <div class="row"><label for="activeText">Активный текст</label><div class="ctl"><select id="activeText" class="grow"></select></div></div>
+      <p class="hint">Выбранный текст двигается пальцем или мышью прямо на холсте, а также стрелками (Shift — по 10 px). Shift / Ctrl + щелчок — выбрать несколько доп. текстов: настройки ниже меняются у всех сразу. Колесо мыши или тачпад — масштаб маски.</p>
+      <!-- 2.0.38: общие настройки для активного текста (основного или дополнительного) -->
+      <p class="hint num" id="txWho">Настройки ниже — для основного текста</p>
+      <div class="row"><label for="txSize">Размер текста</label><div class="ctl"><select id="txSize"></select><button class="b sq" id="txMinus">−</button><button class="b sq" id="txPlus">+</button></div></div>
+      <div class="row"><span class="lbl">Поворот текста <span class="num" id="txRotVal">0°</span></span><div class="ctl"><button class="b" id="txRotCCW" title="Против часовой на 45°">⟲ 45°</button><button class="b" id="txRot0">0°</button><button class="b" id="txRotCW" title="По часовой на 45°">⟳ 45°</button></div></div>
+      <div class="row"><span class="lbl">Положение</span><div class="ctl"><div class="txpos" id="txPos" role="group" aria-label="Положение текста на маске">
+        <button data-pos="tl" title="Слева сверху">↖</button><button data-pos="t" title="По центру сверху">↑</button><button data-pos="tr" title="Справа сверху">↗</button>
+        <button data-pos="l" title="Слева по центру">←</button><button data-pos="c" title="По центру маски">•</button><button data-pos="r" title="Справа по центру">→</button>
+        <button data-pos="bl" title="Слева снизу">↙</button><button data-pos="b" title="По центру снизу">↓</button><button data-pos="br" title="Справа снизу">↘</button>
+      </div></div></div>
+      <div class="row"><label for="txColor">Цвет текста</label><div class="ctl"><input type="color" id="txColor" title="Цвет выбранного текста"><button class="b" id="txColorReset" title="Вернуть цвет по умолчанию (белый; у проекции — цвет текста из настроек)">По умолчанию</button></div></div>
+      <div class="row"><span class="lbl">Магнит</span><div class="ctl"><label class="chk"><input type="checkbox" id="txMagnet" checked> притягивать к центру и краям экрана и других текстов</label></div></div>
+      <div hidden>
+      <div class="row"><label for="inscSize">Размер текста</label><div class="ctl"><select id="inscSize"></select><button class="b sq" id="mainMinus">−</button><button class="b sq" id="mainPlus">+</button></div></div>
+      <div class="row"><span class="lbl">Поворот текста <span class="num" id="rotVal">0°</span></span><div class="ctl"><button class="b" id="rotCCW" title="Против часовой на 45°">⟲ 45°</button><button class="b" id="rot0">0°</button><button class="b" id="rotCW" title="По часовой на 45°">⟳ 45°</button><select id="rot" hidden></select></div></div>
+      <div class="row"><label for="exSize">Размер текста</label><div class="ctl"><select id="exSize"></select><button class="b sq" id="exMinus">−</button><button class="b sq" id="exPlus">+</button></div></div>
+      <div class="row"><span class="lbl">Поворот текста <span class="num" id="exRotVal">0°</span></span><div class="ctl"><button class="b" id="exRotCCW" title="Против часовой на 45°">⟲ 45°</button><button class="b" id="exRot0">0°</button><button class="b" id="exRotCW" title="По часовой на 45°">⟳ 45°</button><select id="exRot" hidden></select></div></div>
+      </div>
+      <div class="tgroup">ОСНОВНОЙ ТЕКСТ</div>
+      <div class="row"><label for="resText">Разрешение (1-я строка)</label><div class="ctl"><input type="text" id="resText" class="num grow" readonly><label class="chk"><input type="checkbox" id="line1"> показ</label></div></div>
+      <div class="row"><label for="scrName">Название (2-я строка)</label><div class="ctl"><input type="text" id="scrName" class="grow"><label class="chk"><input type="checkbox" id="line2"> показ</label></div></div>
+      <div class="row"><label for="line3Text">Размеры (3-я строка)</label><div class="ctl"><input type="text" id="line3Text" class="num grow" readonly><label class="chk"><input type="checkbox" id="line3"> показ</label></div></div>
+    </div></details>
+
+    <details class="sec led-only" open><summary>ВЫДЕЛЕНИЕ И ЦВЕТ КАБИНЕТОВ</summary><div class="sec-body">
+      <p class="hint">Инструмент над холстом: «Выбор» — касание добавляет или убирает кабинет, «Диапазон» — протяните пальцем, «Гашение» — чёрный кабинет. С мышью: Ctrl/⌘ — добавить, Shift — диапазон, Alt — чёрный, Esc — снять выделение.</p>
+      <div class="btns">
+        <button class="b" id="btnAllBlack">Выключить все</button>
+        <button class="b" id="btnAllOn">Включить все</button>
+        <button class="b" id="btnClearSel">Снять выделение</button>
+        <button class="b" id="btnCabGroup" title="Сгруппировать выделенные кабинеты: дальше выбираются и двигаются вместе">Сгруппировать</button>
+        <button class="b" id="btnCabUngroup" title="Разбить группы выделенных кабинетов">Разгруппировать</button>
+      </div>
+      <div class="row"><span class="lbl">Цвет кабинетов</span><div class="ctl paintrow">
+        <button type="button" class="cabsw empty" id="selColor" aria-label="Цвет выделенного кабинета — выбрать новый"></button>
+        <button class="b" id="btnPaint"><span class="sw" id="lastSw"></span>Покрасить</button>
+        <input type="color" id="paintColor" class="pal-native" aria-label="Другой цвет" tabindex="-1">
+        <div class="pal-pop" id="palPop" hidden>
+          <div class="pal-h" id="palRecentH">Недавние</div><div class="pal-grid" id="palRecent"></div>
+          <div class="pal-h">Палитра</div><div class="pal-grid" id="palPreset"></div>
+          <div class="btns"><button class="b" id="palOther">Другой цвет…</button><button class="b" id="palNone">Снять цвет</button></div>
+        </div>
+      </div></div>
+      <p class="hint">Левый квадрат — цвет выделенного кабинета: нажмите и выберите цвет — выделенные сразу перекрасятся. «Покрасить» — последним выбранным цветом.</p>
+      <div class="row"><span class="lbl">Угловые кабинеты</span><div class="ctl">
+        <div class="seg corner" role="group" aria-label="Треугольники: какая половина светится">
+          <button data-corner="0" title="Треугольник: светится нижняя левая половина">◣</button>
+          <button data-corner="1" title="Треугольник: светится верхняя левая половина">◤</button>
+          <button data-corner="2" title="Треугольник: светится верхняя правая половина">◥</button>
+          <button data-corner="3" title="Треугольник: светится нижняя правая половина">◢</button>
+        </div>
+        <div class="seg corner" role="group" aria-label="Четверти круга">
+          <button data-corner="4" title="Четверть круга от нижнего левого угла"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M2 14V2A12 12 0 0 1 14 14Z" fill="currentColor"/></svg></button>
+          <button data-corner="5" title="Четверть круга от верхнего левого угла"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M2 2H14A12 12 0 0 1 2 14Z" fill="currentColor"/></svg></button>
+          <button data-corner="6" title="Четверть круга от верхнего правого угла"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M14 2V14A12 12 0 0 1 2 2Z" fill="currentColor"/></svg></button>
+          <button data-corner="7" title="Четверть круга от нижнего правого угла"><svg viewBox="0 0 16 16" width="16" height="16"><path d="M14 14H2A12 12 0 0 1 14 2Z" fill="currentColor"/></svg></button>
+        </div></div></div>
+      <p class="hint">Выделите кабинеты и нажмите нужную форму — применится сразу.</p>
+      <div class="btns"><button class="b" id="btnCornerDel">Убрать угловые</button></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Фигурные кабинеты</span><div class="ctl">
+        <div class="seg shaped" style="white-space:nowrap" role="group" aria-label="Тип фигурного кабинета">
+          <button data-w="1/4" aria-pressed="true" title="Кабинет на угол 90°: 1/4 ширины кабинета">1/4 · 90° <span class="shp-px" data-f="1/4"></span></button>
+          <button data-w="1/2" aria-pressed="false" title="Кабинет на угол 60°: 1/2 ширины кабинета">1/2 · 60° <span class="shp-px" data-f="1/2"></span></button>
+          <button data-w="custom" aria-pressed="false" title="Своя ширина кабинета в пикселях">Свой</button>
+        </div>
+        <span id="shapedCustomBox" hidden><input id="shapedCustom" type="number" min="1" max="20000" step="1" value="128" style="width:72px" aria-label="Ширина своего фигурного кабинета"> <span class="unit" id="shapedCustomH">×192 px</span></span>
+        </div></div>
+      <p class="hint">Выделите любой кабинет и нажмите тип — весь его столбец сразу станет узким, без чёрных полей. «Свой» — впишите ширину. Разрешение и общее поле пересчитываются.</p>
+      <div class="btns"><button class="b" id="btnShapedDel">Убрать фигурные</button></div>
+    </div></details>
+
+    <details class="sec led-only" open><summary>ГРАНИЦЫ ЯЧЕЕК</summary><div class="sec-body">
+      <p class="hint">Выделите кабинеты и нажмите, какие границы нарисовать — белая линия 2 px появится сразу (повторное нажатие убирает). Попадает в PNG и ТЗ.</p>
+      <div class="ctl borders">
+        <div class="seg edges" role="group" aria-label="Вертикальные границы"><button data-edge="l" title="Левая граница" aria-label="Левая граница"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M2.5 2L2.5 16" stroke-width="2.4"/></svg></button><button data-edge="iv" title="Внутренние вертикальные" aria-label="Внутренние вертикальные"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M9 2L9 16" stroke-width="2.4"/></svg></button><button data-edge="r" title="Правая граница" aria-label="Правая граница"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M15.5 2L15.5 16" stroke-width="2.4"/></svg></button></div>
+        <div class="seg edges" role="group" aria-label="Горизонтальные границы"><button data-edge="t" title="Верхняя граница" aria-label="Верхняя граница"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M2 2.5L16 2.5" stroke-width="2.4"/></svg></button><button data-edge="ih" title="Внутренние горизонтальные" aria-label="Внутренние горизонтальные"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M2 9L16 9" stroke-width="2.4"/></svg></button><button data-edge="b" title="Нижняя граница" aria-label="Нижняя граница"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M2 15.5L16 15.5" stroke-width="2.4"/></svg></button></div>
+        <div class="seg edges" role="group" aria-label="Все границы"><button data-edge="out" title="Внешний контур" aria-label="Внешний контур"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-width="2.4"/><path d="M9 3V15M3 9H15" stroke-opacity=".35"/></svg></button><button data-edge="in" title="Все внутренние" aria-label="Все внутренние"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M9 2L9 16" stroke-width="2.4"/><path d="M2 9L16 9" stroke-width="2.4"/></svg></button><button data-edge="all" title="Все границы" aria-label="Все границы"><svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor"><rect x="2.5" y="2.5" width="13" height="13" stroke-opacity=".35"/><path d="M9 2L9 16" stroke-width="2.4"/><path d="M2 9L16 9" stroke-width="2.4"/><rect x="2.5" y="2.5" width="13" height="13" stroke-width="2.4"/></svg></button></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="autoContour"> Автоконтур — граница вокруг убранных кабинетов</label>
+      <div class="btns">
+        <button class="b" id="btnContourDel">Убрать границы</button>
+        <button class="b" id="btnContourToggle">Показать / скрыть</button>
+      </div>
+    </div></details>
+
+    <details class="sec led-only" open><summary>СМЕЩЕНИЕ</summary><div class="sec-body">
+      <p class="hint">Для монтажа кабинетов под конструкцией или каше. Выделите на холсте нужные кабинеты, задайте величину сдвига и нажмите направление — поедут только выделенные кабинеты. Разрешение маски меняется само. Сдвиг применяется одинаково ко всем выделенным и складывается при повторном нажатии.</p>
+      <div class="tgroup">ВЕЛИЧИНА СДВИГА</div>
+      <div class="row wide"><span class="lbl">Доля кабинета</span><div class="ctl"><div class="seg shiftFrac" role="group" aria-label="Шаблон сдвига по отношению к кабинету">
+        <button data-f="0.5" title="Половина кабинета" aria-pressed="true">1/2</button><button data-f="0.333333" title="Треть кабинета">1/3</button><button data-f="0.25" title="Четверть кабинета">1/4</button><button data-f="0.2" title="1/5 кабинета">1/5</button><button data-f="0.166667" title="1/6 кабинета">1/6</button><button data-f="0.142857" title="1/7 кабинета">1/7</button><button data-f="0.125" title="1/8 кабинета">1/8</button>
+      </div></div></div>
+      <div class="row"><label for="shiftPx">Свой сдвиг</label><div class="ctl"><input type="number" id="shiftPx" min="1" class="w-md" inputmode="numeric"><span class="unit">px</span><input type="number" id="shiftCm" min="0.1" step="0.1" class="w-md" inputmode="decimal"><span class="unit">см</span></div></div>
+      <div class="tgroup">НАПРАВЛЕНИЕ</div>
+      <div class="row"><span class="lbl">По горизонтали</span><div class="ctl"><div class="seg" role="group" aria-label="Сдвиг выделенных кабинетов по горизонтали">
+        <button class="b" id="shiftL" title="Выделенные кабинеты — влево">◀ Влево</button><button class="b" id="shiftR" title="Выделенные кабинеты — вправо">Вправо ▶</button>
+      </div></div></div>
+      <div class="row"><span class="lbl">По вертикали</span><div class="ctl"><div class="seg" role="group" aria-label="Сдвиг выделенных кабинетов по вертикали">
+        <button class="b" id="shiftU" title="Выделенные кабинеты — вверх">▲ Вверх</button><button class="b" id="shiftD" title="Выделенные кабинеты — вниз">Вниз ▼</button>
+      </div></div></div>
+      <div class="tgroup">ПОЛОЖЕНИЕ ВЫБРАННЫХ</div>
+      <div class="row"><label for="cabPosX">Сдвиг X / Y</label><div class="ctl"><input type="number" id="cabPosX" step="any" class="w-md" inputmode="decimal" title="Сдвиг по горизонтали, px (вправо +)"><input type="number" id="cabPosY" step="any" class="w-md" inputmode="decimal" title="Сдвиг по вертикали, px (вверх +)"><span class="unit">px</span></div></div>
+      <div class="row"><label for="cabPosCmX">В сантиметрах</label><div class="ctl"><input type="number" id="cabPosCmX" step="0.1" class="w-md" inputmode="decimal" title="Сдвиг по горизонтали, см (вправо +)"><input type="number" id="cabPosCmY" step="0.1" class="w-md" inputmode="decimal" title="Сдвиг по вертикали, см (вверх +)"><span class="unit">см</span></div></div>
+      <p class="hint" id="cabPosInfo"></p>
+      <div class="tgroup">ПОВОРОТ КАБИНЕТОВ</div>
+      <div class="row"><label for="cabRotIn">Угол</label><div class="ctl"><input type="number" id="cabRotIn" step="any" min="-180" max="180" class="w-md w-ang" inputmode="decimal" title="Угол выбранного кабинета, ° (до сотых; плюс — по часовой)"><span class="unit">°</span><button class="b" id="cabRotCCW" title="Против часовой на 45°">⟲ −45°</button><button class="b" id="cabRotCW" title="По часовой на 45°">⟳ +45°</button><button class="b" id="cabRot0" title="Угол 0°">0°</button></div></div>
+      <p class="hint">Можно тянуть зелёную точку на холсте (Shift — шагом 15°). Сгруппированные кабинеты поворачиваются вокруг общего центра как один блок. Двигать выбранные кабинеты можно мышью.</p>
+      <div class="btns"><button class="b" id="shiftReset" title="Сбросить сдвиг и поворот выбранных кабинетов (без выделения — всех)">Сбросить сдвиг и поворот</button></div>
+      <div class="tgroup">ПОДЛОЖКА — КАРТИНКА</div>
+      <p class="hint">Загрузите картинку с каше или конструкцией, по которой выставляете смещение — это та же подложка, что в разделе «КАШЕ». Видна только на холсте, в PNG и ТЗ не попадает.</p>
+      <div class="btns"><button class="b" id="shiftRefLoad">Загрузить картинку…</button></div>
+    </div></details>
+
+    <details class="sec cache-sec" open><summary><span class="no-ring">КАШЕ — ФИГУРЫ</span><span class="ring-only">ПОДЛОЖКА — КАРТИНКА</span></summary><div class="sec-body">
+      <p class="hint">Выберите форму (круг, суперэллипс — у него радиус 0 даёт квадрат, трапеция, пентагон или своя из точек) и нажмите «Добавить фигуру» — она ляжет по центру выделенных кабинетов (или экрана). Кабинеты, которых фигура касается хоть краем, светятся целиком, остальные гаснут без номеров; «Инверсия» — наоборот. «Снаружи фигуры»: «Гасить», «Затемнить» (кабинеты не гаснут, снаружи только темнее) или «Рамка» (одна линия). Выбранная фигура двигается за жёлтый кружок в центре, растягивается за жёлтые квадратики, углы скругляются оранжевой точкой, у трапеции ширина верхнего основания меняется голубой точкой, зелёная точка над фигурой поворачивает её (с Shift — шагом 15°). Снаружи фигуры кабинеты автоматически темнее.</p>
+      <div class="tgroup ref-part no-ring">ПОДЛОЖКА — КАРТИНКА С КАШЕ</div>
+      <p class="hint ref-part ring-only">Загрузите фото или схему сцены и выставьте по ней кабинеты кольца: щелчок по кабинету — выбрать, тянуть — сдвинуть, зелёная точка — повернуть. С галочкой «Двигать картинку» подложку можно перетаскивать и растягивать. Видна только на холсте, в PNG и ТЗ не попадает.</p>
+      <p class="hint ref-part no-ring">Загрузите картинку с нарисованным каше и обведите её своей фигурой из точек. Картинка растягивается на весь экран или на выделенные кабинеты; с галочкой «Двигать картинку» её можно перетаскивать и растягивать за фиолетовые квадратики — края прилипают к линиям кабинетов (Alt — без прилипания). Подложка видна только на холсте — в PNG и ТЗ не попадает.</p>
+      <input type="file" id="refFile" accept="image/*" hidden class="ref-part">
+      <div class="btns ref-part"><button class="b" id="refLoad">Загрузить картинку…</button><button class="b" id="refDel">Убрать</button></div>
+      <div id="refBox" class="ref-part" hidden>
+        <div class="row"><span class="lbl">Привязка</span><div class="ctl"><div class="seg refFit" role="group" aria-label="Куда растянуть подложку"><button data-f="screen" title="Растянуть на весь экран">Экран</button><button data-f="cab" title="Выделите кабинеты на холсте и нажмите — картинка растянется на них">Кабинеты</button></div></div></div>
+        <label class="chk"><input type="checkbox" id="refEdit"> Двигать картинку на холсте</label>
+        <div class="row"><label for="refX">Положение</label><div class="ctl"><input type="number" id="refX" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="refY" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+        <div class="row"><label for="refW">Размер</label><div class="ctl"><input type="number" id="refW" min="10" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="refH" min="10" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+        <label class="chk"><input type="checkbox" id="refKeep"> Сохранять пропорции картинки</label>
+        <div class="row"><label for="refAlpha">Прозрачность подложки</label><div class="ctl"><input type="range" id="refAlpha" min="0" max="95" class="grow"><span class="unit num" id="refAlphaV">50%</span></div></div>
+        <label class="chk"><input type="checkbox" id="refShow"> Показывать подложку</label>
+        <p class="hint num" id="refInfo"></p>
+      </div>
+      <div class="tgroup">ФИГУРЫ</div>
+      <div class="seg shapeType icons" role="group" aria-label="Форма новой фигуры" style="align-self:flex-start">
+        <button data-t="circle" title="Круг / овал" aria-label="Круг"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/></svg></button><button data-t="round" title="Суперэллипс: прямоугольник со скруглёнными углами — радиус задаётся" aria-label="Суперэллипс"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5C19 3.5 20.5 5 20.5 12S19 20.5 12 20.5 3.5 19 3.5 12 5 3.5 12 3.5Z"/></svg></button><button data-t="trap" title="Трапеция: ширина и сдвиг верхнего основания, скругление углов" aria-label="Трапеция"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 5.5h9l4.5 13H3z"/></svg></button><button data-t="pent" title="Пентагон: растягивается как суперэллипс, углы скругляются" aria-label="Пентагон"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2 20.6 9.5 17.3 19.6H6.7L3.4 9.5Z"/></svg></button><button data-t="bez" title="Своя фигура: точки и кривые Безье" aria-label="Своя фигура"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 15C4 8 9 4.5 13 6.5S16 13 20 11.5 18 20 12 19.5 4 19 4 15Z"/><rect x="2.6" y="13.6" width="2.8" height="2.8" fill="currentColor" stroke="none"/><rect x="11.6" y="5.1" width="2.8" height="2.8" fill="currentColor" stroke="none"/><rect x="18.6" y="10.1" width="2.8" height="2.8" fill="currentColor" stroke="none"/></svg></button>
+      </div>
+      <div class="btns"><button class="b" id="shapeAdd">+ Добавить фигуру</button><button class="b" id="shapeDel">Удалить</button></div>
+      <div id="shapeBezDraw" hidden>
+        <p class="hint">Своя фигура: щёлкайте по холсту — ставятся точки, потяните при щелчке — получится изгиб. Щелчок по первой точке, Enter или «Замкнуть» — готово, Esc — отмена.</p>
+        <div class="btns"><button class="b" id="shapeBezDone">Замкнуть фигуру</button><button class="b" id="shapeBezCancel">Отмена</button></div>
+      </div>
+      <div class="row"><label for="shapeSel">Фигура</label><div class="ctl"><select id="shapeSel" class="grow"></select></div></div>
+      <div class="row"><label for="shapeW">Ширина × высота</label><div class="ctl"><input type="number" id="shapeW" min="4" class="w-md" inputmode="numeric"><span class="unit">×</span><input type="number" id="shapeH" min="4" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <div class="row"><label for="shapeWcm">Реальный размер</label><div class="ctl"><input type="number" id="shapeWcm" min="1" step="0.1" class="w-md" inputmode="decimal"><span class="unit">×</span><input type="number" id="shapeHcm" min="1" step="0.1" class="w-md" inputmode="decimal"><span class="unit">см</span></div></div>
+      <div class="row" id="shapeRotRow"><label for="shapeRot">Поворот</label><div class="ctl"><input type="number" id="shapeRot" min="-180" max="180" class="w-sm" inputmode="numeric"><span class="unit">°</span><button class="b" id="shapeRotCCW" title="Против часовой на 15°">⟲</button><button class="b" id="shapeRot0">0°</button><button class="b" id="shapeRotCW" title="По часовой на 15°">⟳</button></div></div>
+      <div id="shapeBezEdit" hidden>
+        <p class="hint">Точки двигаются мышью; у выбранной точки голубые ручки задают изгиб. Двойной щелчок по точке — острый / плавный угол, по линии — новая точка.</p>
+        <div class="btns"><button class="b" id="shapeBezDel">Удалить точку</button></div>
+      </div>
+      <div class="row" id="shapeTbRow" hidden><label for="shapeTb">Верхнее основание</label><div class="ctl"><input type="number" id="shapeTb" min="5" max="100" class="w-md" inputmode="numeric"><span class="unit">% от нижнего</span></div></div>
+      <div class="row" id="shapeSkRow" hidden><label for="shapeSk">Сдвиг верха</label><div class="ctl"><input type="number" id="shapeSk" min="-100" max="100" class="w-md" inputmode="numeric"><span class="unit">%, −100…100</span></div></div>
+      <label class="chk" id="shapeFlipRow" hidden><input type="checkbox" id="shapeFlip"> Перевернуть — широкой стороной вверх</label>
+      <div class="row" id="shapeNRow"><label for="shapeN">Радиус углов</label><div class="ctl"><input type="number" id="shapeN" min="0" class="w-md" inputmode="numeric"><span class="unit">px</span></div></div>
+      <label class="chk"><input type="checkbox" id="shapeLock"> Пропорции 1:1 (снимите — растягивается в овал / прямоугольник)</label>
+      <div class="row"><span class="lbl">Снаружи фигуры</span><div class="ctl"><div class="seg shapeMode" role="group" aria-label="Что делать снаружи фигуры">
+        <button data-m="off" title="Кабинеты, которых фигура не касается, гаснут">Гасить</button><button data-m="dim" title="Кабинеты не гаснут, снаружи фигуры всё темнее">Затемнить</button><button data-m="frame" title="Ничего не гасить и не затемнять — только линия">Рамка</button>
+      </div></div></div>
+      <label class="chk"><input type="checkbox" id="shapeInv"> Инверсия — под фигурой гаснет (или темнее при «Затемнить»), снаружи светится</label>
+      <div class="row"><label for="shapeDim">Затемнить снаружи фигуры</label><div class="ctl"><input type="range" id="shapeDim" min="0" max="100" class="grow"><span class="unit num" id="shapeDimV">45%</span></div></div>
+      <label class="chk"><input type="checkbox" id="shapeLine"> Линия по краю фигур</label>
+      <div class="row"><label for="shapeLW">Толщина и цвет линии</label><div class="ctl"><input type="number" id="shapeLW" min="1" max="200" class="w-sm" inputmode="numeric"><span class="unit">px</span><input type="color" id="shapeLC" title="Цвет линии"></div></div>
+      <div class="row"><label for="shapeLA">Прозрачность линии</label><div class="ctl"><input type="range" id="shapeLA" min="5" max="100" class="grow"><span class="unit num" id="shapeLAV">100%</span></div></div>
+    </div></details>
+
+    <details class="sec no-pix" open><summary>ИНФОРМАЦИЯ</summary><div class="sec-body">
+      <div class="row" id="guidesRow"><span class="lbl">Направляющие</span><div class="ctl"><label class="chk"><input type="checkbox" id="gCircle"> Круг</label><label class="chk"><input type="checkbox" id="gDiag"> Линии через центр</label></div></div>
+      <label class="chk no-strip no-vol"><input type="checkbox" id="showInfo"> Информация о маске (в левом нижнем углу)</label>
+      <div class="info"><span id="infoRes"></span><span id="infoPhys"></span><span id="infoCab"></span></div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </div></details>
+
+    <div class="ver"><div class="rowbtns"><button class="b authors-btn help-q" id="btnHelp">Как пользоваться</button><button class="b authors-btn" id="btnAuthors">Авторы · Telegram</button></div><span id="verText">Версия 2.0.5 · Web</span><button class="linkbtn" id="btnUpdate" hidden>Проверить обновления</button></div>
+  </aside>
+
+  <main class="stage">
+    <div class="toolbar">
+      <div class="seg appmode" id="appMode" role="group" aria-label="Режим программы">
+        <button data-mode="led" aria-pressed="true" title="LED-экраны, проекция, ТВ, pixel drop: маски, нарезка, общее поле, мэппинг, ТЗ Resolume / D3 / MP4">LED / Маски</button>
+        <button data-mode="vol" aria-pressed="false" title="Волюметрик P3D: конструкция, коммутация, ТЗ «Волюметрик»">Волюметрик</button>
+      </div>
+      <div class="seg pages" role="group" aria-label="Страница">
+        <button data-page="mask" aria-pressed="true">Маска</button>
+        <button data-page="cut" aria-pressed="false">Нарезка</button>
+        <button data-page="field" aria-pressed="false">Общее поле</button>
+        <button data-page="out" aria-pressed="false">Мэппинг</button>
+        <button data-page="tz" aria-pressed="false">Формирование ТЗ</button>
+      </div>
+      <div class="seg tools" role="group" aria-label="Инструмент">
+        <button data-tool="select" aria-pressed="true">Выбор</button>
+        <button data-tool="range" aria-pressed="false">Диапазон</button>
+        <button data-tool="black" aria-pressed="false">Гашение</button>
+        <button data-tool="pan" aria-pressed="false">Рука</button>
+      </div>
+      <div class="undo"><button class="b sq" id="btnUndo" title="Отменить (Ctrl/⌘+Z)" aria-label="Отменить шаг" disabled>↶</button><button class="b sq" id="btnRedo" title="Вернуть (Ctrl/⌘+Shift+Z, Ctrl+Y)" aria-label="Вернуть шаг" disabled>↷</button><button class="b sq" id="btnHelpTop" title="Как пользоваться" aria-label="Как пользоваться">?</button></div>
+      <div class="ttools tzoom"><button class="b sq" id="tZoomPrev" title="Предыдущий лист (←)" aria-label="Предыдущий лист" hidden>◀</button><button class="b" id="tZoom" title="Один лист крупно — проверить мелкий текст (или двойной щелчок по листу)">Крупно</button><button class="b sq" id="tZoomNext" title="Следующий лист (→)" aria-label="Следующий лист" hidden>▶</button><span class="num" id="tZoomNo"></span></div>
+      <div class="ttools" id="tSummary"></div>
+      <div class="ftools"><button class="b sq" id="fzMinus" aria-label="Уменьшить">−</button><span class="num" id="fzLabel">100%</span><button class="b sq" id="fzPlus" aria-label="Увеличить">+</button><button class="b" id="fzFit">Вписать</button></div>
+      <div class="zoom"><button class="b sq" id="zMinus" aria-label="Уменьшить">−</button><span class="num" id="zLabel">100%</span><button class="b sq" id="zPlus" aria-label="Увеличить">+</button><button class="b" id="zAuto">Авто</button></div>
+    </div>
+    <div class="canvas-wrap" id="wrap"><canvas id="pv"></canvas><canvas id="volCom" class="volcom" hidden aria-label="Коммутация кабинетов"></canvas><div id="vol3dBox" class="vol3d" hidden><canvas id="vol3d" aria-label="3D-вид волюметрика"></canvas><div class="vol3dbar" id="vol3dBar"><button data-v3="iso" title="Вид 3/4">3/4</button><button data-v3="front" title="Спереди">Спереди</button><button data-v3="side" title="Сбоку">Сбоку</button><button data-v3="top" title="Сверху">Сверху</button><button data-v3="bottom" title="Снизу, как смотрит зритель">Снизу</button><button data-v3="big" title="Крупно">⤢</button></div></div>
+      <div class="about" id="aboutView">
+        <div class="about-in">
+          <div class="about-title">LED Pixel Mask Generator</div>
+          <div class="about-copy">© 2026 Khokhryakov Viatcheslav, Nikonov Konstantin</div>
+          <div class="qrs">
+            <a class="qr" href="https://t.me/slavahoh" target="_blank" rel="noopener"><img alt="QR Telegram @slavahoh" src="data:image/png;base64,{{b64:assets/qr-slavahoh.png}}"><span class="qr-cap">Khokhryakov Viatcheslav<br><b>@slavahoh</b></span></a>
+            <a class="qr" href="https://t.me/NKNVOFFICIAL" target="_blank" rel="noopener"><img alt="QR Telegram @NKNVOFFICIAL" src="data:image/png;base64,{{b64:assets/qr-nknvofficial.png}}"><span class="qr-cap">Nikonov Konstantin<br><b>@NKNVOFFICIAL</b></span></a>
+          </div>
+        </div>
+      </div>
+      <div class="toast" id="toast" hidden></div></div>
+    <div class="mstrip" id="mStrip" aria-label="Маски проекта"></div>
+    <div class="mstrip fstrip" id="fStrip" aria-label="Общие поля проекта"></div>
+    <div class="mstrip fstrip cstrip" id="cStrip" aria-label="Нарезки проекта"></div>
+    <div class="mstrip fstrip ostrip" id="oStrip" aria-label="Выходы мэппинга"></div>
+  </main>
+</div>
+
+<div class="modal" id="saveSheet" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+    <h2 id="saveTitle">Файл готов</h2>
+    <p class="hint num" id="saveName"></p>
+    <div class="btns" style="justify-content:flex-end"><button class="b" id="saveCancel">Закрыть</button><a class="b" id="saveLink" download>Скачать</a><button class="b" id="saveShare" style="border-color:var(--accent)">Сохранить в Файлы…</button></div>
+  </div>
+</div>
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle"></h2>
+    <p class="hint" id="modalText"></p>
+    <input type="text" id="modalInput">
+    <div class="btns" style="justify-content:flex-end"><button class="b" id="modalCancel">Отмена</button><button class="b" id="modalAlt" hidden>Не сохранять</button><button class="b" id="modalOk" style="border-color:var(--accent)">OK</button></div>
+  </div>
+</div>
+<div class="modal" id="recent" hidden>
+  <div class="modal-card recent-card" role="dialog" aria-modal="true" aria-labelledby="recentTitle">
+    <h2 id="recentTitle">Последние проекты</h2>
+    <p class="hint">Проекты запоминаются, когда вы их открываете, сохраняете или выгружаете ТЗ. Открываются отсюда, даже если файла уже нет на месте.</p>
+    <div class="recent-list" id="recentList"></div>
+    <div class="btns" style="justify-content:space-between"><button class="b" id="recentClear">Очистить список</button><button class="b" id="recentClose">Закрыть</button></div>
+  </div>
+</div>
+<div class="help" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="help-card">
+    <div class="help-head"><h2 id="helpTitle">Как пользоваться</h2><button class="b sq x2" id="helpClose" aria-label="Закрыть">✕</button></div>
+    <nav class="help-toc" aria-label="Разделы"><a href="#help-s1" data-h="help-s1">Где открыть</a><a href="#help-s2" data-h="help-s2">Вкладка «Маска»</a><a href="#help-sm" data-h="help-sm">Режимы LED / Волюметрик</a><a href="#help-sc" data-h="help-sc">Нарезка</a><a href="#help-s3" data-h="help-s3">Вкладка «Общее поле»</a><a href="#help-so" data-h="help-so">Мэппинг выходов</a><a href="#help-sv" data-h="help-sv">Волюметрик</a><a href="#help-s4" data-h="help-s4">Вкладка «Формирование ТЗ»</a><a href="#help-s5" data-h="help-s5">Проект</a><a href="#help-s6" data-h="help-s6">Имена файлов</a><a href="#help-s7" data-h="help-s7">Клавиши и жесты</a><a href="#help-s8" data-h="help-s8">Авторы и связь</a></nav>
+    <div class="help-body" id="helpBody"><p>LED Pixel Mask Generator делает пиксельные маски LED-экранов (PNG в точном разрешении) и ТЗ для подрядчиков контента (PPTX + PDF). Инструкция обновлена по веб-версии 2.0.146. Кроме масок и ТЗ в программе есть два режима (LED/Маски и Волюметрик), нарезка длинных экранов, мэппинг масок на выходы и генерация адресации для MADRIX, MAD-SHOW и TouchDesigner.</p>
+<h2 id="help-s1">Где открыть</h2>
+<table>
+<thead>
+<tr>
+<th>Версия</th>
+<th>Где взять</th>
+<th>Что есть</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Веб (браузер, iPhone, iPad)</td>
+<td><a target="_blank" rel="noopener" href="https://slavahoh1976-ops.github.io/-tz/">slavahoh1976-ops.github.io/-tz</a></td>
+<td>Всё: маски, общие поля, ТЗ Resolume / D3 / MP4</td>
+</tr>
+<tr>
+<td>Android</td>
+<td>файл LED-Mask-Android.apk</td>
+<td>То же, что веб</td>
+</tr>
+<tr>
+<td>Mac и Windows</td>
+<td><a target="_blank" rel="noopener" href="https://slavahoh1976-ops.github.io/-tz/download/">страница скачивания</a></td>
+<td>Маски и ТЗ Resolume / D3; общих полей и вкладки ТЗ пока нет</td>
+</tr>
+</tbody>
+</table>
+<p>На iPhone сайт можно добавить на экран «Домой» (Поделиться → На экран «Домой») — откроется как приложение. Проект между запусками хранится в браузере; чтобы передать его другому человеку или на другой компьютер, сохраните файл проекта (раздел «Проект»).</p>
+<p>Вверху три вкладки: <strong>Маска</strong> — один экран, <strong>Общее поле</strong> — несколько экранов вместе, <strong>Формирование ТЗ</strong> — сборка ТЗ. Внизу левой панели — кнопка «Авторы · Telegram».</p>
+<h2 id="help-s2">Вкладка «Маска»</h2>
+<p>На этой вкладке настраивается один экран. Под холстом — лента миниатюр всех экранов проекта: нажатие открывает экран, «+» добавляет новый.</p>
+<h3>Экран и кабинеты</h3>
+<p>Переключатель <strong>«LED-экран / Проекция»</strong> вверху раздела выбирает, что это за экран. Для LED — кабинеты, как ниже; для проекции — проекторы (см. «Проекция»).</p>
+<ol>
+<li>Выберите <strong>Тип кабинета</strong> — подставятся разрешение кабинета, физический размер и цвет маски. Нет в списке — введите вручную строку <strong>«Пиксели кабинета»</strong> (ширина × высота).</li>
+<li>Три строки, везде «ширина × высота»: 1-я — пиксели кабинета, 2-я — <strong>«Кабинеты»</strong> (сколько штук), 3-я — <strong>«Размер»</strong> в метрах. Можно задать кабинеты или метры: программа подберёт ближайшее целое число кабинетов (7,8 м при кабинете 0,5 м → 16 кабинетов → 8 м).</li>
+<li>Цвет маски и цвет нумерации меняются своими квадратиками цвета.</li>
+</ol>
+<p>Несколько экранов в проекте: «+ Экран» добавляет новый с теми же настройками (но без гашения, покраски, контуров и доп. текста), «−» удаляет текущий.</p>
+<h3>Выделение и цвет кабинетов</h3>
+<p>Инструмент выбирается над холстом:</p>
+<table>
+<thead>
+<tr>
+<th>Инструмент</th>
+<th>Что делает</th>
+<th>С мышью</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Выбор</td>
+<td>Нажатие добавляет или убирает кабинет из выделения</td>
+<td>Ctrl / ⌘ + клик</td>
+</tr>
+<tr>
+<td>Диапазон</td>
+<td>Протяните — выделится прямоугольник</td>
+<td>Shift + клик / протяжка</td>
+</tr>
+<tr>
+<td>Гашение</td>
+<td>Кабинет становится чёрным; можно протянуть по ряду</td>
+<td>Alt + клик / протяжка</td>
+</tr>
+<tr>
+<td>Рука</td>
+<td>Двигает изображение</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Выключить все / Включить все</strong> — гасят или включают сразу все кабинеты.</li>
+<li><strong>Покрасить выделенные</strong> — выделенные кабинеты заливаются цветом из квадратика слева.</li>
+<li><strong>Угловые кабинеты</strong> — выделите кабинеты и нажмите форму: треугольник (◣ ◤ ◥ ◢ — какая половина светится) или четверть круга от одного из углов. Применяется сразу, остальная часть кабинета станет чёрной. «Убрать угловые» возвращает выделенные (или все, если ничего не выделено).</li>
+<li><strong>Фигурные кабинеты</strong> — узкие кабинеты для углов: «1/4 · 90°» и «1/2 · 60°» — четверть и половина ширины выбранного кабинета (для 192×192 это 48×192 и 96×192, пересчитывается само при смене кабинета), или «Свой» — впишите ширину в пикселях (например 128); поле «Свой» сразу показывает текущую ширину выделенного столбца, чтобы стартовать от неё. Выделите любой кабинет и нажмите тип — весь его столбец сразу станет узким, без чёрных полей. Разрешение экрана и общего поля пересчитывается само. «Убрать фигурные» возвращает выделенные столбцы (или все).</li>
+<li><strong>Каше — фигуры</strong> — с «Инверсией» фигура становится дыркой: кабинеты, которых она касается, гаснут, и рисуются два контура — сама дырка и внешний круг каше по дальним углам погашенных кабинетов. выберите форму («Круг» или «Скруглённый» — прямоугольник со скруглёнными углами; радиус 0 — обычный квадрат) и нажмите «+ Добавить фигуру»: она ляжет по центру выделенных кабинетов (или экрана). Размер — в пикселях маски или в <strong>реальных сантиметрах</strong> (пересчёт по физическому размеру кабинета выбранного типа кабинета; меняете одно — другое считается само). «Снаружи фигуры»: <strong>«Гасить»</strong> — кабинеты, которых фигура касается хоть краем, светятся целиком, остальные гаснут без номеров; <strong>«Затемнить»</strong> (по умолчанию у новой фигуры) — кабинеты не гаснут, всё снаружи фигуры просто темнее; <strong>«Рамка»</strong> — ничего не гаснет и не темнеет, только линия. Насколько темнее снаружи — ползунок «Затемнить снаружи фигуры» (по умолчанию 45 %; при «Гасить» затемняются части кабинетов за линией фигуры). «Инверсия» — кабинеты под фигурой гаснут; при «Затемнить» с инверсией наоборот темнее внутри фигуры, а снаружи всё светится. Выбранная фигура двигается за жёлтый кружок в центре, растягивается за жёлтые квадратики, а у скруглённого оранжевая точка у правого верхнего угла меняет радиус углов (до «таблетки»). «Пропорции 1:1» — снимите, чтобы растянуть в овал или прямоугольник. «Линия по краю фигур» — толщина, цвет и прозрачность.</li>
+<li><strong>Границы ячеек</strong> — как в Keynote: выделите кабинеты и нажмите, какие границы нарисовать (левая, внутренние вертикальные, правая; верхняя, внутренние горизонтальные, нижняя; внешний контур; все внутренние; все). Белая линия 2 px (по внешнему краю маски — 1 px) появляется сразу, повторное нажатие убирает. «Убрать границы» — в выделении (или все), «Показать / скрыть» — не удаляя. Галочка <strong>«Автоконтур»</strong> рисует линию только там, где убраны кабинеты: выключили кабинет «Гашением» — вокруг него сразу появляется граница (по краю экрана ничего не добавляется, там своя рамка 1 px).</li>
+</ul>
+<h3>Проекция</h3>
+<p>Тест-паттерн для проекторов. Включается переключателем «Проекция»; экран сам называется «projection 1», «projection 2»… (своё название не меняется). По умолчанию — один проектор 1920×1200. Переключатель «Паттерн»: сетка проекторов или купол (domemaster).</p>
+<ol>
+<li><strong>Проектор</strong> — готовые разрешения (Full HD, WUXGA, 4K…) или своё. <strong>Ориентация</strong>: «Обычный» или «Портрет» — проектор повёрнут на 90°, его кадр на маске становится вертикальным (1920×1200 → 1200×1920).</li>
+<li>Три строки «ширина × высота»: <strong>«Пиксели проектора»</strong>, <strong>«Проекторы»</strong> (сколько по горизонтали и вертикали), <strong>«Размер»</strong> в метрах (можно не задавать).</li>
+<li><strong>Пропорции и размер по умолчанию.</strong> Пока свой размер не вписан, поля заполнены сами — по 100 пикселей на метр (1920×1200 → 19,2 × 12 м). Рядом — <strong>пропорции</strong> (16:9, 8:5, 3:5…): вписали пропорции — высота полотна пересчитается при той же ширине. Галочка «Соблюдать пропорции» — меняете ширину, высота меняется по пропорциям, и наоборот; снимите — стороны независимы. Разрешение и перекрытие в режиме полотна округляются до чётных.</li>
+<li><strong>Размер полотна в метрах.</strong> Порядок: проектор → количество → размер полотна (например 3 × 5 м). Разрешение считается само: у одного проектора большая сторона кадра ложится на большую сторону полотна (кадр сам разворачивается в портрет, если полотно вертикальное), 3 × 5 м на WUXGA → 1152×1920 px. У нескольких проекторов перекрытие по ширине вы задаёте в % или px, а по высоте оно подбирается само (у одного ряда — разрешение по высоте). Если полотно не закрывается проекторами при перекрытии 0–50 %, кадры просто выходят за край полотна.</li>
+<li><strong>Полотно и перекрытие в пикселях</strong> (без размера в метрах). Задайте проектор и их количество, затем нужное <strong>полотно в пикселях</strong> — перекрытие посчитается само и покажется в % и в px (3 × WUXGA на полотно 5000 px → перекрытие 380 px, 19,8 %). Можно и наоборот: вписать перекрытие в % или в px — полотно пересчитается. Перекрытие — от 0 до 50 % кадра проектора.</li>
+<li><strong>Шаг сетки</strong> в пикселях и цвета <strong>фона, линий и текста</strong> (текст отдельно от линий).</li>
+<li>У всех числовых полей есть стрелки <strong>▲▼</strong>, как у кабинетов: пиксели и проекторы — по 1, метры — по 0,1, перекрытие — по 0,5%, шаг сетки — по 10 px, купол — по 128 px и 5°. Удержание листает.</li>
+<li>Галочки: зоны перекрытия, рамки и номера проекторов (P1, P2… с разрешением и координатами), круги, подписи клеток A1, B1…, штриховка, цветовая полоса, инверсия (белый фон).</li>
+<li><strong>Купол</strong> (переключатель «Паттерн») — полярная сетка domemaster для купольной проекции: квадрат 1K / 2K / 4K / 6K / 8K или своя сторона, зенит в центре, азимут 0° сверху по часовой. Задаются <strong>угол обзора</strong> (180° — полусфера, больше — ниже горизонта), <strong>шаг азимута и высоты</strong> в градусах. Красный крест, фиолетовые кольца каждые 30° высоты и край купола; галочки — мелкая сетка, подписи градусов, стороны FRONT / BACK / LEFT / RIGHT. Текст и цветовая полоса — ниже центра, чтобы не закрывать зенит.</li>
+</ol>
+<p>Проекция сохраняется в PNG, ставится в общее поле и попадает в ТЗ, как обычная маска.</p>
+<h3>ТВ-панели</h3>
+<p>Переключатель «ТВ-панели» в «Экран и кабинеты» — настроечная картинка для телевизоров и видеостен. Экран сам называется «tv 1», «tv 2»…</p>
+<ol>
+<li><strong>Панель</strong> — Full HD, 4K, HD… или своё разрешение; <strong>ориентация</strong> — горизонтально или вертикально; <strong>панели</strong> — сколько по горизонтали и вертикали (видеостена).</li>
+<li><strong>Диагональ</strong> в дюймах (можно не задавать) — по ней считается физический размер. <strong>Подпись панелей</strong> — название + номер (TV 1, TV 2…), на плашке каждой панели — её разрешение и координаты X/Y.</li>
+<li>Галочки: цветные полосы и градации серого, сетка и круг (центр, круги по углам), зоны безопасности 5 % и 10 %. По краю каждой панели — белая рамка и стрелки к краям: сразу видно, если телевизор обрезает картинку.</li>
+</ol>
+<h3>Волюметрик</h3>
+<p>Переключатель «Волюметрик» — объёмная LED-матрица из нитей: кабинеты 50×50 см висят под потолком, из каждого вниз — сетка нитей. Модели: P3D Matrix Light CL-3DP62.5 с нитью 2 м (32 px) или 4 м (64 px), P3D Matrix Light CL-3DP83.3 (6×6 нитей) с нитью 3 м (36 px), либо «Свой кабинет». «Кабинеты» — сколько по ширине и в глубину. Раздел работает в режиме <strong>Коммутация</strong> (маска волюметрика сейчас отключена).</p>
+<ul>
+<li><strong>Маска «Срезы по глубине»</strong> — каждый ряд нитей по глубине отдельная картинка (ширина — нити по ширине, высота — пиксели нити), срез 1 — передний ряд. «Срезов в ряд» — сколько срезов в одной строке маски.</li>
+<li><strong>Маска «По адресации»</strong> — все нити подряд в порядке коммутации: кабинет 1, 2, … (IP по порядку), внутри кабинета — по листу адресации. Цвет — кабинет, полосы яркости — universe.</li>
+<li><strong>Коммутация</strong> — схема кабинетов на весь холст: номер кабинета (порядок коммутации), IP, universe, жёлтая линия со стрелками от первого кабинета, нити с номерами внутри кабинета. «Вид на кабинеты»: <em>сверху</em> (фронт внизу) или <em>снизу</em> — на лицевую сторону, как на листе адресации (фронт вверху). Порядок: «Первый кабинет» (передний/задний, левый/правый), «Направление» (по рядам или по столбцам), «змейкой» — или «Задать порядок щелчками»: щёлкайте кабинеты на схеме от первого до последнего; «Сбросить ручной порядок» — вернуть по углу и направлению. <strong>Гашение</strong>: «Гасить кабинеты» (или инструмент «Гашение» над холстом, или Alt + щелчок) — щелчок по кабинету на схеме гасит или включает его, как у LED-экранов; так из сетки собирается любая расстановка. Погашенные кабинеты не коммутируются, не получают IP и не светятся в маске и 3D; «Включить все» — вернуть.</li>
+<li><strong>Адресация нитей в кабинете</strong> — как на листе P3D (вид снизу, на лицевую сторону): четверти 1 (верх-право), 2 (верх-лево), 3 (низ-право), 4 (низ-лево), в четверти — ряды сверху вниз, справа налево; верх листа (где первые номера) — фронт кабинета.</li>
+<li><strong>DMX и IP</strong> — нить занимает пиксели × 3 канала; в один universe входит столько целых нитей, сколько помещается в 512 каналов, следующая начинается с нового universe. У каждого кабинета свой IP, от «IP первого кабинета» по порядку коммутации. Art-Net: порт 6454, Net 0, Subnet 0.</li>
+<li><strong>3D-вид</strong> — окно справа внизу холста: тяните мышью или пальцем — поворот, колесо — масштаб, двойной щелчок — исходный вид. Номера на потолке — порядок кабинетов. Галочка «Показывать 3D-вид» прячет окно.</li>
+<li><strong>ТЗ «Волюметрик»</strong> — в «Формирование ТЗ» → «Тип ТЗ» последний пункт; ниже выбор нити: 2 м, 4 м или 3 м. Первый лист — данные кабинета (протокол, параметры, IP, лист адресации, DMX), его тексты можно править как у других шаблонов. Дальше — маски, а для каждого экрана-волюметрика отдельные листы: вид сверху с коммутацией, вид снизу (лицевая сторона) без коммутации — только кабинеты и номера нитей, и 3D-вид в том ракурсе, как повёрнут сейчас. Галочки «Маска», «Коммутация», «3D-вид» — что из волюметрика положить в ТЗ (по умолчанию — коммутация и 3D-вид). Тип нити (2 / 4 / 3 м) выбирается сам по модели кабинета волюметрика. В ТЗ Resolume, D3 и MP4 экраны-волюметрики не попадают.</li>
+</ul>
+<h3>Pixel drop</h3>
+<p>Переключатель «Pixel drop» — пиксельная карта для Fantaled, палок и бочек. Рамок нет: каждая вертикаль (колонка) — свой цвет, соседние всегда хорошо различимы; номер колонки сверху. Кругов, линий через центр и блока информации на этой карте нет — только цвета и номера (на ТВ-панелях блока информации тоже нет).</p>
+<ol>
+<li><strong>Элемент</strong> — готовые: Fantaled 16×96 px · 80×300 см, LED tube 1 м · 24 px, 2 м · 48 px, 1 м · 12 px, 2 м · 24 px, бочка — или свой. Пиксели и сантиметры элемента можно поменять под свою модель.</li>
+<li><strong>Шаг между элементами</strong> в см (по ширине × по высоте) — по умолчанию вплотную. <strong>Колонки × ряды</strong> задаются штуками или через <strong>общий размер в метрах</strong>: элементов = (размер − элемент) / шаг + 1. Физический размер считается сам.</li>
+<li><strong>Маска</strong>: «По пикселям» — элементы вплотную, карта = колонки × пиксели элемента, расстояние между элементами не рисуется; «По размеру» — маска в пропорциях реальных размеров в см: одна плотность пикселей на сантиметр по ширине и высоте (по самой плотной стороне элемента), элементы и чёрные промежутки переводятся из см в пиксели.</li>
+<li>Галочки: номера колонок (все одного размера), ряды чуть разной яркости (видно, где кончается один элемент и начинается следующий).</li>
+</ol>
+<h3>Кольцо</h3>
+<p>Переключатель «Кольцо» — кабинеты по кругу или эллипсу (круглые сцены, кольца вокруг центра). Колец в одном экране может быть несколько, каждое своего цвета; номер кабинета — «кольцо,кабинет» (1,5), просто номер или сквозной.</p>
+<ol>
+<li><strong>Кабинет</strong> — тип из списка или свои пиксели и размер в мм (по ним сантиметры).</li>
+<li><strong>Кольца</strong>: «+ Кольцо» добавляет кольцо снаружи предыдущего. У выбранного кольца — сколько кабинетов, <strong>диаметр</strong> по центрам кабинетов в px или см, начальный угол (0 — сверху), дуга (360 — весь круг, меньше — дуга), направление нумерации, кабинеты «по кругу» или «все прямо», цвет и сдвиг центра.</li>
+<li><strong>Растянуть</strong>: с «Сохранять пропорции» ширина и высота кольца меняются вместе, без — кольцо становится эллипсом (кабинеты поворачиваются по его краю). «○ Круг» возвращает круг. Мышью — за жёлтые квадратики на холсте, когда не выбран ни один кабинет.</li>
+<li><strong>Любой кабинет</strong>: щелчок — выбрать (Shift / Ctrl / ⌘ — добавить, рамкой по пустому месту — несколько), тянуть — сдвинуть, зелёная точка — повернуть на любой угол (Shift — шагом 15°), поле «Поворот» и кнопки ⟲ ⟳ 1° / 15°. Клавиши: стрелки — сдвиг на 1 px (Shift — 10), [ и ] — поворот на 1° (Shift — 15°), Delete — погасить, Esc — снять выбор. «Вернуть на кольцо» сбрасывает сдвиг и поворот.</li>
+<li><strong>По картинке</strong>: в разделе «ПОДЛОЖКА — КАРТИНКА» загрузите фото или схему сцены и выставьте по ней кабинеты. Подложка видна только на холсте.</li>
+<li>Размер маски — по кольцам с отступом (всегда чётный) или свой. На общем поле с «Накладывать маски на маски» у кольца видны только кабинеты — его можно класть поверх других масок.</li>
+</ol>
+<h3>Текст на маске</h3>
+<ul>
+<li><strong>Основной текст</strong> — до трёх строк в центре: разрешение, название экрана, размер в метрах. Каждая строка включается галочкой «показ»; метраж по умолчанию выключен. Размер — «Авто» или из списка, кнопки − / + меняют на 10 px. Поворот — «⟲ 45°» / «⟳ 45°» шагом 45°, «0°» возвращает прямо.</li>
+<li><strong>Информация о маске</strong> — галочка выводит в левый нижний угол маски сводку: кабинет (размер в мм и разрешение), разрешение экрана, физический размер и сколько всего кабинетов светится (чёрные не считаются). Галочка — в разделе «Информация». У проекции — проектор, ориентация, количество, перекрытие, разрешение и размер.</li>
+<li><strong>Дополнительный текст</strong> — «+ Добавить», затем выберите его в списке «Активный текст» и двигайте прямо на холсте. Так же двигается и основной текст. «Размер текста» и «Поворот текста» под списком — общие: меняют тот текст, что выбран в «Активный текст» (если не выбран — основной).</li>
+<li><strong>Магнит текста</strong> — при перетаскивании центр и края текста притягиваются к центру и краям экрана и к центрам и краям других текстов, по горизонтали и по вертикали; место показывает пунктир. Alt — без магнита.</li>
+</ul>
+<h3>Нумерация и направляющие</h3>
+<p>Формат номера (1,1 · 1-1 · 1 / 1 · C1-R1 · сквозной), угол, с которого начинается нумерация, и место номера в кабинете выбираются списками. Направляющие «Круг» и «Линии через центр» включаются по отдельности.</p>
+<h3>Сохранение PNG</h3>
+<p>«Сохранить PNG» — текущая маска в точном разрешении без потерь. «Все PNG (ZIP)» — все маски проекта одним архивом. Сетка между кабинетами — 2 px цвета RGB 64,64,64, внешняя рамка — 1 px белая.</p>
+<h2 id="help-sm">Режимы LED / Волюметрик</h2>
+<p>Вверху слева — переключатель <strong>LED / Маски</strong> и <strong>Волюметрик</strong>. В режиме «LED / Маски» доступны плоские экраны, нарезка, общее поле, мэппинг и ТЗ для Resolume / D3 / MP4. В режиме «Волюметрик» — только объёмные конструкции (раздел называется «Конструкция») и ТЗ для волюметрика. Список экранов показывает только экраны текущего режима; выбранный режим сохраняется в проекте.</p>
+
+<h2 id="help-sc">Нарезка</h2>
+<p>Для очень длинных или высоких экранов. Маску режут по кабинетам на части и складывают друг под другом (или рядом) — получается удобный кадр для контента и медиасервера. Нажмите «+ Нарезка», выберите маску и число частей (стрелками ▲▼ у каждой части можно задать свой размер в кабинетах). На каждой части подписано, какая это часть и где разрез, а в ТЗ под маской — пояснение для контентщиков. Пока нарезка не создана, настроек нет — только кнопка создания. Колесом и тачпадом окно масштабируется.</p>
+
+<h2 id="help-so">Мэппинг выходов</h2>
+<p>Раскладка готовых масок по выходам видеопроцессора, как Advanced Output в Resolume, но слайсы выделяются по кабинетам. Источник (вход) — общее поле, маска или нарезка. Вид по умолчанию «Input + Output» — вход и выход сразу. Протяните мышью по маске во входе — слайс прилипнет к краям кабинетов; на выходе двигайте слайсы и тяните за углы, чтобы менять их размер (прилипают к краям выхода и друг к другу; Alt — без привязки, Shift — без пропорций). Размер слайса на выходе можно задать и числами «Выход W × H», в том числе формулой — 192*6, 3840/2, (192+8)*4. Переключатель «Пропорции: сохранять / свободно». Экспорт — PNG каждого выхода.</p>
+
+<h2 id="help-sv">Волюметрик</h2>
+<p>Объёмные (3D) конструкции из пикселей: задаёте габариты, шаг, модули, смотрите схему коммутации и 3D-вид (оба окна масштабируются колесом и тачпадом). В ТЗ волюметрика в разделе «Экспорт» есть блок «Адресация» — генерация готовых сетапов с координатной адресацией каждого пикселя (IP, universe, каналы — как в коммутации) для <strong>MADRIX</strong> (патч и сетап .mpz, таблицы CSV), <strong>MAD-SHOW</strong> (.clen) и <strong>TouchDesigner</strong> (.vmtd). Отмеченные файлы кладутся в архив ТЗ, в папку «Адресация».</p>
+
+<h2 id="help-s3">Вкладка «Общее поле»</h2>
+<p>Общее поле собирает несколько экранов проекта в одну картинку и считает её ширину и высоту. Размер поля всегда чётный: если экраны дают нечётный габарит, поле дополняется на 1 px справа или снизу.</p>
+<ol>
+<li><strong>Выберите поле</strong> во вкладках вверху раздела. «+ Поле» добавляет новое, «Переименовать» и «Удалить поле» работают с текущим.</li>
+<li><strong>Отметьте экраны</strong> галочками в списке. Новый экран встаёт вплотную справа от уже стоящих. Быстро: «Все на поле», «В ряд», «В столбик», «Убрать все».</li>
+<li><strong>Расставьте экраны</strong> на холсте мышью или пальцем. С галочкой «Магнит» края притягиваются к соседним (стык и выравнивание), место показывает пунктир. Alt — двигать без магнита. Точно — стрелками (1 px, с Shift 10 px) или числами X / Y.</li>
+<li><strong>Поверните</strong>, если нужно: выберите экран и нажмите «⟲ 45°» или «⟳ 45°»; «0°» вернёт как было.</li>
+<li><strong>Настройте надпись поля</strong>: разрешение и название поля по центру. Галочки «Надпись» и «Метраж» (по умолчанию выключен), размер текста с − / +. Надпись двигается мышью, у центра притягивается; «В центр» вернёт на место.</li>
+<li><strong>Сохраните</strong> «Сохранить PNG поля» или перейдите к «Формирование ТЗ →».</li>
+</ol>
+<p>В панели видно размер поля в пикселях и метрах. Метры считаются, только если у всех экранов на поле одинаковый шаг пикселя. Пересечения экранов подсвечиваются красным; пустые места в PNG чёрные. Двойной клик по экрану открывает его на вкладке «Маска».</p>
+<h2 id="help-s4">Вкладка «Формирование ТЗ»</h2>
+<p>ТЗ сохраняется одним ZIP: PPTX по шаблону, такой же PDF и PNG каждой маски и поля. Галочка «Файл проекта в архив» (по умолчанию включена): в тот же ZIP, рядом с PPTX, PDF и PNG, кладётся файл проекта .ledmask — потом его можно открыть кнопкой «Открыть проект» и поправить. На холсте — предпросмотр всех слайдов.</p>
+<ol>
+<li><strong>Отметьте, что войдёт.</strong> По умолчанию отмечены общие поля целиком и маски, которые не стоят на полях. Маски с полей по отдельности можно добавить галочкой под полем. «По умолчанию» возвращает этот выбор.</li>
+<li><strong>Картинки</strong> (необязательно). «Добавить картинки…» — можно выбрать сразу несколько (фото, рендеры, схемы). Они встают на слайды после требований, в порядке списка. «Картинок на слайде»: «Авто» (горизонтальные до трёх столбиком, вертикальные до двух в ряд) или ровно 1, 2, 3 на слайд. Стрелки ↑ ↓ меняют порядок, × убирает картинку, «Убрать все» — все. Подпись над картинкой правится в её строке (у первой по умолчанию «Общий план», у остальных — имя файла). Снята галочка — картинки в ТЗ не попадут. Картинки живут, пока открыта программа, и очищаются при «Сброс» и открытии другого проекта.</li>
+<li><strong>Текст в ТЗ</strong> (необязательно). Один редактор для всех слайдов: нажмите на слайд в предпросмотре справа или выберите его в списке «Слайд» — выбранный слайд обведён, его текст открывается в редакторе. На 1-м слайде — весь текст требований выбранного шаблона: меняйте, удаляйте, дописывайте строки; «Вернуть текст шаблона» — как было. На остальных слайдах — свой текст, он встанет над масками или картинками.
+<ul>
+<li>Редактор показывает текст сразу с оформлением. Выделите слова и нажмите <strong>Ж</strong> — жирный; нажмите на квадратик цвета и выберите цвет — слова покрасятся; выберите размер в списке «Размер» — он применится сразу. <strong>«Сбросить»</strong> убирает жирный, цвет и размер. На слайдах 2 и дальше без выделения цвет и размер применяются ко всему тексту. Ссылки https://… кликаются сами.</li>
+<li>Строки, которые вы не трогали, сохраняют оформление шаблона (зелёный, подчёркивание, ссылки).</li>
+<li>Текст <strong>двигается мышью или пальцем</strong> прямо на слайде в предпросмотре (появляется пунктирная рамка). Сдвинутый текст лежит поверх масок; «Над масками» (или «Вернуть на место» на 1-м слайде) возвращает его.</li>
+</ul></li>
+<li><strong>Выберите тип ТЗ</strong> в списке и нажмите «Сохранить ТЗ».</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Тип ТЗ</th>
+<th>Для чего</th>
+<th>Кодек в шаблоне</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resolume</td>
+<td>Плейбек в Resolume</td>
+<td>DXV3</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>Медиасервер disguise (d3)</td>
+<td>HAP / NOTCH LC</td>
+</tr>
+<tr>
+<td>Медиаплееры (MP4)</td>
+<td>Простые медиаплееры</td>
+<td>MPEG-4</td>
+</tr>
+</tbody>
+</table>
+<p>Устройство ТЗ: первый слайд — требования из шаблона, дальше картинки и маски. «Масок на слайде»: «Авто» — горизонтальные до трёх на слайд столбиком, вертикальные до двух в ряд; или ровно от 1 до 10 на слайд. Число можно задать и для отдельного слайда: в списке рядом выберите «для слайда N» и укажите своё число — остальные слайды останутся как заданы «для всех слайдов». Для 2 и больше выбирается «Расстановка» — сколько по горизонтали и сколько по вертикали (например 2 × 3); «Авто» подбирает вариант, где маски крупнее всего. Галочка «Одинаковые маски — одного размера»: маски одинакового разрешения показываются одним размером, даже если они на разных слайдах. Пояснительный текст встаёт вплотную над маской. Над каждой маской вплотную подпись «разрешение | название | размер в метрах» (у проекции — «проекция», если метры не заданы). Свой текст, цвет и положение текста попадают и в PPTX, и в PDF. PDF — точная копия PPTX, ссылки в нём кликаются.</p>
+<h2 id="help-s5">Проект</h2>
+<p>Проект — это все экраны, общие поля и выбор для ТЗ сразу. Браузер запоминает его сам, но только на этом устройстве.</p>
+<ul>
+<li><strong>Новый</strong> — новый пустой проект.</li>
+<li><strong>Последние</strong> — список недавно открытых и сохранённых проектов.</li>
+<li><strong>Сохранить</strong> (Ctrl+S) — файл .ledmask (в Claude — .ledmask.json). Если проект открыт или уже сохранён в браузере Chrome/Edge — записывается в тот же файл без вопросов, иначе спрашивает, куда сохранить.</li>
+<li><strong>Сохранить как</strong> (Ctrl+Shift+S) — всегда в новый файл.</li>
+<li><strong>Открыть</strong> (Ctrl+O) — читает файлы .ledmask из веб-версии, Mac и Windows.</li>
+<li>Если в проекте есть несохранённые изменения, «Новый», «Открыть» и открытие из «Последних» сначала спросят: «Сохранить», «Не сохранять» или «Отмена».</li>
+<li><strong>↶ Отменить / ↷ Вернуть</strong> — кнопки над холстом. Отменяется любое изменение маски, поля или выбора ТЗ, до 100 шагов; перетаскивание — один шаг. Выделение и масштаб не отменяются.</li>
+</ul>
+<p>Если проект с общими полями открыть и пересохранить на Mac или Windows, поля пропадут — там их пока нет.</p>
+<h2 id="help-s6">Имена файлов</h2>
+<p>Маски называются «разрешение-название», общие поля — «разрешение-scr» и номера экранов на поле.</p>
+<table>
+<thead>
+<tr>
+<th>Что</th>
+<th>Пример</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Маска</td>
+<td>3072x1728-screen 1.png</td>
+</tr>
+<tr>
+<td>Общее поле из экранов 2, 3 и 5</td>
+<td>2304x1728-scr2-3-5.png</td>
+</tr>
+<tr>
+<td>Архив ТЗ</td>
+<td>Проект ТЗ_Resolume.zip</td>
+</tr>
+<tr>
+<td>Внутри архива</td>
+<td>Проект_ТЗ_Resolume.pptx, Проект_ТЗ_Resolume.pdf и PNG всего, что вошло в ТЗ</td>
+</tr>
+</tbody>
+</table>
+<p>Номера экранов — из списка проекта («1. screen 1»). Если у двух масок совпадают и разрешение, и название, вторая получит « (2)».</p>
+<h2 id="help-s7">Клавиши и жесты</h2>
+<table>
+<thead>
+<tr>
+<th>Действие</th>
+<th>Компьютер</th>
+<th>Телефон / планшет</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Добавить / убрать кабинет из выделения</td>
+<td>Ctrl / ⌘ + клик</td>
+<td>Инструмент «Выбор», касание</td>
+</tr>
+<tr>
+<td>Выделить прямоугольник</td>
+<td>Shift + протяжка</td>
+<td>«Диапазон», протянуть пальцем</td>
+</tr>
+<tr>
+<td>Погасить кабинеты</td>
+<td>Alt + клик / протяжка</td>
+<td>«Гашение»</td>
+</tr>
+<tr>
+<td>Снять выделение</td>
+<td>Esc</td>
+<td>«Снять выделение»</td>
+</tr>
+<tr>
+<td>Отменить шаг</td>
+<td>Ctrl / ⌘ + Z</td>
+<td>↶</td>
+</tr>
+<tr>
+<td>Вернуть шаг</td>
+<td>Ctrl / ⌘ + Shift + Z, Ctrl + Y</td>
+<td>↷</td>
+</tr>
+<tr>
+<td>Масштаб</td>
+<td>Ctrl + колесо (на общем поле — просто колесо)</td>
+<td>Щипок двумя пальцами</td>
+</tr>
+<tr>
+<td>Сдвинуть экран на поле точно</td>
+<td>Стрелки (1 px), Shift + стрелки (10 px)</td>
+<td>Поля X / Y</td>
+</tr>
+<tr>
+<td>Двигать без магнита</td>
+<td>Alt при перетаскивании</td>
+<td>Снять галочку «Магнит»</td>
+</tr>
+</tbody>
+</table>
+<p>В текстовом поле Ctrl + Z отменяет набор текста, а не шаг в маске. Сочетания работают и в русской раскладке.</p>
+<h2 id="help-s8">Авторы и связь</h2>
+<p>Вопросы, идеи и ошибки — в Telegram. В программе кнопка «Авторы · Telegram» внизу левой панели открывает карточки и QR-коды.</p>
+<ul>
+<li>Khokhryakov Viatcheslav (Вячеслав Хохряков) — <a target="_blank" rel="noopener" href="https://t.me/slavahoh">@slavahoh</a></li>
+<li>Nikonov Konstantin (Константин Никонов) — <a target="_blank" rel="noopener" href="https://t.me/NKNVOFFICIAL">@NKNVOFFICIAL</a></li>
+</ul>
+<p>© 2026 Khokhryakov Viatcheslav, Nikonov Konstantin · LED Pixel Mask Generator, версия 2.0.5 · Web</p></div>
+  </div>
+</div>
+<div class="busy" id="busy" hidden><div id="busyText">Экспорт…</div></div>
+
+<script>{{include:js/blob-polyfill.js}}</script>
+<script>{{include:js/error-catcher.js}}</script>
+<script>{{include:vendor/pako.min.js}}</script>
+<script>{{include:js/app.js}}</script>
+
+</body>
+</html>
