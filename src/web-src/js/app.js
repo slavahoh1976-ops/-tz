@@ -3434,6 +3434,7 @@ function ask(title, text, value, okText = "OK", withInput = true) {
     inp.hidden = !withInput;
     inp.value = value || "";
     $("modalOk").textContent = okText;
+    $("modalCancel").textContent = "Отмена";
     $("modalAlt").hidden = true;
     $("modal").hidden = false;
     if (withInput) setTimeout(() => {
@@ -7729,6 +7730,7 @@ function askBump(title, text, value) {
       $("modal").hidden = true;
       $("modalOk").textContent = "OK";
       alt.hidden = true;
+      alt.textContent = "Не сохранять";
       $("modalOk").onclick = $("modalCancel").onclick = alt.onclick = inp.onkeydown = null;
       res(v);
     };
@@ -7781,6 +7783,9 @@ function askUnsaved() {
     $("modalText").hidden = false;
     $("modalInput").hidden = true;
     $("modalOk").textContent = "Сохранить";
+    // 2.0.180: подписи задаются явно — окно версии ТЗ (askBump) меняет эту же кнопку на «Оставить имя»
+    $("modalAlt").textContent = "Не сохранять";
+    $("modalCancel").textContent = "Отмена";
     $("modalAlt").hidden = false;
     $("modal").hidden = false;
     const done = (v) => {
