@@ -5,3 +5,6 @@
 
 `download/version.json` — по нему программы на Windows, Mac и Android проверяют обновления.
 Android-версия собирается автоматически (GitHub Actions → «Android APK») из `index.html` и выкладывается в Releases → `android-latest`.
+
+`src/` — исходники веб-версии (`web-src/`, `build_web.py`, `CHANGELOG.md`, `VERSION`). Сборка: `python src/build_web.py` → `src/build/web/index.html`.
+Все версии и исходники одним архивом — в Releases (`led-v…`).

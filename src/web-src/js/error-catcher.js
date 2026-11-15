@@ -1,0 +1,1 @@
+window.__errs = []; window.addEventListener("error", e => { try { const m = String(e.message) + " @" + e.lineno + ":" + (e.colno || 0); window.__errs.push(m); if (!window.__appReady) window.__showErr(m); } catch (x) { } }); window.addEventListener("unhandledrejection", e => { try { window.__errs.push("promise: " + (e.reason && e.reason.message || e.reason)); } catch (x) { } });
