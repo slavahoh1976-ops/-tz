@@ -1871,7 +1871,7 @@ select.ssel-src { display: none !important; }
 .csz input { width: 64px; }
 #cEmpty .b { margin-left: 6px; }
 /* 2.0.122: выходы */
-#oSliceList, #oScrList { max-height: 260px; overflow: auto; }
+#oScrList { max-height: 260px; overflow: auto; }
 #oSliceList .fitem, #oScrList .fitem { cursor: pointer; }
 #oSlFH[aria-pressed=true], #oSlFV[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
 #oEmpty .b { margin-left: 6px; }
@@ -1926,3 +1926,65 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
 .layer-row .layer-name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--fg); text-decoration: none; }
 .layer-row .layer-tag { flex: none; font-family: var(--font-num); }
 .layer-sep { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 6px 6px 2px; padding-top: 6px; border-top: 1px solid var(--line); }
+.layer-row .layer-sel { flex: none; width: auto; min-width: 92px; padding: 3px 6px; font-size: 12px; }
+.layer-order { margin: 4px 6px 0; }
+/* 2.0.192: поля размера композиции только для просмотра (Как у маски / Авто) */
+#oCompWHRow input.ro{opacity:.6;cursor:default;background:transparent}
+#oCompWHRow input.ro:focus{box-shadow:none}
+#oCompWHRow .stp button:disabled{opacity:.3;cursor:default}
+
+/* 2.0.194: проверка мэппинга перед экспортом */
+.out-issues { border: 1px solid #ffb020; border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; color: #ffb020; font-size: 12.5px; line-height: 1.45; }
+.out-issues div:first-child { font-weight: 600; }
+.out-issues .b { margin-top: 6px; }
+#modalText { white-space: pre-line; }
+
+/* 2.0.195: список готовых слайсов — как в окне Advanced Output у Resolume */
+.slwell { border: 1px solid var(--accent); border-radius: 10px; background: #2a2d30; margin: 6px 0 12px; overflow: hidden; }
+.slhd { display: flex; align-items: center; gap: 6px; padding: 7px 8px 7px 10px; background: rgba(25,197,181,.14); color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.slhd > span:first-child { flex: 1; }
+.slcnt { font-family: var(--font-num); font-weight: 400; font-size: 11.5px; background: var(--accent); color: var(--accent-ink); border-radius: 9px; padding: 0 7px; }
+.slcnt:empty { display: none; }
+.slfold { border: 1px solid transparent; background: none; color: var(--accent); font: inherit; font-size: 11px; text-transform: none; padding: 2px 6px; border-radius: 6px; cursor: pointer; }
+.slfold:hover { border-color: var(--accent); }
+.sltools { display: flex; gap: 6px; padding: 6px; align-items: center; }
+.sltools .slfind { flex: 1; min-width: 0; margin: 0; width: auto; }
+.sltools .slfind[hidden] { display: none; }
+.sltools .slfind[hidden] + .b { margin-left: auto; }
+.sltools .b { flex: none; padding: 5px 9px; font-size: 12px; }
+.sllist { max-height: 380px; min-height: 60px; overflow: auto; resize: vertical; }
+.sllist > .hint { padding: 8px 10px; margin: 0; }
+.slgrp { background: #46494d; border-top: 1px solid #1b1d1f; position: sticky; top: 0; z-index: 1; }
+.sltop { display: flex; align-items: center; gap: 8px; padding: 7px 10px 2px; cursor: pointer; }
+.sltop .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; color: #f2f2f2; }
+.slgrp.cur .sltop .nm { color: var(--accent); }
+.slsub { padding: 0 10px 7px 34px; font-size: 11.5px; color: #c9cdd1; cursor: pointer; user-select: none; }
+.slsub:hover { color: #fff; }
+.slrow { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 8px 0 34px; background: #3a3d40; border-top: 1px solid #1b1d1f; cursor: pointer; }
+.slrow:hover { background: #43474b; }
+.slrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #f0f0f0; }
+.slrow.sel { background: #7ff5d2; }
+.slrow.sel .nm { color: #10241e; font-weight: 600; }
+.slrow.off .nm { color: #8c9196; }
+.slrow.sel.off .nm { color: #4d6b62; text-decoration: line-through; }
+.slx { flex: none; width: 24px; height: 22px; border: 0; border-radius: 4px; background: #2a2d30; color: #fff; font: 600 12px var(--font-ui); cursor: pointer; padding: 0; }
+.slx:hover { background: #b8100b; }
+.slmore { display: block; width: calc(100% - 16px); margin: 6px 8px; font-size: 12px; }
+
+/* 2.0.196: несколько выбранных слайсов, перетаскивание */
+.slrow.msel { background: #2f6f61; }
+.slrow.msel .nm { color: #eafff8; }
+.slrow.drop-above { box-shadow: inset 0 3px 0 #ffd54a; }
+.slrow.drop-below { box-shadow: inset 0 -3px 0 #ffd54a; }
+.slgrp.drop-in { outline: 2px solid #ffd54a; outline-offset: -2px; }
+.sllist.dragging .slrow { cursor: grabbing; }
+.slrow[draggable=true] { -webkit-user-drag: element; }
+.slmhint { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 6px 8px; border-radius: 8px; background: rgba(25,197,181,.12); border: 1px solid rgba(25,197,181,.45); color: var(--accent); font-size: 12px; line-height: 1.35; }
+.slmhint span { flex: 1; }
+.slmhint[hidden] { display: none; }
+
+/* 2.0.198: вложенное меню ПКМ */
+.ctxmenu .ctx-it.has-sub { position: relative; padding-right: 28px; }
+.ctxmenu .ctx-it.has-sub::after { content: "›"; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; opacity: .7; }
+.ctxmenu .ctx-it.open { background: var(--raise); }
+.ctxmenu .ctx-it.checked:disabled { color: var(--accent); opacity: 1; }
