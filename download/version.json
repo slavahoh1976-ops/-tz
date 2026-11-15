@@ -1,13 +1,13 @@
 {
- "version": "2.0.179",
- "notes": "Обновлена инструкция «Как пользоваться»: выделение как в Keynote, группы, смещение и поворот кабинетов (в том числе в сантиметрах), кольца с блоками и группами, авторазметка и группы слайсов в мэппинге, поворот на любой угол в общем поле.",
+ "version": "2.0.180",
+ "notes": "Исправлено окно «Сохранить изменения в …?»: после повторного сохранения ТЗ на кнопке «Не сохранять» могла стоять надпись «Оставить имя».",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "ff52374c0cb0cbdc730b20143da45f14185700fb6f01c0c9fc552e298e1690a9"
+  "sha256": "157a99037685df3f2c7de6be9aa49a1cf78fb55bbf11d41ca854c8e586b3a165"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "b6c1081e906adaac878da3a4feb8e1649ba9147767deae3763ea6e849e2831d2"
+  "sha256": "e0cbd0d9b1e41c324e283c959171ebb28609486e5be02b5a235197184696bce9"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
