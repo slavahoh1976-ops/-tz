@@ -1,13 +1,13 @@
 {
- "version": "2.0.183",
- "notes": "Мэппинг: умная разметка — программа сама нарезает маску на слайсы с минимумом выходов; настройки магнита; экспорт в Resolume Arena (Advanced Output, версии 7.0 и новее). Слайсы выделяются по сдвинутым кабинетам. Масштаб «− 100% + Авто» во всех разделах. Элементы панели больше не вылезают за край.",
+ "version": "2.0.189",
+ "notes": "Мэппинг: композиция как в Resolume (размер авто / как у маски / свой; маска 1:1 по центру, растянуть, по ширине, по высоте). Несколько масок в одном мэппинге — галочками, порядок масок = слои Resolume (Слой 1 внизу). Экспорт в Resolume: каждый слайс берёт слой своей маски.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "f6841450fcbbf586ad81ddea669b5e4e2f9f3faa212f5f49dcc3e53df82df187"
+  "sha256": "686305e20eed03f7da3598bd4faa025d496de6d8804120bddeb50b555dc3904a"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "4dbe772b52cb07e1f67769692bcf2b4edc46f71af043083bf7ab85befb84e0f0"
+  "sha256": "6006f5e83982926e6761cdacfe8e6b2505cb23c0ea2ec212990d600ae363fcf7"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"

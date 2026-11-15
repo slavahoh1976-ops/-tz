@@ -9785,6 +9785,31 @@ function outSrcKey(key) {
 function sliceSrc(o, sl) {
   return sl && sl.src && outSources().some((s) => s.k === sl.src) ? sl.src : o.src;
 }
+// ===== 2.0.185: несколько масок в одном мэппинге — галочками; порядок отмеченных = слои Resolume (первая — Слой 1) =====
+// o.layers — строка ключей источников через запятую. Список: сначала маски (по порядку проекта), потом нарезки и поля.
+function outLayerList() {
+  const all = outSources(), rank = (k) => k[0] === "m" ? 0 : k[0] === "c" ? 1 : 2;
+  return all.slice().sort((a, b) => rank(a.k) - rank(b.k) || all.indexOf(a) - all.indexOf(b));
+}
+// 2.0.186: порядок слоёв — свой у мэппинга (как отмечали и переставляли ▲▼), а не порядок масок в проекте
+function outLayerKeys(o) {
+  const have = new Set(outSources().map((s) => s.k)), seen = /* @__PURE__ */ new Set();
+  return String(o.layers || "").split(",").filter((k) => k && have.has(k) && !seen.has(k) && seen.add(k));
+}
+function outLayerMove(o, k, d) {
+  const ks = outLayerKeys(o), i = ks.indexOf(k), j = i + d;
+  if (i < 0 || j < 0 || j >= ks.length) return;
+  [ks[i], ks[j]] = [ks[j], ks[i]];
+  o.layers = ks.join(",");
+  outChanged(true);
+}
+// источники для авторазметки: отмеченные маски, а если не отмечено ничего — активный источник
+const outAutoKeys = (o) => {
+  const ks = outLayerKeys(o);
+  return ks.length ? ks : o.src ? [o.src] : [];
+};
+// номер слоя Resolume для источника (1 — первая отмеченная), 0 — не отмечен
+const outLayerNo = (o, k) => outLayerKeys(o).indexOf(k) + 1;
 function outSrcCanvasK(srcKey, maxDim) {
   const S0 = outSources().find((s) => s.k === srcKey);
   if (!S0) return null;
@@ -9981,7 +10006,8 @@ function outInRect(o, x0, y0, x1, y1, e, P, self) {
   return w >= 2 && h >= 2 ? { x: Math.min(ax, bx), y: Math.min(ay, by), w, h } : null;
 }
 function snapToCells(o, x0, y0, x1, y1) {
-  const L = Math.min(x0, x1), R = Math.max(x0, x1), T = Math.min(y0, y1), B = Math.max(y0, y1);
+  // допуск 0,001 px: точка, пересчитанная с экрана, может отличаться от центра кабинета на ничтожную долю
+  const L = Math.min(x0, x1) - 1e-3, R = Math.max(x0, x1) + 1e-3, T = Math.min(y0, y1) - 1e-3, B = Math.max(y0, y1) + 1e-3;
   let a = null;
   for (const q of outCells(o)) {
     const cx = q.x + q.w / 2, cy = q.y + q.h / 2;
@@ -10060,7 +10086,7 @@ async function renderOutPNG(o, scr, onBand) {
 function outAutoMap(o, mode) {
   if (!o || !o.screens.length) return;
   o.smartInfo = "";
-  const gs = outGroups(o.src);
+  const gs = outAutoKeys(o).flatMap((k) => outGroups(k).map((g) => ({ ...g, srcKey: k, g: k + "#" + g.g })));
   if (!gs.length) return status("В источнике нет кабинетов для разметки", true);
   const rad = (d) => d * Math.PI / 180, parts = [];
   const push = (g, cells, name) => {
@@ -10069,10 +10095,10 @@ function outAutoMap(o, mode) {
     const y0 = Math.min(...cells.map((q) => q.dy - q.h / 2)), y1 = Math.max(...cells.map((q) => q.dy + q.h / 2));
     const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, a = rad(g.a);
     parts.push({ cx: g.cx + mx * Math.cos(a) - my * Math.sin(a), cy: g.cy + mx * Math.sin(a) + my * Math.cos(a),
-      w: x1 - x0, h: y1 - y0, a: g.a, name, key: g.g + "|" + (g.scr && g.scr.uid || "") });
+      w: x1 - x0, h: y1 - y0, a: g.a, name, key: g.g + "|" + (g.scr && g.scr.uid || ""), src: g.srcKey });
   };
   for (const g of gs) {
-    if (mode === "cab") for (const q of g.cells) push(g, [q], q.name);
+    if (mode === "cab") for (const q of g.cells) push(g, [q], outAutoKeys(o).length > 1 ? (g.name || "") + " · " + q.name : q.name);
     else if (mode === "rows" || mode === "cols") {
       const by = /* @__PURE__ */ new Map();
       for (const q of g.cells) {
@@ -10116,13 +10142,13 @@ function outAutoMap(o, mode) {
       const x0 = Math.min(...pts.map((q) => q.x - q.w / 2)), x1 = Math.max(...pts.map((q) => q.x + q.w / 2));
       const y0 = Math.min(...pts.map((q) => q.y - q.h / 2)), y1 = Math.max(...pts.map((q) => q.y + q.h / 2));
       const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, b = rad(a);
-      merged.push({ cx: mx * Math.cos(b) - my * Math.sin(b), cy: mx * Math.sin(b) + my * Math.cos(b), w: x1 - x0, h: y1 - y0, a, name: arr[0].name.split(" · ")[0] });
+      merged.push({ cx: mx * Math.cos(b) - my * Math.sin(b), cy: mx * Math.sin(b) + my * Math.cos(b), w: x1 - x0, h: y1 - y0, a, name: arr[0].name.split(" · ")[0], src: arr[0].src });
     }
     parts.length = 0;
     parts.push(...merged);
   }
   if (!parts.length) return status("Нечего размечать", true);
-  o.slices = parts.map((r, i) => ({ id: newUid(), name: r.name || "Slice " + (i + 1), scr: o.screens[0].id, src: o.src,
+  o.slices = parts.map((r, i) => ({ id: newUid(), name: r.name || "Slice " + (i + 1), scr: o.screens[0].id, src: r.src || o.src,
     ix: Math.round(r.cx - r.w / 2), iy: Math.round(r.cy - r.h / 2), iw: Math.max(1, Math.round(r.w)), ih: Math.max(1, Math.round(r.h)),
     ox: 0, oy: 0, ow: 0, oh: 0, keep: true, rot: 0, ra: +(+r.a || 0).toFixed(2), fh: false, fv: false, on: true }));
   outPack(o, true);
@@ -10339,7 +10365,8 @@ function smartFill(gs, grids, scrs) {
 }
 function outSmartMap(o) {
   if (!o || !o.screens.length) return;
-  const gs = outGroups(o.src);
+  // все отмеченные маски вместе (слайсы раскладываются по общим выходам); у каждой группы — свой источник
+  const gs = outAutoKeys(o).flatMap((k) => outGroups(k).map((g) => ({ ...g, srcKey: k, g: k + "#" + g.g })));
   if (!gs.length) return status("В источнике нет кабинетов для разметки", true);
   const W = o.screens[0].w, H = o.screens[0].h, rad = (d) => d * Math.PI / 180;
   // группа не складывается в одну сетку (например, «лесенка» — каждый ряд сдвинут по-своему):
@@ -10431,7 +10458,7 @@ function outSmartMap(o) {
   o.slices = idx.map((i, n) => {
     const it = best.items[i], g = gs[it.gi], pr = toPart(g, it.r, ""), pl = best.P.res[i];
     const nm = (gs.length > 1 ? g.name + " · " : "") + "Slice " + (n + 1);
-    return { id: newUid(), name: nm, scr: o.screens[pl.o].id, src: o.src,
+    return { id: newUid(), name: nm, scr: o.screens[pl.o].id, src: g.srcKey || o.src,
       ix: Math.round(pr.cx - pr.w / 2), iy: Math.round(pr.cy - pr.h / 2), iw: Math.max(1, Math.round(pr.w)), ih: Math.max(1, Math.round(pr.h)),
       ox: pl.x, oy: pl.y, ow: 0, oh: 0, keep: true, rot: pl.rot ? 90 : 0, ra: +(+pr.a || 0).toFixed(2), fh: false, fv: false, on: true };
   });
@@ -10777,6 +10804,7 @@ function updateOutInfo() {
     }
   }
   setHtml($("oInfo"), out.join(""));
+  if (o) syncOutComp(o), syncOutLayers(o);
   if (o) {
     const M = outMag(o);
     for (const [id, k] of [["oMagOn", "on"], ["oMagCab", "cab"], ["oMagInSl", "inSl"], ["oMagEdge", "edge"], ["oMagOutSl", "outSl"], ["oMagCenter", "center"], ["oMagGrid", "grid"]]) $(id).checked = M[k];
@@ -10971,6 +10999,142 @@ for (const [id, k] of [["oScrW", "w"], ["oScrH", "h"]]) {
 for (const el of document.querySelectorAll('#oSlBox input.calc, #oScrW, #oScrH')) el.addEventListener("keydown", (e) => {
   if (e.key === "Enter") el.dispatchEvent(new Event("change"));
 });
+// 2.0.184: композиция мэппинга
+for (const b of document.querySelectorAll("#oCompMode button")) b.onclick = () => {
+  const o = OC(), S0 = o && outSrc(o);
+  if (!o) return;
+  o.compMode = b.dataset.m;
+  if (o.compMode === "custom" && S0 && !(+o.compW > 0)) {
+    o.compW = S0.w;
+    o.compH = S0.h;
+  }
+  outChanged(true);
+};
+for (const b of document.querySelectorAll("#oCompFit button")) b.onclick = () => {
+  const o = OC();
+  if (!o) return;
+  o.compFit = b.dataset.f;
+  outChanged(true);
+};
+for (const [id, k] of [["oCompW", "compW"], ["oCompH", "compH"]]) {
+  $(id).onchange = (e) => {
+    const o = OC(), CM = o && outComp(o);
+    if (!CM) return;
+    o.compMode = "custom";
+    o[k] = Math.max(16, Math.min(16384, Math.round(calcNum(e.target.value, k === "compW" ? CM.W : CM.H))));
+    if (!(+o[k === "compW" ? "compH" : "compW"] > 0)) o[k === "compW" ? "compH" : "compW"] = k === "compW" ? CM.H : CM.W;
+    outChanged(true);
+  };
+  $(id).addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $(id).dispatchEvent(new Event("change"));
+  });
+}
+$("oCompPreset").onchange = (e) => {
+  const v = e.target.value, o = OC();
+  e.target.value = "";
+  if (!v || !o) return;
+  const [w, h] = v.split("x").map(Number);
+  Object.assign(o, { compMode: "custom", compW: w, compH: h });
+  outChanged(true);
+};
+// 2.0.185: список масок с галочками (слои Resolume)
+function syncOutLayers(o) {
+  const box = $("oLayerList");
+  if (!box || !o) return;
+  // 2.0.187: как в Resolume — Слой 1 внизу стопки, выше — следующие слои; под стопкой — неотмеченные (по порядку проекта)
+  const keys = outLayerKeys(o), all = outLayerList(), list = keys.slice().reverse().map((k) => all.find((s) => s.k === k)).concat(all.filter((s) => !keys.includes(s.k)));
+  const sig = JSON.stringify([list.map((s) => [s.k, s.name, s.w, s.h]), keys, o.src]);
+  if (box._sig !== sig) {
+    box._sig = sig;
+    box.replaceChildren();
+    list.forEach((s, li) => {
+      if (li === keys.length && keys.length) {
+        const sep = document.createElement("div");
+        sep.className = "layer-sep";
+        sep.textContent = "Не в мэппинге";
+        box.appendChild(sep);
+      }
+      const row = document.createElement("div"), cb = document.createElement("input"), nm = document.createElement("button"), tag = document.createElement("span");
+      row.className = "frow layer-row" + (s.k === o.src ? " cur" : "");
+      cb.type = "checkbox";
+      cb.checked = keys.includes(s.k);
+      cb.setAttribute("aria-label", "Маска для мэппинга: " + s.name);
+      cb.onchange = () => {
+        // отмеченная маска встаёт последним слоем; снятая — уходит из слоёв
+        const ks = outLayerKeys(o).filter((k) => k !== s.k);
+        if (cb.checked) ks.push(s.k);
+        o.layers = ks.join(",");
+        if (cb.checked && !ks.includes(o.src)) o.src = s.k;
+        outChanged(true);
+      };
+      nm.type = "button";
+      nm.className = "linkbtn layer-name";
+      nm.textContent = s.name.replace(/^Маска: /, "") + " · " + s.w + "×" + s.h;
+      nm.title = "Показать во входе";
+      nm.onclick = () => {
+        o.src = s.k;
+        outChanged(true);
+      };
+      const n = keys.indexOf(s.k) + 1;
+      tag.className = "unit layer-tag";
+      tag.textContent = n ? "Слой " + n : "—";
+      row.append(cb, nm, tag);
+      // ▲▼ — переставить слой (только у отмеченных)
+      const mv = document.createElement("span");
+      mv.className = "layer-mv";
+      // как в Resolume: выше в стопке — больший номер слоя
+      for (const [t, d, lbl] of [["▲", 1, "Выше — на слой больше"], ["▼", -1, "Ниже — на слой меньше"]]) {
+        const bt = document.createElement("button");
+        bt.type = "button";
+        bt.className = "b sq";
+        bt.textContent = t;
+        bt.title = lbl;
+        bt.setAttribute("aria-label", lbl + ": " + s.name);
+        bt.disabled = !n || (d > 0 ? n === keys.length : n === 1);
+        bt.onclick = () => outLayerMove(o, s.k, d);
+        mv.appendChild(bt);
+      }
+      mv.style.visibility = n ? "visible" : "hidden";
+      row.appendChild(mv);
+      box.appendChild(row);
+    });
+  }
+  for (const b of document.querySelectorAll("#oResRoute button")) b.setAttribute("aria-pressed", String(b.dataset.r === outRoute(o)));
+}
+$("oLayerAll").onclick = () => {
+  const o = OC();
+  if (!o) return;
+  // к уже отмеченным (в их порядке) добавляются остальные маски по порядку проекта
+  const had = outLayerKeys(o);
+  o.layers = had.concat(outLayerList().filter((s) => s.k[0] === "m" && !had.includes(s.k)).map((s) => s.k)).join(",");
+  const ks = outLayerKeys(o);
+  if (ks.length && !ks.includes(o.src)) o.src = ks[0];
+  outChanged(true);
+};
+$("oLayerNone").onclick = () => {
+  const o = OC();
+  if (!o) return;
+  o.layers = "";
+  outChanged(true);
+};
+for (const b of document.querySelectorAll("#oResRoute button")) b.onclick = () => {
+  const o = OC();
+  if (!o) return;
+  o.resRoute = b.dataset.r;
+  outChanged(true);
+};
+function syncOutComp(o) {
+  const CM = o && outComp(o);
+  for (const b of document.querySelectorAll("#oCompMode button")) b.setAttribute("aria-pressed", String(b.dataset.m === (CM ? CM.mode : "auto")));
+  for (const b of document.querySelectorAll("#oCompFit button")) b.setAttribute("aria-pressed", String(b.dataset.f === (CM ? CM.fit : "native")));
+  $("oCompWHRow").hidden = !(CM && CM.custom);
+  if (CM) {
+    if (document.activeElement !== $("oCompW")) $("oCompW").value = CM.W;
+    if (document.activeElement !== $("oCompH")) $("oCompH").value = CM.H;
+  }
+  const r1 = (v) => Math.round(v * 100) / 100;
+  setTxt($("oCompInfo"), CM ? "Композиция ".concat(CM.W, "×").concat(CM.H).concat(CM.mode === "auto" ? " (авто: наибольшие ширина и высота отмеченных масок)" : "", " · маска ").concat(CM.mw, "×").concat(CM.mh).concat(CM.sx !== 1 || CM.sy !== 1 ? " → " + r1(CM.mw * CM.sx) + "×" + r1(CM.mh * CM.sy) + (CM.sx === CM.sy ? " (×" + r1(CM.sx) + ")" : "") : "", " в точке ").concat(r1(CM.x), ", ").concat(r1(CM.y), ". В Resolume поставьте такой же размер композиции.") : "");
+}
 $("oScrPreset").onchange = (e) => {
   const v = e.target.value;
   e.target.value = "";
@@ -11210,17 +11374,29 @@ function resHash64(str) {
 function resVerts(pts, ind) {
   return pts.map((p) => ind + '<v x="' + resNum(p.x) + '" y="' + resNum(p.y) + '"/>').join("\n");
 }
+// код источника «слой» в Input Source слайса Resolume 7: «3:N» — слой N (слой 1 — нижний). Взято из настоящих пресетов
+// (слайс «Camera» = 3:24) и проекта phosphor; в Arena 5/6 «3:N» были экраны. Проверочный пресет: outResolumeLayerTest().
+const RES_LAYER_CODE = 3;
+// куда смотрят слайсы в Resolume: "layers" — слой своей маски (по умолчанию), "comp" — вся композиция
+const outRoute = (o) => o.resRoute === "comp" ? "comp" : "layers";
 function outResolumeXml(o) {
   const S0 = outSrc(o);
   if (!S0) return null;
-  const all = o.slices.filter((sl) => sliceSrc(o, sl) === o.src), other = o.slices.length - all.length;
+  // 2.0.185: выгружаются слайсы всех отмеченных масок (или активного источника, если не отмечено ничего).
+  // «Слои»: слайс берёт в Resolume слой своей маски (первая отмеченная — Слой 1); «Композиция» — всю композицию.
+  const keys = outAutoKeys(o), all = o.slices.filter((sl) => keys.includes(sliceSrc(o, sl))), other = o.slices.length - all.length;
+  const CM = outComp(o, keys[0]), byLayer = outRoute(o) === "layers";
   let id = Date.now();
   const T = (k) => "\t".repeat(k);
   const screens = o.screens.map((scr) => {
     const list = all.filter((sl) => sl.scr === scr.id), sid = id++;
     const slices = list.map((sl) => {
       const [ow, oh] = sliceOutWH(sl), r90 = sl.rot === 90 || sl.rot === 270;
-      const inQ = resQuad(sl.ix + sl.iw / 2, sl.iy + sl.ih / 2, sl.iw, sl.ih, +sl.ra || 0);
+      // участок на композиции: углы участка на маске переносятся на композицию (сдвиг и масштаб своей маски)
+      const sk = sliceSrc(o, sl), CMs = outComp(o, sk) || CM;
+      const inQ = resQuad(sl.ix + sl.iw / 2, sl.iy + sl.ih / 2, sl.iw, sl.ih, +sl.ra || 0).map((q) => compPt(CMs, q.x, q.y));
+      const inSrc = byLayer ? RES_LAYER_CODE + ":" + Math.max(1, keys.indexOf(sk) + 1) : "0:1";
+      const inA = Math.atan2(inQ[1].y - inQ[0].y, inQ[1].x - inQ[0].x) * 180 / Math.PI;
       // на выходе: контент (до поворота) — ширина и высота до перестановки; поворачиваем вокруг центра места на выходе
       const cw = r90 ? oh : ow, ch = r90 ? ow : oh, outQ = resQuad(sl.ox + ow / 2, sl.oy + oh / 2, cw, ch, +sl.rot || 0);
       // 2.0.182: деформация — в координатах выхода, как в настоящих файлах Arena: Homography src = dst = углы OutputRect,
@@ -11241,12 +11417,12 @@ function outResolumeXml(o) {
         T(6) + '<Param name="Enabled" T="BOOL" default="1" value="' + (sl.on === false ? 0 : 1) + '"/>',
         T(5) + "</Params>",
         T(5) + '<Params name="Input">',
-        T(6) + '<ParamChoice name="Input Source" default="0:1" value="0:1" storeChoices="0"/>',
+        T(6) + '<ParamChoice name="Input Source" default="0:1" value="' + inSrc + '" storeChoices="0"/>',
         T(5) + "</Params>",
         T(5) + '<Params name="Output">',
         T(6) + '<Param name="Flip" T="UINT8" default="0" value="' + flip + '"/>',
         T(5) + "</Params>",
-        T(5) + '<InputRect orientation="' + rad(+sl.ra || 0) + '">',
+        T(5) + '<InputRect orientation="' + rad(Math.abs(inA) < 1e-9 ? 0 : inA) + '">',
         resVerts(inQ, T(6)),
         T(5) + "</InputRect>",
         T(5) + '<OutputRect orientation="' + rad(+sl.rot || 0) + '">',
@@ -11315,13 +11491,13 @@ function outResolumeXml(o) {
     '\t<versionInfo name="Resolume Arena" majorVersion="7" minorVersion="13" microVersion="2" revision="17774"/>',
     '\t<ScreenSetup name="ScreenSetup">',
     '\t\t<Params name="ScreenSetupParams"/>',
-    '\t\t<CurrentCompositionTextureSize width="' + S0.w + '" height="' + S0.h + '"/>',
+    '\t\t<CurrentCompositionTextureSize width="' + CM.W + '" height="' + CM.H + '"/>',
     "\t\t<screens>",
     ...screens,
     "\t\t</screens>",
     "\t</ScreenSetup>",
     "</XmlState>", ""].join("\n");
-  return { xml, slices: all.length, screens: o.screens.length, other, W: S0.w, H: S0.h };
+  return { xml, slices: all.length, screens: o.screens.length, other, W: CM.W, H: CM.H, layers: byLayer ? keys.length : 0 };
 }
 $("oResolume").onclick = async () => {
   const o = OC();
@@ -11329,7 +11505,7 @@ $("oResolume").onclick = async () => {
   const r = outResolumeXml(o);
   if (!r.slices) return status("Нет слайсов для выгрузки — разметьте источник", true);
   const ok = await save(safeName(o.name, "Advanced Output") + ".xml", new Blob([r.xml], { type: "application/xml" }));
-  if (ok !== false) status("Resolume: ".concat(r.screens, " ").concat(r.screens === 1 ? "выход" : r.screens < 5 ? "выхода" : "выходов", ", слайсов ").concat(r.slices, ". Размер композиции в Arena — ").concat(r.W, "×").concat(r.H).concat(r.other ? ". Не выгружены слайсы других источников: " + r.other + " (в Resolume одна композиция)" : "", "."), true);
+  if (ok !== false) status("Resolume: ".concat(r.screens, " ").concat(r.screens === 1 ? "выход" : r.screens < 5 ? "выхода" : "выходов", ", слайсов ").concat(r.slices).concat(r.layers ? ", слоёв " + r.layers + " (маска 1 — Слой 1)" : "", ". Размер композиции в Arena — ").concat(r.W, "×").concat(r.H).concat(r.other ? ". Не выгружены слайсы неотмеченных источников: " + r.other : "", "."), true);
 };
 $("oPNG").onclick = async () => {
   const o = OC();
@@ -11364,13 +11540,44 @@ $("oPNGAll").onclick = async () => {
 };
 // ---- холст: вид входа (Input Selection) и выхода (Output Transformation)
 // 2.0.134: вид «Input + Output» — вход и выход рядом (или друг под другом, что крупнее); у каждой панели своя область холста
+// ===== 2.0.184: композиция мэппинга, как в Resolume: маска лежит на композиции =====
+// Размер: «как у маски» (по умолчанию) или свой. Как маска лежит на композиции (как клип в Resolume, когда композиция больше):
+// native — 1:1 по центру (по умолчанию), stretch — растянуть на всю композицию, fitw — пропорционально по ширине, fith — по высоте.
+// Слайсы хранятся в координатах маски; на композиции точка (x, y) маски = (cx + x * sx, cy + y * sy).
+const COMP_FITS = ["native", "stretch", "fitw", "fith"];
+function outComp(o, key) {
+  const all = outSources(), S0 = all.find((s) => s.k === (key || o.src));
+  if (!S0) return null;
+  // размер композиции (одна на все слои): «Как у маски» — как активная маска; «Авто» — ширина = самая большая ширина,
+  // высота = самая большая высота среди отмеченных масок (ничего не отмечено — как активная); «Свой» — вписанный
+  const act = all.find((s) => s.k === o.src) || S0, lk = outLayerKeys(o).map((k) => all.find((s) => s.k === k)).filter(Boolean), base = lk.length ? lk : [act];
+  // 2.0.189: по умолчанию «Авто»
+  const mode = ["mask", "auto", "custom"].includes(o.compMode) ? o.compMode : "auto", custom = mode === "custom", fit = COMP_FITS.includes(o.compFit) ? o.compFit : "native";
+  const bw = mode === "auto" ? Math.max(...base.map((q) => q.w)) : act.w, bh = mode === "auto" ? Math.max(...base.map((q) => q.h)) : act.h;
+  const W = custom ? Math.max(16, Math.min(16384, Math.round(+o.compW || bw))) : bw;
+  const H = custom ? Math.max(16, Math.min(16384, Math.round(+o.compH || bh))) : bh;
+  let sx = 1, sy = 1;
+  if (fit === "stretch") sx = W / S0.w, sy = H / S0.h;
+  else if (fit === "fitw") sx = sy = W / S0.w;
+  else if (fit === "fith") sx = sy = H / S0.h;
+  const mw = S0.w * sx, mh = S0.h * sy;
+  // 1:1 — целые пиксели (пиксель в пиксель), иначе — точно по центру
+  const x = fit === "native" ? Math.round((W - mw) / 2) : (W - mw) / 2, y = fit === "native" ? Math.round((H - mh) / 2) : (H - mh) / 2;
+  return { W, H, x, y, sx, sy, mw: S0.w, mh: S0.h, custom, mode, fit };
+}
+// точка маски -> точка композиции
+const compPt = (CM, px, py) => ({ x: CM.x + px * CM.sx, y: CM.y + py * CM.sy });
 function outPanes(o) {
   const R = $("wrap").getBoundingClientRect(), V = ui_out.V, S0 = outSrc(o), scr = outScr(o), cap = 18;
-  const dims = (v) => v === "in" ? [S0 ? S0.w : 1920, S0 ? S0.h : 1080] : [scr.w, scr.h];
+  const CM = outComp(o), dims = (v) => v === "in" ? [CM ? CM.W : 1920, CM ? CM.H : 1080] : [scr.w, scr.h];
   const pad = R.width < 600 ? 16 : 40, views = o.view === "both" ? ["in", "out"] : [o.view];
   const fit = (box, v) => {
     const [W, H] = dims(v), k0 = Math.max(1e-4, Math.min((box.w - pad * 2) / W, (box.h - pad * 2 - cap) / H)), k = k0 * V.z;
-    return { v, box, W, H, k, k0, R, ox: box.x + (box.w - W * k) / 2 + V.x, oy: box.y + (box.h - cap - H * k) / 2 + V.y };
+    // на входе: W×H — композиция (масштаб kc), маска лежит на ней в (mx, my) с масштабом sx × sy.
+    // k — масштаб МАСКИ на экране (всё, что рисуется и щёлкается на входе, — в координатах маски), ry = sy / sx.
+    const isIn = v === "in" && CM, sx = isIn ? CM.sx : 1, sy = isIn ? CM.sy : 1;
+    return { v, box, W, H, k: k * sx, kc: k, ry: sy / sx, k0, R, mx: isIn ? CM.x : 0, my: isIn ? CM.y : 0, MW: isIn ? CM.mw : W, MH: isIn ? CM.mh : H,
+      ox: box.x + (box.w - W * k) / 2 + V.x, oy: box.y + (box.h - cap - H * k) / 2 + V.y };
   };
   if (views.length === 1) return [fit({ x: 0, y: 0, w: R.width, h: R.height }, views[0])];
   const side = [fit({ x: 0, y: 0, w: R.width / 2, h: R.height }, "in"), fit({ x: R.width / 2, y: 0, w: R.width / 2, h: R.height }, "out")];
@@ -11387,9 +11594,18 @@ function drawOutPane(c, o, P, srcOf) {
   c.translate(P.ox, P.oy);
   if (P.v === "in") {
     const srcC = srcOf(o.src);
+    // композиция: тёмное поле с рамкой; маска лежит на ней со сдвигом (mx, my)
+    c.fillStyle = "#0b0d10";
+    c.fillRect(0, 0, P.W * P.kc, P.H * P.kc);
+    c.strokeStyle = "rgba(255,255,255,0.35)";
+    c.lineWidth = 1;
+    c.strokeRect(-0.5, -0.5, P.W * P.kc + 1, P.H * P.kc + 1);
+    // маска на композиции: сдвиг и (при «растянуть») разный масштаб по высоте
+    c.translate(P.mx * P.kc, P.my * P.kc);
+    if (P.ry !== 1) c.scale(1, P.ry);
     c.fillStyle = "#000";
-    c.fillRect(0, 0, P.W * P.k, P.H * P.k);
-    if (srcC) c.drawImage(srcC.cv, 0, 0, P.W * P.k, P.H * P.k);
+    c.fillRect(0, 0, P.MW * P.k, P.MH * P.k);
+    if (srcC) c.drawImage(srcC.cv, 0, 0, P.MW * P.k, P.MH * P.k);
     // слайсы на входе — только те, что с активного источника (у остальных координаты в другой маске)
     o.slices.filter((s) => sliceSrc(o, s) === o.src).forEach((s) => {
       const cur = o.slices.find((q) => q.id === ui_out.sel);
@@ -11474,7 +11690,8 @@ function drawOutPane(c, o, P, srcOf) {
   c.fillStyle = "#8c9bab";
   c.font = "12px ".concat(FONT);
   const scr = outScr(o), both = o.view === "both";
-  const t = P.v === "in" ? both ? "Input Selection — " + (outSrc(o) ? outSrc(o).name : "источник") : "Input Selection — протяните мышью по кабинетам, чтобы выделить слайс" : both ? "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h) : "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h, " · двигайте слайсы, углы выбранного — размер");
+  const CMt = outComp(o), compT = CMt && (CMt.W !== CMt.mw || CMt.H !== CMt.mh) ? " · композиция ".concat(CMt.W, "×").concat(CMt.H) : "";
+  const t = P.v === "in" ? both ? "Input Selection — " + (outSrc(o) ? outSrc(o).name : "источник") + compT : "Input Selection — протяните мышью по кабинетам, чтобы выделить слайс" : both ? "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h) : "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h, " · двигайте слайсы, углы выбранного — размер");
   c.save();
   c.beginPath();
   c.rect(P.box.x, P.box.y, P.box.w, P.box.h);
@@ -11512,7 +11729,9 @@ function drawOut() {
 function outPt(e, P) {
   const p = local(e);
   P = P || outPaneAt(p[0], p[1]);
-  return [(p[0] - P.ox) / P.k, (p[1] - P.oy) / P.k, p[0], p[1], P];
+  // на входе — координаты маски (композиция сдвигает маску на mx, my)
+  const kc = P.kc || P.k, ry = P.ry || 1;
+  return [(p[0] - P.ox - (P.mx || 0) * kc) / P.k, (p[1] - P.oy - (P.my || 0) * kc) / (P.k * ry), p[0], p[1], P];
 }
 // угол прямоугольника [x, y, w, h] под курсором: [правый?, нижний?] или null
 function outCornerR(r, x, y, k) {
@@ -11805,7 +12024,7 @@ pv.addEventListener("wheel", (e) => {
   const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
   const z = Math.max(1, Math.min(40, V.z * Math.max(0.5, Math.min(2, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018))))));
   // точка под курсором остаётся на месте
-  const ux = (p[0] - P.ox) / P.k, uy = (p[1] - P.oy) / P.k, k1 = P.k0 * z;
+  const kc = P.kc || P.k, ux = (p[0] - P.ox) / kc, uy = (p[1] - P.oy) / kc, k1 = P.k0 * z;
   V.z = z;
   const cx0 = P.box.x + (P.box.w - P.W * k1) / 2, cy0 = P.box.y + (P.box.h - 18 - P.H * k1) / 2;
   V.x = p[0] - ux * k1 - cx0;

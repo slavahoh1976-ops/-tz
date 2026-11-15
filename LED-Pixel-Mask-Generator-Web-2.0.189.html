@@ -1936,6 +1936,12 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
 #oMagBox.dim{opacity:.45}
 #oMagBox{display:flex;flex-direction:column;gap:6px}
 #oMagBox .row.wide{margin-top:4px}
+/* 2.0.185: список масок мэппинга (слои Resolume) */
+.layer-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 7px; border: 1px solid transparent; }
+.layer-row.cur { border-color: var(--accent); background: var(--raise); }
+.layer-row .layer-name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--fg); text-decoration: none; }
+.layer-row .layer-tag { flex: none; font-family: var(--font-num); }
+.layer-sep { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 6px 6px 2px; padding-top: 6px; border-top: 1px solid var(--line); }
 </style>
 
 </head>
@@ -1973,8 +1979,10 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
     <details class="sec osec oexp" id="oExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
       <label class="chk"><input type="checkbox" id="oLabels" checked> Рамки и названия слайсов на PNG</label>
       <div class="btns"><button class="x" id="oPNG">PNG текущего выхода</button><button class="b" id="oPNGAll">Все выходы (ZIP)</button></div>
+      <div class="row wide"><span class="lbl">Слайсы в Resolume берут</span></div>
+      <div class="seg" id="oResRoute" role="group" aria-label="Источник слайсов в Resolume"><button data-r="layers" aria-pressed="false" title="Каждый слайс берёт слой своей маски: маска 1 — Слой 1, маска 2 — Слой 2…">Слой своей маски</button><button data-r="comp" aria-pressed="false" title="Все слайсы берут всю композицию">Композицию</button></div>
       <div class="btns"><button class="b" id="oResolume" style="border-color:var(--accent)" title="Пресет Advanced Output для Resolume Arena: выходы, слайсы, их участки на композиции и места на выходах">Resolume Arena — Advanced Output (.xml)</button></div>
-      <p class="hint">Для Resolume Arena 7.0 и новее. Положите файл в «Документы / Resolume Arena / Presets / Advanced Output» и выберите его в списке пресетов окна Advanced Output. Размер композиции — как у источника. Выходы приходят виртуальными: назначьте каждому свой реальный выход.</p>
+      <p class="hint">Для Resolume Arena 7.0 и новее. Положите файл в «Документы / Resolume Arena / Presets / Advanced Output» и выберите его в списке пресетов окна Advanced Output. Размер композиции и положение маски — из блока «Композиция»; в Resolume поставьте такой же размер композиции. Выходы приходят виртуальными: назначьте каждому свой реальный выход.</p>
     </div></details>
     <details class="sec fsec fexp" id="fExp" open><summary>ЭКСПОРТ</summary><div class="sec-body">
       <div class="btns"><button class="x" id="fPNG">Сохранить PNG поля</button><button class="x" id="fTZgo">Формирование ТЗ →</button></div>
@@ -2062,6 +2070,20 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
       <div id="oBody">
       <div class="btns"><button class="b" id="oRename">Переименовать</button></div>
       <div class="row"><label for="oSrc">Источник</label><div class="ctl"><select id="oSrc" class="grow"></select></div></div>
+      <div class="tgroup">МАСКИ ДЛЯ МЭППИНГА (СЛОИ RESOLUME)</div>
+      <div class="flist" id="oLayerList"></div>
+      <div class="btns"><button class="b" id="oLayerAll">Все маски</button><button class="b" id="oLayerNone">Снять все</button></div>
+      <p class="hint">Отметьте маски — авторазметка и умная разметка размечают все отмеченные сразу. Как в Resolume: Слой 1 — внизу стопки отмеченных, выше — следующие слои; ▲ поднимает маску на слой выше, ▼ опускает. Новая отмеченная маска встаёт сверху — следующим слоем. Ниже стопки — неотмеченные. Щелчок по названию — показать маску во входе.</p>
+      <div class="tgroup">КОМПОЗИЦИЯ (КАК В RESOLUME)</div>
+      <div class="row"><span class="lbl">Размер</span><div class="ctl"><div class="seg" id="oCompMode" role="group" aria-label="Размер композиции">
+        <button data-m="mask" aria-pressed="false" title="Композиция такого же размера, как активная маска">Как у маски</button><button data-m="auto" aria-pressed="true" title="Ширина — самая большая ширина, высота — самая большая высота среди отмеченных масок">Авто</button><button data-m="custom" aria-pressed="false" title="Свой размер композиции — как в настройках композиции Resolume">Свой</button>
+      </div></div></div>
+      <div class="row" id="oCompWHRow"><label for="oCompW">Ширина × высота</label><div class="ctl"><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oCompW" class="num calc" title="Можно формулой: 192*20, 3840/2" style="width:84px" aria-label="Ширина композиции"><span class="unit">×</span><input type="text" inputmode="decimal" spellcheck="false" autocomplete="off" id="oCompH" class="num calc" title="Можно формулой" style="width:84px" aria-label="Высота композиции"><select id="oCompPreset" aria-label="Готовые размеры"><option value="">…</option><option value="1920x1080">1920×1080</option><option value="3840x2160">3840×2160</option><option value="1920x1200">1920×1200</option><option value="2560x1440">2560×1440</option><option value="4096x2160">4096×2160</option><option value="7680x4320">7680×4320</option></select></div></div>
+      <div class="row wide"><span class="lbl">Маска на композиции</span></div>
+      <div class="seg" id="oCompFit" role="group" aria-label="Как маска лежит на композиции">
+        <button data-f="native" aria-pressed="true" title="Пиксель в пиксель, по центру композиции">1:1 по центру</button><button data-f="stretch" aria-pressed="false" title="Растянуть на всю композицию (пропорции могут измениться)">Растянуть</button><button data-f="fitw" aria-pressed="false" title="Пропорционально, на всю ширину композиции, по центру">По ширине</button><button data-f="fith" aria-pressed="false" title="Пропорционально, на всю высоту композиции, по центру">По высоте</button>
+      </div>
+      <p class="hint" id="oCompInfo"></p>
       <div class="row"><span class="lbl">Вид</span><div class="ctl"><div class="seg" id="oView" role="group" aria-label="Вид">
         <button data-v="in" aria-pressed="false" title="Input Selection — что берём: выделение слайсов на источнике">Input</button>
         <button data-v="out" aria-pressed="false" title="Output Transformation — куда кладём: раскладка слайсов на выходе">Output</button>
@@ -2610,7 +2632,7 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
   <div class="help-card">
     <div class="help-head"><h2 id="helpTitle">Как пользоваться</h2><button class="b sq x2" id="helpClose" aria-label="Закрыть">✕</button></div>
     <nav class="help-toc" aria-label="Разделы"><a href="#help-s1" data-h="help-s1">Где открыть</a><a href="#help-s2" data-h="help-s2">Вкладка «Маска»</a><a href="#help-sm" data-h="help-sm">Режимы LED / Волюметрик</a><a href="#help-sc" data-h="help-sc">Нарезка</a><a href="#help-s3" data-h="help-s3">Вкладка «Общее поле»</a><a href="#help-so" data-h="help-so">Мэппинг выходов</a><a href="#help-sv" data-h="help-sv">Волюметрик</a><a href="#help-s4" data-h="help-s4">Вкладка «Формирование ТЗ»</a><a href="#help-s5" data-h="help-s5">Проект</a><a href="#help-s6" data-h="help-s6">Имена файлов</a><a href="#help-s7" data-h="help-s7">Клавиши и жесты</a><a href="#help-s8" data-h="help-s8">Авторы и связь</a></nav>
-    <div class="help-body" id="helpBody"><p>LED Pixel Mask Generator делает пиксельные маски LED-экранов (PNG в точном разрешении) и ТЗ для подрядчиков контента (PPTX + PDF). Инструкция обновлена по версии 2.0.183. Кроме масок и ТЗ в программе есть два режима (LED/Маски и Волюметрик), нарезка длинных экранов, мэппинг масок на выходы и генерация адресации для MADRIX, MAD-SHOW и TouchDesigner. Разрешение масок, полей, нарезок и выходов всегда чётное.</p>
+    <div class="help-body" id="helpBody"><p>LED Pixel Mask Generator делает пиксельные маски LED-экранов (PNG в точном разрешении) и ТЗ для подрядчиков контента (PPTX + PDF). Инструкция обновлена по версии 2.0.189. Кроме масок и ТЗ в программе есть два режима (LED/Маски и Волюметрик), нарезка длинных экранов, мэппинг масок на выходы и генерация адресации для MADRIX, MAD-SHOW и TouchDesigner. Разрешение масок, полей, нарезок и выходов всегда чётное.</p>
 <h2 id="help-s1">Где открыть</h2>
 <table>
 <thead>
@@ -2776,6 +2798,8 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
 <h2 id="help-so">Мэппинг выходов</h2>
 <p>Раскладка готовых масок по выходам видеопроцессора, как Advanced Output в Resolume, но слайсы выделяются по кабинетам. Источник (вход) — общее поле, маска или нарезка. Вид по умолчанию «Input + Output» — вход и выход сразу. Протяните мышью по маске во входе — слайс прилипнет к краям кабинетов; на выходе двигайте слайсы и тяните за углы, чтобы менять их размер (прилипают к краям выхода и друг к другу; Alt — без привязки, Shift — без пропорций). Размер слайса на выходе можно задать и числами «Выход W × H», в том числе формулой — 192*6, 3840/2, (192+8)*4. Переключатель «Пропорции: сохранять / свободно». Экспорт — PNG каждого выхода.</p>
 <ul>
+<li><strong>Маски для мэппинга (слои Resolume)</strong> — отметьте галочками маски, которые мэппите вместе. Умная разметка и все кнопки авторазметки размечают все отмеченные маски сразу и раскладывают их слайсы по общим выходам. Отмеченные маски показаны стопкой, как слои в Resolume: Слой 1 внизу, выше — Слой 2 и т. д.; номер слоя написан справа. ▲ поднимает маску на слой выше, ▼ опускает. Новая отмеченная маска встаёт сверху — следующим слоем. Неотмеченные — под стопкой. Щелчок по названию маски показывает её во входе. В экспорте «Слайсы в Resolume берут»: «Слой своей маски» (по умолчанию) — каждый слайс берёт слой своей маски; «Композицию» — всю композицию. Положите контент каждой маски на её слой. Код слоя в файле Resolume (3:N) снят с настоящих пресетов Arena 7, но не подтверждён — проверьте в Arena, что у слайсов стоит нужный Layer.</li>
+<li><strong>Композиция (как в Resolume)</strong> — на чём лежит маска. Размер: «Авто» (по умолчанию: ширина — самая большая ширина, высота — самая большая высота среди отмеченных масок; если не отмечено ни одной — как активная маска), «Как у маски» (как активная маска) или «Свой» (ширина × высота, можно формулой или из списка). Композиция одна на все слои: каждая маска лежит на ней по выбранному режиму. Маска на композиции: «1:1 по центру» (по умолчанию, пиксель в пиксель), «Растянуть» (на всю композицию), «По ширине» или «По высоте» (пропорционально, по центру) — как клип в Resolume, когда композиция больше маски. На входе видна вся композиция и маска на ней; слайсы выделяются по маске как обычно. Экспорт в Resolume пишет размер композиции и ставит слайсы туда, где маска лежит на композиции (с её масштабом).</li>
 <li><strong>✦ Умная разметка</strong> — программа сама решает, как нарезать маску: перебирает варианты (маска целиком, полосы по 1, 2, 3… ряда или столбца, деление длинных полос поровну или до упора, заполнение выходов кусками разного размера) и берёт тот, где меньше всего выходов, затем меньше слайсов и без поворотов. Режет только по границам кабинетов, в слайс не попадают погашенные кабинеты, ничего не вылезает за край выхода. Размер выхода — как у первого выхода. Под кнопкой написано, что выбрано: например «заполнение выходов · 3 выхода 1920×1080 · 8 слайсов · заполнение 85%».</li>
 <li><strong>Экспорт в Resolume Arena</strong> — кнопка «Resolume Arena — Advanced Output (.xml)» в разделе «Экспорт» сохраняет пресет Advanced Output: каждый выход — экран Resolume своего разрешения, каждый слайс — с участком на композиции (в том числе под углом) и местом на выходе (с поворотом и масштабом). Положите файл в «Документы / Resolume Arena / Presets / Advanced Output» (на Mac — ~/Documents/Resolume Arena/Presets/Advanced Output) и выберите его в списке пресетов вверху окна Advanced Output. Размер композиции в Arena сделайте как у источника — программа пишет его после сохранения. Экраны приходят виртуальными: назначьте каждому реальный выход. В Resolume одна композиция, поэтому выгружаются слайсы текущего источника. Совместимость: Resolume Arena 7.0 и новее (Resolume 8 нет — все версии с 2019 года это 7.x). Формат Resolume официально не описан, поэтому файл собран точно по образцу настоящих пресетов: сверен с 30 файлами Arena 7.13–7.26 и помечен версией 7.13.2 — такие файлы открывают 7.13 и все более новые версии. Выходы записаны с размером (Width / Height), как это делает сама Arena, иначе она ставит 800×600. Отражение слайса (Flip: 1 — по горизонтали, 2 — по вертикали) в настоящих файлах встречается, но какой бит какое направление — не подтверждено; проверьте отражённые слайсы в Arena. Перед шоу откройте пресет в Arena и проверьте.</li>
 <li><strong>Магнит</strong> — галочка «Магнит включён» и что к чему притягивается. На входе: к кабинетам (слайс выделяется целыми кабинетами; без этой галочки — попиксельно) и к соседним слайсам. На выходе: к краям выхода, к соседним слайсам, к центру выхода и к сетке с заданным шагом. «Сила магнита» — с какого расстояния срабатывает. Alt при перетаскивании — временно без магнита. Настройки свои у каждого мэппинга и сохраняются в проекте.</li>
@@ -2959,7 +2983,7 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
 <li>Khokhryakov Viatcheslav (Вячеслав Хохряков) — <a target="_blank" rel="noopener" href="https://t.me/slavahoh">@slavahoh</a></li>
 <li>Nikonov Konstantin (Константин Никонов) — <a target="_blank" rel="noopener" href="https://t.me/NKNVOFFICIAL">@NKNVOFFICIAL</a></li>
 </ul>
-<p>© 2026 Khokhryakov Viatcheslav, Nikonov Konstantin · LED Pixel Mask Generator, версия 2.0.183</p></div>
+<p>© 2026 Khokhryakov Viatcheslav, Nikonov Konstantin · LED Pixel Mask Generator, версия 2.0.189</p></div>
   </div>
 </div>
 <div class="busy" id="busy" hidden><div id="busyText">Экспорт…</div></div>
@@ -4246,8 +4270,8 @@ if (typeof String !== "undefined" && !String.prototype.matchAll) {
 }
 const ICON_B64 = "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";
 const STANDALONE = true;
-const APP_VERSION = "2.0.183";
-const BUILD_STAMP = "15.11 07:10";
+const APP_VERSION = "2.0.189";
+const BUILD_STAMP = "15.11 08:13";
 const UPDATE_URL = "https://slavahoh1976-ops.github.io/-tz/download/version.json";
 const QS = new URLSearchParams(location.search);
 let PLATFORM = window.AndroidBridge ? "android" : window.LEDMASK_PLATFORM || QS.get("platform") || (window.pywebview ? "windows" : "web");
@@ -14008,6 +14032,31 @@ function outSrcKey(key) {
 function sliceSrc(o, sl) {
   return sl && sl.src && outSources().some((s) => s.k === sl.src) ? sl.src : o.src;
 }
+// ===== 2.0.185: несколько масок в одном мэппинге — галочками; порядок отмеченных = слои Resolume (первая — Слой 1) =====
+// o.layers — строка ключей источников через запятую. Список: сначала маски (по порядку проекта), потом нарезки и поля.
+function outLayerList() {
+  const all = outSources(), rank = (k) => k[0] === "m" ? 0 : k[0] === "c" ? 1 : 2;
+  return all.slice().sort((a, b) => rank(a.k) - rank(b.k) || all.indexOf(a) - all.indexOf(b));
+}
+// 2.0.186: порядок слоёв — свой у мэппинга (как отмечали и переставляли ▲▼), а не порядок масок в проекте
+function outLayerKeys(o) {
+  const have = new Set(outSources().map((s) => s.k)), seen = /* @__PURE__ */ new Set();
+  return String(o.layers || "").split(",").filter((k) => k && have.has(k) && !seen.has(k) && seen.add(k));
+}
+function outLayerMove(o, k, d) {
+  const ks = outLayerKeys(o), i = ks.indexOf(k), j = i + d;
+  if (i < 0 || j < 0 || j >= ks.length) return;
+  [ks[i], ks[j]] = [ks[j], ks[i]];
+  o.layers = ks.join(",");
+  outChanged(true);
+}
+// источники для авторазметки: отмеченные маски, а если не отмечено ничего — активный источник
+const outAutoKeys = (o) => {
+  const ks = outLayerKeys(o);
+  return ks.length ? ks : o.src ? [o.src] : [];
+};
+// номер слоя Resolume для источника (1 — первая отмеченная), 0 — не отмечен
+const outLayerNo = (o, k) => outLayerKeys(o).indexOf(k) + 1;
 function outSrcCanvasK(srcKey, maxDim) {
   const S0 = outSources().find((s) => s.k === srcKey);
   if (!S0) return null;
@@ -14204,7 +14253,8 @@ function outInRect(o, x0, y0, x1, y1, e, P, self) {
   return w >= 2 && h >= 2 ? { x: Math.min(ax, bx), y: Math.min(ay, by), w, h } : null;
 }
 function snapToCells(o, x0, y0, x1, y1) {
-  const L = Math.min(x0, x1), R = Math.max(x0, x1), T = Math.min(y0, y1), B = Math.max(y0, y1);
+  // допуск 0,001 px: точка, пересчитанная с экрана, может отличаться от центра кабинета на ничтожную долю
+  const L = Math.min(x0, x1) - 1e-3, R = Math.max(x0, x1) + 1e-3, T = Math.min(y0, y1) - 1e-3, B = Math.max(y0, y1) + 1e-3;
   let a = null;
   for (const q of outCells(o)) {
     const cx = q.x + q.w / 2, cy = q.y + q.h / 2;
@@ -14283,7 +14333,7 @@ async function renderOutPNG(o, scr, onBand) {
 function outAutoMap(o, mode) {
   if (!o || !o.screens.length) return;
   o.smartInfo = "";
-  const gs = outGroups(o.src);
+  const gs = outAutoKeys(o).flatMap((k) => outGroups(k).map((g) => ({ ...g, srcKey: k, g: k + "#" + g.g })));
   if (!gs.length) return status("В источнике нет кабинетов для разметки", true);
   const rad = (d) => d * Math.PI / 180, parts = [];
   const push = (g, cells, name) => {
@@ -14292,10 +14342,10 @@ function outAutoMap(o, mode) {
     const y0 = Math.min(...cells.map((q) => q.dy - q.h / 2)), y1 = Math.max(...cells.map((q) => q.dy + q.h / 2));
     const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, a = rad(g.a);
     parts.push({ cx: g.cx + mx * Math.cos(a) - my * Math.sin(a), cy: g.cy + mx * Math.sin(a) + my * Math.cos(a),
-      w: x1 - x0, h: y1 - y0, a: g.a, name, key: g.g + "|" + (g.scr && g.scr.uid || "") });
+      w: x1 - x0, h: y1 - y0, a: g.a, name, key: g.g + "|" + (g.scr && g.scr.uid || ""), src: g.srcKey });
   };
   for (const g of gs) {
-    if (mode === "cab") for (const q of g.cells) push(g, [q], q.name);
+    if (mode === "cab") for (const q of g.cells) push(g, [q], outAutoKeys(o).length > 1 ? (g.name || "") + " · " + q.name : q.name);
     else if (mode === "rows" || mode === "cols") {
       const by = /* @__PURE__ */ new Map();
       for (const q of g.cells) {
@@ -14339,13 +14389,13 @@ function outAutoMap(o, mode) {
       const x0 = Math.min(...pts.map((q) => q.x - q.w / 2)), x1 = Math.max(...pts.map((q) => q.x + q.w / 2));
       const y0 = Math.min(...pts.map((q) => q.y - q.h / 2)), y1 = Math.max(...pts.map((q) => q.y + q.h / 2));
       const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, b = rad(a);
-      merged.push({ cx: mx * Math.cos(b) - my * Math.sin(b), cy: mx * Math.sin(b) + my * Math.cos(b), w: x1 - x0, h: y1 - y0, a, name: arr[0].name.split(" · ")[0] });
+      merged.push({ cx: mx * Math.cos(b) - my * Math.sin(b), cy: mx * Math.sin(b) + my * Math.cos(b), w: x1 - x0, h: y1 - y0, a, name: arr[0].name.split(" · ")[0], src: arr[0].src });
     }
     parts.length = 0;
     parts.push(...merged);
   }
   if (!parts.length) return status("Нечего размечать", true);
-  o.slices = parts.map((r, i) => ({ id: newUid(), name: r.name || "Slice " + (i + 1), scr: o.screens[0].id, src: o.src,
+  o.slices = parts.map((r, i) => ({ id: newUid(), name: r.name || "Slice " + (i + 1), scr: o.screens[0].id, src: r.src || o.src,
     ix: Math.round(r.cx - r.w / 2), iy: Math.round(r.cy - r.h / 2), iw: Math.max(1, Math.round(r.w)), ih: Math.max(1, Math.round(r.h)),
     ox: 0, oy: 0, ow: 0, oh: 0, keep: true, rot: 0, ra: +(+r.a || 0).toFixed(2), fh: false, fv: false, on: true }));
   outPack(o, true);
@@ -14562,7 +14612,8 @@ function smartFill(gs, grids, scrs) {
 }
 function outSmartMap(o) {
   if (!o || !o.screens.length) return;
-  const gs = outGroups(o.src);
+  // все отмеченные маски вместе (слайсы раскладываются по общим выходам); у каждой группы — свой источник
+  const gs = outAutoKeys(o).flatMap((k) => outGroups(k).map((g) => ({ ...g, srcKey: k, g: k + "#" + g.g })));
   if (!gs.length) return status("В источнике нет кабинетов для разметки", true);
   const W = o.screens[0].w, H = o.screens[0].h, rad = (d) => d * Math.PI / 180;
   // группа не складывается в одну сетку (например, «лесенка» — каждый ряд сдвинут по-своему):
@@ -14654,7 +14705,7 @@ function outSmartMap(o) {
   o.slices = idx.map((i, n) => {
     const it = best.items[i], g = gs[it.gi], pr = toPart(g, it.r, ""), pl = best.P.res[i];
     const nm = (gs.length > 1 ? g.name + " · " : "") + "Slice " + (n + 1);
-    return { id: newUid(), name: nm, scr: o.screens[pl.o].id, src: o.src,
+    return { id: newUid(), name: nm, scr: o.screens[pl.o].id, src: g.srcKey || o.src,
       ix: Math.round(pr.cx - pr.w / 2), iy: Math.round(pr.cy - pr.h / 2), iw: Math.max(1, Math.round(pr.w)), ih: Math.max(1, Math.round(pr.h)),
       ox: pl.x, oy: pl.y, ow: 0, oh: 0, keep: true, rot: pl.rot ? 90 : 0, ra: +(+pr.a || 0).toFixed(2), fh: false, fv: false, on: true };
   });
@@ -15000,6 +15051,7 @@ function updateOutInfo() {
     }
   }
   setHtml($("oInfo"), out.join(""));
+  if (o) syncOutComp(o), syncOutLayers(o);
   if (o) {
     const M = outMag(o);
     for (const [id, k] of [["oMagOn", "on"], ["oMagCab", "cab"], ["oMagInSl", "inSl"], ["oMagEdge", "edge"], ["oMagOutSl", "outSl"], ["oMagCenter", "center"], ["oMagGrid", "grid"]]) $(id).checked = M[k];
@@ -15194,6 +15246,142 @@ for (const [id, k] of [["oScrW", "w"], ["oScrH", "h"]]) {
 for (const el of document.querySelectorAll('#oSlBox input.calc, #oScrW, #oScrH')) el.addEventListener("keydown", (e) => {
   if (e.key === "Enter") el.dispatchEvent(new Event("change"));
 });
+// 2.0.184: композиция мэппинга
+for (const b of document.querySelectorAll("#oCompMode button")) b.onclick = () => {
+  const o = OC(), S0 = o && outSrc(o);
+  if (!o) return;
+  o.compMode = b.dataset.m;
+  if (o.compMode === "custom" && S0 && !(+o.compW > 0)) {
+    o.compW = S0.w;
+    o.compH = S0.h;
+  }
+  outChanged(true);
+};
+for (const b of document.querySelectorAll("#oCompFit button")) b.onclick = () => {
+  const o = OC();
+  if (!o) return;
+  o.compFit = b.dataset.f;
+  outChanged(true);
+};
+for (const [id, k] of [["oCompW", "compW"], ["oCompH", "compH"]]) {
+  $(id).onchange = (e) => {
+    const o = OC(), CM = o && outComp(o);
+    if (!CM) return;
+    o.compMode = "custom";
+    o[k] = Math.max(16, Math.min(16384, Math.round(calcNum(e.target.value, k === "compW" ? CM.W : CM.H))));
+    if (!(+o[k === "compW" ? "compH" : "compW"] > 0)) o[k === "compW" ? "compH" : "compW"] = k === "compW" ? CM.H : CM.W;
+    outChanged(true);
+  };
+  $(id).addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $(id).dispatchEvent(new Event("change"));
+  });
+}
+$("oCompPreset").onchange = (e) => {
+  const v = e.target.value, o = OC();
+  e.target.value = "";
+  if (!v || !o) return;
+  const [w, h] = v.split("x").map(Number);
+  Object.assign(o, { compMode: "custom", compW: w, compH: h });
+  outChanged(true);
+};
+// 2.0.185: список масок с галочками (слои Resolume)
+function syncOutLayers(o) {
+  const box = $("oLayerList");
+  if (!box || !o) return;
+  // 2.0.187: как в Resolume — Слой 1 внизу стопки, выше — следующие слои; под стопкой — неотмеченные (по порядку проекта)
+  const keys = outLayerKeys(o), all = outLayerList(), list = keys.slice().reverse().map((k) => all.find((s) => s.k === k)).concat(all.filter((s) => !keys.includes(s.k)));
+  const sig = JSON.stringify([list.map((s) => [s.k, s.name, s.w, s.h]), keys, o.src]);
+  if (box._sig !== sig) {
+    box._sig = sig;
+    box.replaceChildren();
+    list.forEach((s, li) => {
+      if (li === keys.length && keys.length) {
+        const sep = document.createElement("div");
+        sep.className = "layer-sep";
+        sep.textContent = "Не в мэппинге";
+        box.appendChild(sep);
+      }
+      const row = document.createElement("div"), cb = document.createElement("input"), nm = document.createElement("button"), tag = document.createElement("span");
+      row.className = "frow layer-row" + (s.k === o.src ? " cur" : "");
+      cb.type = "checkbox";
+      cb.checked = keys.includes(s.k);
+      cb.setAttribute("aria-label", "Маска для мэппинга: " + s.name);
+      cb.onchange = () => {
+        // отмеченная маска встаёт последним слоем; снятая — уходит из слоёв
+        const ks = outLayerKeys(o).filter((k) => k !== s.k);
+        if (cb.checked) ks.push(s.k);
+        o.layers = ks.join(",");
+        if (cb.checked && !ks.includes(o.src)) o.src = s.k;
+        outChanged(true);
+      };
+      nm.type = "button";
+      nm.className = "linkbtn layer-name";
+      nm.textContent = s.name.replace(/^Маска: /, "") + " · " + s.w + "×" + s.h;
+      nm.title = "Показать во входе";
+      nm.onclick = () => {
+        o.src = s.k;
+        outChanged(true);
+      };
+      const n = keys.indexOf(s.k) + 1;
+      tag.className = "unit layer-tag";
+      tag.textContent = n ? "Слой " + n : "—";
+      row.append(cb, nm, tag);
+      // ▲▼ — переставить слой (только у отмеченных)
+      const mv = document.createElement("span");
+      mv.className = "layer-mv";
+      // как в Resolume: выше в стопке — больший номер слоя
+      for (const [t, d, lbl] of [["▲", 1, "Выше — на слой больше"], ["▼", -1, "Ниже — на слой меньше"]]) {
+        const bt = document.createElement("button");
+        bt.type = "button";
+        bt.className = "b sq";
+        bt.textContent = t;
+        bt.title = lbl;
+        bt.setAttribute("aria-label", lbl + ": " + s.name);
+        bt.disabled = !n || (d > 0 ? n === keys.length : n === 1);
+        bt.onclick = () => outLayerMove(o, s.k, d);
+        mv.appendChild(bt);
+      }
+      mv.style.visibility = n ? "visible" : "hidden";
+      row.appendChild(mv);
+      box.appendChild(row);
+    });
+  }
+  for (const b of document.querySelectorAll("#oResRoute button")) b.setAttribute("aria-pressed", String(b.dataset.r === outRoute(o)));
+}
+$("oLayerAll").onclick = () => {
+  const o = OC();
+  if (!o) return;
+  // к уже отмеченным (в их порядке) добавляются остальные маски по порядку проекта
+  const had = outLayerKeys(o);
+  o.layers = had.concat(outLayerList().filter((s) => s.k[0] === "m" && !had.includes(s.k)).map((s) => s.k)).join(",");
+  const ks = outLayerKeys(o);
+  if (ks.length && !ks.includes(o.src)) o.src = ks[0];
+  outChanged(true);
+};
+$("oLayerNone").onclick = () => {
+  const o = OC();
+  if (!o) return;
+  o.layers = "";
+  outChanged(true);
+};
+for (const b of document.querySelectorAll("#oResRoute button")) b.onclick = () => {
+  const o = OC();
+  if (!o) return;
+  o.resRoute = b.dataset.r;
+  outChanged(true);
+};
+function syncOutComp(o) {
+  const CM = o && outComp(o);
+  for (const b of document.querySelectorAll("#oCompMode button")) b.setAttribute("aria-pressed", String(b.dataset.m === (CM ? CM.mode : "auto")));
+  for (const b of document.querySelectorAll("#oCompFit button")) b.setAttribute("aria-pressed", String(b.dataset.f === (CM ? CM.fit : "native")));
+  $("oCompWHRow").hidden = !(CM && CM.custom);
+  if (CM) {
+    if (document.activeElement !== $("oCompW")) $("oCompW").value = CM.W;
+    if (document.activeElement !== $("oCompH")) $("oCompH").value = CM.H;
+  }
+  const r1 = (v) => Math.round(v * 100) / 100;
+  setTxt($("oCompInfo"), CM ? "Композиция ".concat(CM.W, "×").concat(CM.H).concat(CM.mode === "auto" ? " (авто: наибольшие ширина и высота отмеченных масок)" : "", " · маска ").concat(CM.mw, "×").concat(CM.mh).concat(CM.sx !== 1 || CM.sy !== 1 ? " → " + r1(CM.mw * CM.sx) + "×" + r1(CM.mh * CM.sy) + (CM.sx === CM.sy ? " (×" + r1(CM.sx) + ")" : "") : "", " в точке ").concat(r1(CM.x), ", ").concat(r1(CM.y), ". В Resolume поставьте такой же размер композиции.") : "");
+}
 $("oScrPreset").onchange = (e) => {
   const v = e.target.value;
   e.target.value = "";
@@ -15433,17 +15621,29 @@ function resHash64(str) {
 function resVerts(pts, ind) {
   return pts.map((p) => ind + '<v x="' + resNum(p.x) + '" y="' + resNum(p.y) + '"/>').join("\n");
 }
+// код источника «слой» в Input Source слайса Resolume 7: «3:N» — слой N (слой 1 — нижний). Взято из настоящих пресетов
+// (слайс «Camera» = 3:24) и проекта phosphor; в Arena 5/6 «3:N» были экраны. Проверочный пресет: outResolumeLayerTest().
+const RES_LAYER_CODE = 3;
+// куда смотрят слайсы в Resolume: "layers" — слой своей маски (по умолчанию), "comp" — вся композиция
+const outRoute = (o) => o.resRoute === "comp" ? "comp" : "layers";
 function outResolumeXml(o) {
   const S0 = outSrc(o);
   if (!S0) return null;
-  const all = o.slices.filter((sl) => sliceSrc(o, sl) === o.src), other = o.slices.length - all.length;
+  // 2.0.185: выгружаются слайсы всех отмеченных масок (или активного источника, если не отмечено ничего).
+  // «Слои»: слайс берёт в Resolume слой своей маски (первая отмеченная — Слой 1); «Композиция» — всю композицию.
+  const keys = outAutoKeys(o), all = o.slices.filter((sl) => keys.includes(sliceSrc(o, sl))), other = o.slices.length - all.length;
+  const CM = outComp(o, keys[0]), byLayer = outRoute(o) === "layers";
   let id = Date.now();
   const T = (k) => "\t".repeat(k);
   const screens = o.screens.map((scr) => {
     const list = all.filter((sl) => sl.scr === scr.id), sid = id++;
     const slices = list.map((sl) => {
       const [ow, oh] = sliceOutWH(sl), r90 = sl.rot === 90 || sl.rot === 270;
-      const inQ = resQuad(sl.ix + sl.iw / 2, sl.iy + sl.ih / 2, sl.iw, sl.ih, +sl.ra || 0);
+      // участок на композиции: углы участка на маске переносятся на композицию (сдвиг и масштаб своей маски)
+      const sk = sliceSrc(o, sl), CMs = outComp(o, sk) || CM;
+      const inQ = resQuad(sl.ix + sl.iw / 2, sl.iy + sl.ih / 2, sl.iw, sl.ih, +sl.ra || 0).map((q) => compPt(CMs, q.x, q.y));
+      const inSrc = byLayer ? RES_LAYER_CODE + ":" + Math.max(1, keys.indexOf(sk) + 1) : "0:1";
+      const inA = Math.atan2(inQ[1].y - inQ[0].y, inQ[1].x - inQ[0].x) * 180 / Math.PI;
       // на выходе: контент (до поворота) — ширина и высота до перестановки; поворачиваем вокруг центра места на выходе
       const cw = r90 ? oh : ow, ch = r90 ? ow : oh, outQ = resQuad(sl.ox + ow / 2, sl.oy + oh / 2, cw, ch, +sl.rot || 0);
       // 2.0.182: деформация — в координатах выхода, как в настоящих файлах Arena: Homography src = dst = углы OutputRect,
@@ -15464,12 +15664,12 @@ function outResolumeXml(o) {
         T(6) + '<Param name="Enabled" T="BOOL" default="1" value="' + (sl.on === false ? 0 : 1) + '"/>',
         T(5) + "</Params>",
         T(5) + '<Params name="Input">',
-        T(6) + '<ParamChoice name="Input Source" default="0:1" value="0:1" storeChoices="0"/>',
+        T(6) + '<ParamChoice name="Input Source" default="0:1" value="' + inSrc + '" storeChoices="0"/>',
         T(5) + "</Params>",
         T(5) + '<Params name="Output">',
         T(6) + '<Param name="Flip" T="UINT8" default="0" value="' + flip + '"/>',
         T(5) + "</Params>",
-        T(5) + '<InputRect orientation="' + rad(+sl.ra || 0) + '">',
+        T(5) + '<InputRect orientation="' + rad(Math.abs(inA) < 1e-9 ? 0 : inA) + '">',
         resVerts(inQ, T(6)),
         T(5) + "</InputRect>",
         T(5) + '<OutputRect orientation="' + rad(+sl.rot || 0) + '">',
@@ -15538,13 +15738,13 @@ function outResolumeXml(o) {
     '\t<versionInfo name="Resolume Arena" majorVersion="7" minorVersion="13" microVersion="2" revision="17774"/>',
     '\t<ScreenSetup name="ScreenSetup">',
     '\t\t<Params name="ScreenSetupParams"/>',
-    '\t\t<CurrentCompositionTextureSize width="' + S0.w + '" height="' + S0.h + '"/>',
+    '\t\t<CurrentCompositionTextureSize width="' + CM.W + '" height="' + CM.H + '"/>',
     "\t\t<screens>",
     ...screens,
     "\t\t</screens>",
     "\t</ScreenSetup>",
     "</XmlState>", ""].join("\n");
-  return { xml, slices: all.length, screens: o.screens.length, other, W: S0.w, H: S0.h };
+  return { xml, slices: all.length, screens: o.screens.length, other, W: CM.W, H: CM.H, layers: byLayer ? keys.length : 0 };
 }
 $("oResolume").onclick = async () => {
   const o = OC();
@@ -15552,7 +15752,7 @@ $("oResolume").onclick = async () => {
   const r = outResolumeXml(o);
   if (!r.slices) return status("Нет слайсов для выгрузки — разметьте источник", true);
   const ok = await save(safeName(o.name, "Advanced Output") + ".xml", new Blob([r.xml], { type: "application/xml" }));
-  if (ok !== false) status("Resolume: ".concat(r.screens, " ").concat(r.screens === 1 ? "выход" : r.screens < 5 ? "выхода" : "выходов", ", слайсов ").concat(r.slices, ". Размер композиции в Arena — ").concat(r.W, "×").concat(r.H).concat(r.other ? ". Не выгружены слайсы других источников: " + r.other + " (в Resolume одна композиция)" : "", "."), true);
+  if (ok !== false) status("Resolume: ".concat(r.screens, " ").concat(r.screens === 1 ? "выход" : r.screens < 5 ? "выхода" : "выходов", ", слайсов ").concat(r.slices).concat(r.layers ? ", слоёв " + r.layers + " (маска 1 — Слой 1)" : "", ". Размер композиции в Arena — ").concat(r.W, "×").concat(r.H).concat(r.other ? ". Не выгружены слайсы неотмеченных источников: " + r.other : "", "."), true);
 };
 $("oPNG").onclick = async () => {
   const o = OC();
@@ -15587,13 +15787,44 @@ $("oPNGAll").onclick = async () => {
 };
 // ---- холст: вид входа (Input Selection) и выхода (Output Transformation)
 // 2.0.134: вид «Input + Output» — вход и выход рядом (или друг под другом, что крупнее); у каждой панели своя область холста
+// ===== 2.0.184: композиция мэппинга, как в Resolume: маска лежит на композиции =====
+// Размер: «как у маски» (по умолчанию) или свой. Как маска лежит на композиции (как клип в Resolume, когда композиция больше):
+// native — 1:1 по центру (по умолчанию), stretch — растянуть на всю композицию, fitw — пропорционально по ширине, fith — по высоте.
+// Слайсы хранятся в координатах маски; на композиции точка (x, y) маски = (cx + x * sx, cy + y * sy).
+const COMP_FITS = ["native", "stretch", "fitw", "fith"];
+function outComp(o, key) {
+  const all = outSources(), S0 = all.find((s) => s.k === (key || o.src));
+  if (!S0) return null;
+  // размер композиции (одна на все слои): «Как у маски» — как активная маска; «Авто» — ширина = самая большая ширина,
+  // высота = самая большая высота среди отмеченных масок (ничего не отмечено — как активная); «Свой» — вписанный
+  const act = all.find((s) => s.k === o.src) || S0, lk = outLayerKeys(o).map((k) => all.find((s) => s.k === k)).filter(Boolean), base = lk.length ? lk : [act];
+  // 2.0.189: по умолчанию «Авто»
+  const mode = ["mask", "auto", "custom"].includes(o.compMode) ? o.compMode : "auto", custom = mode === "custom", fit = COMP_FITS.includes(o.compFit) ? o.compFit : "native";
+  const bw = mode === "auto" ? Math.max(...base.map((q) => q.w)) : act.w, bh = mode === "auto" ? Math.max(...base.map((q) => q.h)) : act.h;
+  const W = custom ? Math.max(16, Math.min(16384, Math.round(+o.compW || bw))) : bw;
+  const H = custom ? Math.max(16, Math.min(16384, Math.round(+o.compH || bh))) : bh;
+  let sx = 1, sy = 1;
+  if (fit === "stretch") sx = W / S0.w, sy = H / S0.h;
+  else if (fit === "fitw") sx = sy = W / S0.w;
+  else if (fit === "fith") sx = sy = H / S0.h;
+  const mw = S0.w * sx, mh = S0.h * sy;
+  // 1:1 — целые пиксели (пиксель в пиксель), иначе — точно по центру
+  const x = fit === "native" ? Math.round((W - mw) / 2) : (W - mw) / 2, y = fit === "native" ? Math.round((H - mh) / 2) : (H - mh) / 2;
+  return { W, H, x, y, sx, sy, mw: S0.w, mh: S0.h, custom, mode, fit };
+}
+// точка маски -> точка композиции
+const compPt = (CM, px, py) => ({ x: CM.x + px * CM.sx, y: CM.y + py * CM.sy });
 function outPanes(o) {
   const R = $("wrap").getBoundingClientRect(), V = ui_out.V, S0 = outSrc(o), scr = outScr(o), cap = 18;
-  const dims = (v) => v === "in" ? [S0 ? S0.w : 1920, S0 ? S0.h : 1080] : [scr.w, scr.h];
+  const CM = outComp(o), dims = (v) => v === "in" ? [CM ? CM.W : 1920, CM ? CM.H : 1080] : [scr.w, scr.h];
   const pad = R.width < 600 ? 16 : 40, views = o.view === "both" ? ["in", "out"] : [o.view];
   const fit = (box, v) => {
     const [W, H] = dims(v), k0 = Math.max(1e-4, Math.min((box.w - pad * 2) / W, (box.h - pad * 2 - cap) / H)), k = k0 * V.z;
-    return { v, box, W, H, k, k0, R, ox: box.x + (box.w - W * k) / 2 + V.x, oy: box.y + (box.h - cap - H * k) / 2 + V.y };
+    // на входе: W×H — композиция (масштаб kc), маска лежит на ней в (mx, my) с масштабом sx × sy.
+    // k — масштаб МАСКИ на экране (всё, что рисуется и щёлкается на входе, — в координатах маски), ry = sy / sx.
+    const isIn = v === "in" && CM, sx = isIn ? CM.sx : 1, sy = isIn ? CM.sy : 1;
+    return { v, box, W, H, k: k * sx, kc: k, ry: sy / sx, k0, R, mx: isIn ? CM.x : 0, my: isIn ? CM.y : 0, MW: isIn ? CM.mw : W, MH: isIn ? CM.mh : H,
+      ox: box.x + (box.w - W * k) / 2 + V.x, oy: box.y + (box.h - cap - H * k) / 2 + V.y };
   };
   if (views.length === 1) return [fit({ x: 0, y: 0, w: R.width, h: R.height }, views[0])];
   const side = [fit({ x: 0, y: 0, w: R.width / 2, h: R.height }, "in"), fit({ x: R.width / 2, y: 0, w: R.width / 2, h: R.height }, "out")];
@@ -15610,9 +15841,18 @@ function drawOutPane(c, o, P, srcOf) {
   c.translate(P.ox, P.oy);
   if (P.v === "in") {
     const srcC = srcOf(o.src);
+    // композиция: тёмное поле с рамкой; маска лежит на ней со сдвигом (mx, my)
+    c.fillStyle = "#0b0d10";
+    c.fillRect(0, 0, P.W * P.kc, P.H * P.kc);
+    c.strokeStyle = "rgba(255,255,255,0.35)";
+    c.lineWidth = 1;
+    c.strokeRect(-0.5, -0.5, P.W * P.kc + 1, P.H * P.kc + 1);
+    // маска на композиции: сдвиг и (при «растянуть») разный масштаб по высоте
+    c.translate(P.mx * P.kc, P.my * P.kc);
+    if (P.ry !== 1) c.scale(1, P.ry);
     c.fillStyle = "#000";
-    c.fillRect(0, 0, P.W * P.k, P.H * P.k);
-    if (srcC) c.drawImage(srcC.cv, 0, 0, P.W * P.k, P.H * P.k);
+    c.fillRect(0, 0, P.MW * P.k, P.MH * P.k);
+    if (srcC) c.drawImage(srcC.cv, 0, 0, P.MW * P.k, P.MH * P.k);
     // слайсы на входе — только те, что с активного источника (у остальных координаты в другой маске)
     o.slices.filter((s) => sliceSrc(o, s) === o.src).forEach((s) => {
       const cur = o.slices.find((q) => q.id === ui_out.sel);
@@ -15697,7 +15937,8 @@ function drawOutPane(c, o, P, srcOf) {
   c.fillStyle = "#8c9bab";
   c.font = "12px ".concat(FONT);
   const scr = outScr(o), both = o.view === "both";
-  const t = P.v === "in" ? both ? "Input Selection — " + (outSrc(o) ? outSrc(o).name : "источник") : "Input Selection — протяните мышью по кабинетам, чтобы выделить слайс" : both ? "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h) : "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h, " · двигайте слайсы, углы выбранного — размер");
+  const CMt = outComp(o), compT = CMt && (CMt.W !== CMt.mw || CMt.H !== CMt.mh) ? " · композиция ".concat(CMt.W, "×").concat(CMt.H) : "";
+  const t = P.v === "in" ? both ? "Input Selection — " + (outSrc(o) ? outSrc(o).name : "источник") + compT : "Input Selection — протяните мышью по кабинетам, чтобы выделить слайс" : both ? "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h) : "Output Transformation — ".concat(scr.name, " ").concat(scr.w, "×").concat(scr.h, " · двигайте слайсы, углы выбранного — размер");
   c.save();
   c.beginPath();
   c.rect(P.box.x, P.box.y, P.box.w, P.box.h);
@@ -15735,7 +15976,9 @@ function drawOut() {
 function outPt(e, P) {
   const p = local(e);
   P = P || outPaneAt(p[0], p[1]);
-  return [(p[0] - P.ox) / P.k, (p[1] - P.oy) / P.k, p[0], p[1], P];
+  // на входе — координаты маски (композиция сдвигает маску на mx, my)
+  const kc = P.kc || P.k, ry = P.ry || 1;
+  return [(p[0] - P.ox - (P.mx || 0) * kc) / P.k, (p[1] - P.oy - (P.my || 0) * kc) / (P.k * ry), p[0], p[1], P];
 }
 // угол прямоугольника [x, y, w, h] под курсором: [правый?, нижний?] или null
 function outCornerR(r, x, y, k) {
@@ -16028,7 +16271,7 @@ pv.addEventListener("wheel", (e) => {
   const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
   const z = Math.max(1, Math.min(40, V.z * Math.max(0.5, Math.min(2, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018))))));
   // точка под курсором остаётся на месте
-  const ux = (p[0] - P.ox) / P.k, uy = (p[1] - P.oy) / P.k, k1 = P.k0 * z;
+  const kc = P.kc || P.k, ux = (p[0] - P.ox) / kc, uy = (p[1] - P.oy) / kc, k1 = P.k0 * z;
   V.z = z;
   const cx0 = P.box.x + (P.box.w - P.W * k1) / 2, cy0 = P.box.y + (P.box.h - 18 - P.H * k1) / 2;
   V.x = p[0] - ux * k1 - cx0;
