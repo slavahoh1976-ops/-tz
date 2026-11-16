@@ -664,7 +664,7 @@
         <button data-tool="black" aria-pressed="false">Гашение</button>
         <button data-tool="pan" aria-pressed="false">Рука</button>
       </div>
-      <div class="undo"><button class="b sq" id="btnUndo" title="Отменить (Ctrl/⌘+Z)" aria-label="Отменить шаг" disabled>↶</button><button class="b sq" id="btnRedo" title="Вернуть (Ctrl/⌘+Shift+Z, Ctrl+Y)" aria-label="Вернуть шаг" disabled>↷</button><button class="b sq" id="btnHelpTop" title="Как пользоваться" aria-label="Как пользоваться">?</button></div>
+      <div class="undo"><button class="b sq" id="btnUndo" title="Отменить (Ctrl/⌘+Z)" aria-label="Отменить шаг" disabled>↶</button><button class="b sq" id="btnRedo" title="Вернуть (Ctrl/⌘+Shift+Z, Ctrl+Y)" aria-label="Вернуть шаг" disabled>↷</button><button class="b sq" id="btnHelpTop" title="Как пользоваться" aria-label="Как пользоваться">?</button><button class="b verbtn" id="btnVer" title="Обновить"><span class="vic" aria-hidden="true">⟳</span><span class="vno" id="btnVerNo">{{version}}</span></button></div>
       <div class="ttools tzoom"><button class="b sq" id="tZoomPrev" title="Предыдущий лист (←)" aria-label="Предыдущий лист" hidden>◀</button><button class="b" id="tZoom" title="Один лист крупно — проверить мелкий текст (или двойной щелчок по листу)">Крупно</button><button class="b sq" id="tZoomNext" title="Следующий лист (→)" aria-label="Следующий лист" hidden>▶</button><span class="num" id="tZoomNo"></span></div>
       <div class="ttools" id="tSummary"></div>
       <div class="ftools"><button class="b sq" id="fzMinus" aria-label="Уменьшить">−</button><span class="num" id="fzLabel">100%</span><button class="b sq" id="fzPlus" aria-label="Увеличить">+</button><button class="b" id="fzFit">Вписать</button></div>
@@ -740,10 +740,11 @@
 <tr>
 <td>Mac и Windows</td>
 <td><a target="_blank" rel="noopener" href="https://slavahoh1976-ops.github.io/-tz/download/">страница скачивания</a></td>
-<td>То же, что веб. Программа сама проверяет обновления (кнопка «Проверить обновления» внизу левой панели)</td>
+<td>То же, что веб. Программа сама проверяет обновления: кнопка с номером версии «⟳» вверху мигает, если вышла новая — нажмите, и программа скачает её и перезапустится</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Обновление.</strong> Вверху справа — кнопка «⟳» с номером версии. Программа сама проверяет обновления (при запуске, каждые 15 минут и когда возвращаетесь в окно); если вышла новая версия, кнопка мигает, а в подсказке написано, какая. В браузере нажатие перезагружает страницу с новой версией — закрывать вкладку не нужно, проект сохраняется автоматически и откроется сам (в Chrome / Edge после перезагрузки «Сохранить» спросит, куда сохранить файл). Страница, открытая файлом с компьютера, предложит открыть новую версию на сайте.</p>
 <p>На iPhone сайт можно добавить на экран «Домой» (Поделиться → На экран «Домой») — откроется как приложение. Проект между запусками хранится в браузере; чтобы передать его другому человеку или на другой компьютер, сохраните файл проекта (раздел «Проект»).</p>
 <p>Вверху пять вкладок: <strong>Маска</strong> — один экран, <strong>Нарезка</strong> — длинный экран, разрезанный на части, <strong>Общее поле</strong> — несколько экранов вместе, <strong>Мэппинг</strong> — раскладка масок по выходам, <strong>Формирование ТЗ</strong> — сборка ТЗ. Внизу левой панели — кнопки «Как пользоваться» и «Авторы · Telegram». На Windows вместо ⌘ (Cmd) везде используется Ctrl.</p>
 <h2 id="help-s2">Вкладка «Маска»</h2>

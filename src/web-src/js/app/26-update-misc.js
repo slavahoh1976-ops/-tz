@@ -110,6 +110,79 @@ async function checkUpdate(manual) {
     window.__updateFailed(e.message);
   }
 }
+// ---- 2.0.199: кнопка версии «⟳ 2.0.199» в верхней панели (как в «Зефирке»): показывает версию,
+// мигает, если вышла новая. Веб — перезагружает страницу с новой версией (проект сохраняется автоматически),
+// Windows / Mac / Android — запускает обновление программы (скачать и перезапустить)
+const SITE_URL = UPDATE_URL.replace(/download\/version\.json$/, "");
+const UPD = { ver: "", notes: "", last: 0 };
+async function pollUpdate(force) {
+  if (SELFTEST || updating) return;
+  if (!force && Date.now() - UPD.last < 12e4) return;
+  UPD.last = Date.now();
+  let j;
+  try {
+    const r = await fetch(UPDATE_URL + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    j = await r.json();
+  } catch (e) {
+    return;
+  }
+  const it = j && j[PLATFORM], newer = !!(j && j.version && cmpVer(j.version, APP_VERSION) > 0 && (PLATFORM === "web" || it && it.url));
+  UPD.ver = newer ? j.version : "";
+  UPD.notes = newer && j.notes ? String(j.notes) : "";
+  syncVerBtn();
+}
+function syncVerBtn() {
+  const b = $("btnVer");
+  if (!b) return;
+  $("btnVerNo").textContent = APP_VERSION;
+  b.classList.toggle("has-upd", !!UPD.ver);
+  const t = UPD.ver ? "Доступна версия " + UPD.ver + " — нажмите, чтобы обновить" + (UPD.notes ? "\n" + UPD.notes : "") : PLATFORM === "web" ? "Версия " + APP_VERSION + " — нажмите, чтобы обновить страницу" : "Версия " + APP_VERSION + " — нажмите, чтобы проверить обновления";
+  b.title = t;
+  b.setAttribute("aria-label", UPD.ver ? "Доступна версия " + UPD.ver + ", обновить" : "Версия " + APP_VERSION + ", обновить");
+}
+function flushAutosave() {
+  clearTimeout(autosaveTimer);
+  try {
+    localStorage.setItem("ledmask.project", JSON.stringify(projectData(true)));
+  } catch (e) {
+    try {
+      localStorage.setItem("ledmask.project", JSON.stringify({ ...projectData(), refImages: {}, overviewImages: [] }));
+    } catch (e2) {
+    }
+  }
+}
+$("btnVer").onclick = async () => {
+  if (PLATFORM !== "web") {
+    await checkUpdate(true);
+    return;
+  }
+  flushAutosave();
+  if (/^https?:$/.test(location.protocol)) {
+    // с сайта: перезагрузка с меткой версии — браузер не возьмёт старую страницу из кэша
+    window.__reloading = true;
+    const u = new URL(location.href);
+    u.searchParams.set("v", UPD.ver || String(Date.now()));
+    status("Обновляю страницу…", true);
+    location.replace(u.toString());
+    return;
+  }
+  // файл с компьютера: новую версию — на сайте
+  if (UPD.ver) {
+    const ok = await ask("Доступна версия " + UPD.ver, "У вас " + APP_VERSION + (UPD.notes ? ". " + UPD.notes : "") + "\n\nЭта страница открыта файлом с компьютера, поэтому сама не обновится. Откройте новую версию на сайте (ваш проект сохранится в браузере) или скачайте новый файл там же.", "", "Открыть сайт", false);
+    if (ok !== null) window.open(SITE_URL, "_blank");
+    return;
+  }
+  window.__reloading = true;
+  location.reload();
+};
+syncVerBtn();
+// проверка: при запуске, каждые 15 минут и когда возвращаетесь в окно (не чаще раза в 2 минуты)
+setInterval(() => pollUpdate(true), 9e5);
+window.addEventListener("focus", () => pollUpdate(false));
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) pollUpdate(false);
+});
 async function runSelfTest() {
   const log = ["version=".concat(APP_VERSION, " platform=").concat(PLATFORM, " compressionStream=").concat(HAS_CS)];
   const L2 = (s) => {
@@ -217,11 +290,13 @@ function startPlatform() {
   if (platformStarted) return;
   platformStarted = true;
   $("verText").textContent = "Версия ".concat(APP_VERSION, " · ").concat(PLATFORM_LABEL, " · сборка ").concat(BUILD_STAMP);
+  // 2.0.199: вместо окна при запуске — мигающая кнопка версии в верхней панели (внизу ссылка остаётся)
   if (PLATFORM !== "web") {
     $("btnUpdate").hidden = false;
     $("btnUpdate").onclick = () => checkUpdate(true);
-    setTimeout(() => checkUpdate(false), 4e3);
   }
+  syncVerBtn();
+  setTimeout(() => pollUpdate(true), 3e3);
   if (SELFTEST) setTimeout(() => runSelfTest(), 1500);
 }
 $("verText").textContent = "Версия ".concat(APP_VERSION, " · ").concat(PLATFORM_LABEL, " · сборка ").concat(BUILD_STAMP);
@@ -239,6 +314,11 @@ else if (STANDALONE) {
     startPlatform();
   });
 }
+// 2.0.199: в браузере — первая проверка обновлений через 6 с (программа для Windows к этому времени уже
+// определится как Windows и проверит сама, через startPlatform)
+setTimeout(() => {
+  if (PLATFORM === "web") pollUpdate(true);
+}, 6e3);
 if (!HAS_CS && !DESKTOP && !window.pako) {
   $("exportNote").textContent = "Этот браузер слишком старый для экспорта: нужен Safari 16.4+ или свежий Chrome.";
 }
