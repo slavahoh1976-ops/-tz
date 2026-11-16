@@ -153,6 +153,10 @@ function ctxMask(e) {
   if (!L || !st) return;
   const th = textHoverAt(x, y, e);
   if (th && th.k[0] === "l") return ctxText(e, +th.k.slice(1));
+  // 3.0.2: ПКМ по фигуре каше — копировать / вставить / дублировать / удалить
+  const si = shapeAt(st, x, y);
+  if (si >= 0 && !(st.kind === "led" || !st.kind) || si >= 0 && si === ui.selShape) return ctxShape(e, si);
+  if (si >= 0 && (st.kind === "led" || !st.kind) && !ui.selected.size) return ctxShape(e, si);
   // кабинеты (только LED)
   if (st.kind && st.kind !== "led") return;
   const cell = pointToCell(x, y);
@@ -173,6 +177,7 @@ function ctxMask(e) {
     { label: "Выделить все кабинеты", fn: () => { ui.selected.clear(); for (let r = 0; r < st.cabRows; r++) for (let c = 0; c < st.cabCols; c++) ui.selected.add(key(c, r)); changed(false); } },
     { label: "Снять выделение", disabled: !ui.selected.size, fn: () => clearSelection() }
   );
+  if (ui.shapeClip) items.push({ sep: true }, { label: "Вставить фигуру", fn: () => shapePaste(ui.shapeClip) });
   changed(false);
   showCtx(e.clientX, e.clientY, items);
 }
@@ -187,7 +192,7 @@ function ctxText(e, i) {
   changed(false);
   showCtx(e.clientX, e.clientY, [
     { label: "Изменить текст", fn: () => $("btnEditText").click() },
-    { label: "Копировать", fn: () => { ui.textClip = { uid: st.uid, list: JSON.parse(JSON.stringify([st.extraLabels[i]])) }; status("Текст скопирован", true); } },
+    { label: "Копировать", fn: () => { ui.lastClip = "text"; ui.textClip = { uid: st.uid, list: JSON.parse(JSON.stringify([st.extraLabels[i]])) }; status("Текст скопирован", true); } },
     { label: "Вставить", disabled: !ui.textClip, fn: () => pasteTexts(ui.textClip.list, ui.textClip.uid === st.uid) },
     { label: "Дублировать", fn: () => $("btnCopyText").click() },
     { sep: true },
