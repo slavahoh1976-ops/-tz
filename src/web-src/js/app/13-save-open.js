@@ -121,7 +121,8 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("beforeunload", (e) => {
   // в браузере предупреждаем при закрытии вкладки с несохранёнными изменениями
-  if (DESKTOP || window.AndroidBridge || !isDirty()) return;
+  // 2.0.199: перезагрузка кнопкой версии — проект уже сохранён в браузере, не спрашиваем
+  if (window.__reloading || DESKTOP || window.AndroidBridge || !isDirty()) return;
   e.preventDefault();
   e.returnValue = "";
 });
