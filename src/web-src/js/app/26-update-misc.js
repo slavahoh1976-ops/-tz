@@ -33,6 +33,11 @@ function placeStrip() {
   }
   if (narrow && q.parentElement.classList.contains("undo")) document.querySelector(".seg.pages").after(q);
   if (!narrow && !q.parentElement.classList.contains("undo")) document.querySelector(".undo").appendChild(q);
+  // 2.0.199: на телефоне кнопка версии — в первой строке, справа от «LED / Маски · Волюметрик» (там свободно)
+  const vb = $("btnVer"), inUndo = vb.parentElement.classList.contains("undo");
+  if (narrow && inUndo) $("appMode").after(vb);
+  if (!narrow && !inUndo) document.querySelector(".undo").appendChild(vb);
+  vb.classList.toggle("vtop", narrow);
   if (narrow && strip.parentElement !== $("panel")) $("panel").insertBefore(strip, $("panel").firstChild);
   if (!narrow && strip.parentElement === $("panel")) document.querySelector(".stage").appendChild(strip);
 }
