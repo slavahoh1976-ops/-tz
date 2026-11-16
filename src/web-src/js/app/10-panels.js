@@ -36,7 +36,10 @@ function setMode(m) {
       st.vol.view = "com";
       st.vol.side = "top";
       st.name = "volumetric " + (project.screens.filter((s) => s.kind === "vol").length + 1);
-    } else st.name = "screen " + (project.screens.filter((s) => (s.kind || "led") === "led").length + 1);
+    } else {
+      st.name = "screen " + (project.screens.filter((s) => (s.kind || "led") === "led").length + 1);
+      st.guides = { circle: false, diag: false };
+    }
     project.screens.push(st);
     i = project.screens.length - 1;
   }
@@ -1206,6 +1209,8 @@ $("btnAddScreen").onclick = () => {
   Object.assign(base, { borders: [], name: base.kind === "ring" ? "ring" : base.kind && base.kind !== "led" ? "".concat({ proj: "projection", tv: "tv", pix: "pixel drop", tube: "led tube", vol: "volumetric" }[base.kind], " ").concat(project.screens.filter((x) => x.kind === base.kind).length + 1) : "screen ".concat(project.screens.length + 1), blackCabinets: [], cabinetColors: {}, persistentContours: [], showPersistentContour: true, extraLabels: [], cacheShapes: [], cornerCabinets: {}, shapedCols: {}, shapedRows: {}, cabShift: {} });
   delete base.field;
   base.uid = newUid();
+  // 3.0.0: новый экран LED — без направляющих (круг и линии), даже если у текущего они включены
+  if ((base.kind || "led") === "led") base.guides = { circle: false, diag: false };
   project.screens.push(base);
   project.cur = project.screens.length - 1;
   ui.selected.clear();
@@ -1286,7 +1291,7 @@ $("btnNewProj").onclick = async () => {
   if (isDirty()) {
     if (!await guardUnsaved()) return;
   } else if (!await ask("Новый проект?", "Все экраны, общие поля и настройки ТЗ вернутся к значениям по умолчанию — как раньше по кнопке «Сброс».", "", "Новый", false)) return;
-  project = { name: "Проект", screens: [defaultScreen()], cur: 0, guides: { circle: true, diag: true }, ...freshFieldState() };
+  project = { name: "Проект", screens: [defaultScreen()], cur: 0, guides: { circle: false, diag: false }, ...freshFieldState() };
   clearOverview();
   Object.assign(ui, { selected: /* @__PURE__ */ new Set(), anchor: null, textMode: -1, selLabel: -1, zoom: 1, panX: 0, panY: 0, paint: { ...DEF_PAINT } });
   projHandle = null;

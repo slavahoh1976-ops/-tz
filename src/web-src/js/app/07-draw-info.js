@@ -94,7 +94,8 @@ function cornerList(st, black) {
   }
   return out;
 }
-let project = { name: "Проект", screens: [defaultScreen()], cur: 0, guides: { circle: true, diag: true }, ...freshFieldState() };
+// 3.0.0: в новом проекте направляющие «Круг» и «Линии через центр» выключены (в старых файлах — как были)
+let project = { name: "Проект", screens: [defaultScreen()], cur: 0, guides: { circle: false, diag: false }, ...freshFieldState() };
 // 2.0.174: направляющие (круг, линии через центр) — у каждой маски свои; пока не менялись, берутся общие из проекта
 const guidesOf = (st) => st && st.guides && typeof st.guides === "object" ? st.guides : project.guides;
 const S = () => project.screens[project.cur];
