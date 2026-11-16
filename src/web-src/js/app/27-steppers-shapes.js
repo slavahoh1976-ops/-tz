@@ -425,6 +425,10 @@ function mmPerPx(st) {
   return [w / Math.max(1, st.cabWpx), h / Math.max(1, st.cabHpx)];
 }
 function syncShapes() {
+  if ($("shapePaste")) {
+    $("shapePaste").disabled = !ui.shapeClip;
+    $("shapePaste").title = ui.shapeClip ? "Вставить: " + ui.shapeClip.list.map(shapeName).join(", ") + " (Ctrl / ⌘ + V)" : "Сначала скопируйте фигуру";
+  }
   const st = S(), list = st.cacheShapes || (st.cacheShapes = []), sel = $("shapeSel");
   if (ui.selShape >= list.length) ui.selShape = list.length - 1;
   setHtml(sel, '<option value="-1">'.concat(list.length ? "— не выбран" : "Фигур нет", "</option>") + list.map((c2, i) => '<option value="'.concat(i, '">').concat(shapeName(c2), " ").concat(i + 1).concat(c2.frame ? " (рамка)" : c2.inv ? " (инверсия)" : "", " · ").concat(c2.lock ? "⌀ " + Math.round(c2.w) : Math.round(c2.w) + "×" + Math.round(c2.h), " px</option>")).join(""));
@@ -533,6 +537,85 @@ $("shapeAdd").onclick = () => {
   changed();
   status("Добавлено: ".concat(shapeName(c), " — двигайте на холсте, растягивайте за квадратики"), true);
 };
+// ---- 3.0.2: копирование фигур — кнопки, ПКМ, Ctrl / ⌘ + C / V / D; в любую маску с фигурами
+// и в другой проект: в другой маске фигура встаёт на то же место относительно маски, не влезает — уменьшается.
+// Фигуры каше есть у масок LED и проекции
+const shapesHere = (st) => !!st && (!st.kind || st.kind === "led" || st.kind === "proj");
+function shapeCopySel() {
+  const st = S(), c = (st.cacheShapes || [])[ui.selShape];
+  if (!c) return status("Выберите фигуру в списке «Фигура» — потом «Копировать»", true);
+  const [W, H] = dims(st);
+  ui.shapeClip = { uid: st.uid, W, H, list: [JSON.parse(JSON.stringify(c))] };
+  ui.lastClip = "shape";
+  syncShapes();
+  status(shapeName(c) + " скопирован(а) — «Вставить» или Ctrl+V, можно в другую маску", true);
+}
+function shapePaste(clip, dup) {
+  const st = S();
+  if (!clip || !clip.list.length) return status("Сначала скопируйте фигуру", true);
+  if (!shapesHere(st)) return status("В этой маске нет фигур каше", true);
+  const [W, H] = dims(st), same = clip.uid === st.uid && clip.W === W && clip.H === H;
+  const off = Math.max(8, Math.round(Math.min(W, H) * 0.03));
+  if (!(st.cacheShapes || []).length && (st.cacheDim == null || +st.cacheDim === 35)) st.cacheDim = 45;
+  const list = st.cacheShapes || (st.cacheShapes = []);
+  for (const src of clip.list) {
+    const c = JSON.parse(JSON.stringify(src));
+    if (same) {
+      c.x = Math.min(W, (+c.x || 0) + off);
+      c.y = Math.min(H, (+c.y || 0) + off);
+    } else {
+      // другая маска: то же место относительно маски; больше маски — уменьшаем пропорционально
+      c.x = Math.round((+c.x || 0) / (clip.W || W) * W);
+      c.y = Math.round((+c.y || 0) / (clip.H || H) * H);
+      const k = Math.min(1, W / Math.max(1, c.w), H / Math.max(1, c.h));
+      if (k < 1) {
+        c.w = Math.max(4, Math.round(c.w * k));
+        c.h = Math.max(4, Math.round(c.h * k));
+        if (c.r) c.r = Math.round(c.r * k);
+      }
+    }
+    list.push(c);
+  }
+  ui.selShape = list.length - 1;
+  ui.selected.clear();
+  syncShapes();
+  changed();
+  const c = list[ui.selShape];
+  status(dup ? "Копия: " + shapeName(c) + " " + list.length : shapeName(c) + " вставлен(а)" + (same ? "" : " — на то же место относительно маски"), true);
+}
+function shapeDup() {
+  const st = S(), c = (st.cacheShapes || [])[ui.selShape];
+  if (!c) return status("Выберите фигуру в списке «Фигура»", true);
+  const [W, H] = dims(st);
+  shapePaste({ uid: st.uid, W, H, list: [c] }, true);
+}
+// фигура под курсором (верхняя): точка внутри повёрнутого прямоугольника фигуры
+function shapeAt(st, x, y) {
+  if (!L || !shapesHere(st)) return -1;
+  const list = st.cacheShapes || [], s0 = L.scale;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const c = list[i], a = -(+c.rot || 0) * Math.PI / 180, dx = (x - L.ox) / s0 - c.x, dy = (y - L.oy) / s0 - c.y;
+    const u = dx * Math.cos(a) - dy * Math.sin(a), v = dx * Math.sin(a) + dy * Math.cos(a);
+    if (Math.abs(u) <= c.w / 2 && Math.abs(v) <= c.h / 2) return i;
+  }
+  return -1;
+}
+function ctxShape(e, i) {
+  const st = S();
+  ui.selShape = i;
+  syncShapes();
+  requestDraw();
+  showCtx(e.clientX, e.clientY, [
+    { label: "Копировать", fn: shapeCopySel },
+    { label: "Вставить", disabled: !ui.shapeClip, fn: () => shapePaste(ui.shapeClip) },
+    { label: "Дублировать", fn: shapeDup },
+    { sep: true },
+    { label: "Удалить", danger: true, fn: () => $("shapeDel").click() }
+  ]);
+}
+$("shapeCopy").onclick = shapeCopySel;
+$("shapePaste").onclick = () => shapePaste(ui.shapeClip);
+$("shapeDup").onclick = shapeDup;
 $("shapeDel").onclick = () => {
   const st = S();
   if (ui.selShape < 0) return;

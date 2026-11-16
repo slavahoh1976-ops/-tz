@@ -1,13 +1,13 @@
 {
- "version": "3.0.0",
- "notes": "Версия 3.0.0. Кнопка версии вверху — мигает, когда вышло обновление. Мэппинг: список слайсов как в Resolume, выделение нескольких, объединить и разбить по кабинетам, перетаскивание, имена по шаблону, «Разложить выбранные», «Отправить на выход», проверка перед экспортом, тест для проверки на экране. Маски LED: направляющие (круг и линии) по умолчанию выключены.",
+ "version": "3.0.2",
+ "notes": "Версия 3.0.2: фигуры каше можно копировать — «Копия», «Копировать» / «Вставить», правая кнопка по фигуре, Ctrl+C / V / D; вставка в любую маску LED или проекции и в другой проект.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "cc9e500c30675c6bfbee5ff49ee5addb4bd5b88c94bae4e781939d5c7c39eea0"
+  "sha256": "641f50de33e225c79d6eee4d347050bca16498601c7351e3e65cfe261233ee7f"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "641933b710c98cc449faa534e88e963ce010a5eb65c07f546721aaa703c53a94"
+  "sha256": "7f7c1423bc92bdc17143c7577ed7b50d33379e60a5d4bdff8e0f3fe04f8cfdb2"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"

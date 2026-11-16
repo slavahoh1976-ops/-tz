@@ -1112,8 +1112,41 @@ window.addEventListener("keydown", (e) => {
     return;
   }
   const mod = e.ctrlKey || e.metaKey, k = (e.key || "").toLowerCase();
+  // 3.0.2: фигура каше выбрана (а тексты нет) — Ctrl+C / D, Delete, стрелки — для фигуры
+  const shSel = !selExtras().length && shapesHere(st) && (st.cacheShapes || [])[ui.selShape];
+  if (shSel && mod && !e.altKey && (k === "c" || k === "с" || e.code === "KeyC") && !String(window.getSelection && window.getSelection() || "")) {
+    e.preventDefault();
+    shapeCopySel();
+    return;
+  }
+  if (mod && !e.altKey && (k === "v" || k === "м" || e.code === "KeyV") && ui.shapeClip && (ui.lastClip === "shape" || !ui.textClip)) {
+    e.preventDefault();
+    shapePaste(ui.shapeClip);
+    return;
+  }
+  if (shSel && mod && !e.altKey && (k === "d" || k === "в" || e.code === "KeyD")) {
+    e.preventDefault();
+    shapeDup();
+    return;
+  }
+  if (shSel && (e.key === "Delete" || e.key === "Backspace")) {
+    e.preventDefault();
+    $("shapeDel").click();
+    return;
+  }
+  const shMv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (shSel && shMv && !mod && !e.altKey && !ui.selected.size && ui.textMode !== 0) {
+    e.preventDefault();
+    const dd = e.shiftKey ? 10 : 1;
+    shSel.x = Math.round(shSel.x + shMv[0] * dd);
+    shSel.y = Math.round(shSel.y + shMv[1] * dd);
+    syncShapes();
+    changed();
+    return;
+  }
   if (mod && !e.altKey && (k === "c" || k === "с" || e.code === "KeyC") && selExtras().length && !String(window.getSelection && window.getSelection() || "")) {
     e.preventDefault();
+    ui.lastClip = "text";
     ui.textClip = { uid: st.uid, list: JSON.parse(JSON.stringify(selExtras().map((i) => st.extraLabels[i]))) };
     status(ui.textClip.list.length > 1 ? "Скопировано текстов: ".concat(ui.textClip.list.length, " — Ctrl+V, чтобы вставить") : "Текст скопирован — Ctrl+V, чтобы вставить", true);
     return;
