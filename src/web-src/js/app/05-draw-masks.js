@@ -616,6 +616,7 @@ function drawCachePx(ctx, st, s, Wp, Hp) {
     ctx.fill();
     ctx.restore();
   }
+  drawShapeFills(ctx, st, s);
   const stroke = (c, w, color, alpha) => {
     shapePath(ctx, c, c.x * s, c.y * s, c.w / 2 * s - w / 2, c.h / 2 * s - w / 2);
     ctx.save();
@@ -627,6 +628,20 @@ function drawCachePx(ctx, st, s, Wp, Hp) {
   };
   const lw = Math.max(1, Math.round((st.cacheLineW || 6) * s)), la = Math.max(0.05, Math.min(1, (st.cacheLineA == null ? 100 : +st.cacheLineA) / 100));
   for (const c of list) if (st.cacheLine !== false || c.frame) stroke(c, lw, st.cacheLineColor || "#FFFFFF", la);
+}
+// 3.0.3: заливка фигуры цветом (fill — включена, fc — цвет, fa — плотность %); поверх кабинетов, под сеткой и номерами.
+// Старое поле fa без fill (из давних версий) ни на что не влияет
+function drawShapeFills(ctx, st, s) {
+  for (const c of st.cacheShapes || []) {
+    const a = c.fill ? Math.min(1, (+c.fa > 0 ? +c.fa : 50) / 100) : 0;
+    if (!(a > 0)) continue;
+    ctx.save();
+    shapePath(ctx, c, c.x * s, c.y * s, c.w / 2 * s, c.h / 2 * s);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = c.fc || "#FF0000";
+    ctx.fill();
+    ctx.restore();
+  }
 }
 function shapeR(c) {
   if (c.t === "bez") return 0;

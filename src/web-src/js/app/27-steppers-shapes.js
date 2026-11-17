@@ -440,6 +440,17 @@ function syncShapes() {
   }
   $("shapeLock").checked = c ? !!c.lock : true;
   $("shapeLock").disabled = !c;
+  {
+    // 3.0.3: заливка цветом — у выбранной фигуры (ничего не выбрано — показываем первую, меняются все)
+    const cc = c || list[0], on = !!(cc && cc.fill);
+    $("shapeFill").checked = on;
+    $("shapeFill").disabled = !list.length;
+    setVal($("shapeFC"), ((cc && cc.fc) || "#FF0000").toLowerCase());
+    const fa = cc && cc.fill && +cc.fa > 0 ? +cc.fa : 50;
+    if (document.activeElement !== $("shapeFA")) setVal($("shapeFA"), fa);
+    $("shapeFAV").textContent = fa + "%";
+    $("shapeFC").disabled = $("shapeFA").disabled = !on;
+  }
   $("shapeInv").checked = !!(c && c.inv);
   $("shapeInv").disabled = !c || !!c.frame;
   $("shapeDel").disabled = !c;
@@ -613,6 +624,34 @@ function ctxShape(e, i) {
     { label: "Удалить", danger: true, fn: () => $("shapeDel").click() }
   ]);
 }
+// 3.0.3: заливка — выбранной фигуры или всех, если ни одна не выбрана
+const fillTargets = () => {
+  const list = S().cacheShapes || [], c = list[ui.selShape];
+  return c ? [c] : list;
+};
+$("shapeFill").addEventListener("change", (e) => {
+  const ts = fillTargets();
+  if (!ts.length) return status("Сначала добавьте фигуру", true);
+  for (const t of ts) {
+    t.fill = e.target.checked;
+    if (t.fill) {
+      if (!(+t.fa > 0)) t.fa = +$("shapeFA").value || 50;
+      if (!t.fc) t.fc = $("shapeFC").value.toUpperCase();
+    }
+  }
+  syncShapes();
+  changed();
+});
+$("shapeFC").addEventListener("input", (e) => {
+  for (const t of fillTargets()) t.fc = e.target.value.toUpperCase();
+  changed();
+});
+$("shapeFA").addEventListener("input", (e) => {
+  const v = Math.max(5, Math.min(100, +e.target.value || 50));
+  $("shapeFAV").textContent = v + "%";
+  for (const t of fillTargets()) if (t.fill) t.fa = v;
+  changed();
+});
 $("shapeCopy").onclick = shapeCopySel;
 $("shapePaste").onclick = () => shapePaste(ui.shapeClip);
 $("shapeDup").onclick = shapeDup;

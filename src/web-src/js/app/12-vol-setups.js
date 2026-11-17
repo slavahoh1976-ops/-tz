@@ -235,10 +235,13 @@ async function exportTZ(label) {
       const base = it.kind === "out" ? outFileName(it.m, it.scr).replace(/\.png$/, "") : it.kind === "cut" ? cutFileBase(it.c) : it.kind === "cutsrc" ? cutFileBase(it.c) + "-исходник" : it.kind === "field" ? fieldFileBase(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? "".concat(safeName(it.st.name || "volumetric"), it.kind === "volcom" ? it.com ? "-коммутация-сверху" : "-вид-снизу" : "-3D") : maskFileBase(it.st);
       pngs.push({ ...r, w: r.w || it.w, h: r.h || it.h, file: "".concat(folder).concat(uniq(base), ".png"), label: it.label, key: it.key, info: it.info, noFile: it.kind === "cutsrc" });
     }
-    const ov = tzImages();
+    // 3.0.4: в документ — уменьшенные копии больших картинок (иначе часть iPhone показывает лист мешаниной)
+    busy("Подготовка картинок для PPTX и PDF…");
+    await tick();
+    const ov = await docImgs(tzImages());
     busy("Сборка PPTX…");
     await tick();
-    const masks = pngs.map((p) => ({ png: p.png, w: p.w, h: p.h, label: p.label, key: p.key, info: p.info }));
+    const masks = await docMasks(pngs.map((p) => ({ png: p.png, w: p.w, h: p.h, label: p.label, key: p.key, info: p.info })));
     await tplInfo(label);
     const pptBytes = new Uint8Array(await (await buildPptx(TPL[label], masks, ov, label)).arrayBuffer());
     busy("Сборка PDF…");

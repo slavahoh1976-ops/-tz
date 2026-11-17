@@ -747,6 +747,97 @@ const EMU_PT = 12700, PDF_W = SLIDE_W / EMU_PT, PDF_H = SLIDE_H / EMU_PT;
 async function zlibDeflate(bytes) {
   return HAS_CS ? streamBytes(new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate"))) : nativeZ("deflate", "zlib", bytes);
 }
+// ---- 3.0.4: картинки внутри PPTX / PDF — не больше DOC_MAX по длинной стороне. Часть iPhone (и других телефонов)
+// не может показать в документе очень большую картинку (например, полосу 26208×208) и рисует лист «мешаниной».
+// На листе маска всё равно занимает ~18 см, 4096 px — с запасом. PNG масок в ZIP остаются в полном размере.
+const DOC_MAX = 4096;
+function bytesToImage(bytes, mime) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(new Blob([bytes], { type: mime })), im = new Image();
+    im.onload = () => {
+      res(im);
+      setTimeout(() => URL.revokeObjectURL(u), 0);
+    };
+    im.onerror = () => {
+      URL.revokeObjectURL(u);
+      rej(new Error("не удалось прочитать картинку"));
+    };
+    im.src = u;
+  });
+}
+const docFit = (w, h) => {
+  const k = Math.min(1, DOC_MAX / Math.max(1, w, h));
+  return [Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)), k];
+};
+// уменьшение по шагам вдвое — тонкие линии и номера кабинетов не пропадают
+function halveTo(im, w, h, w2, h2) {
+  let src = im, cw = w, ch = h;
+  while (cw / 2 >= w2 && ch / 2 >= h2 && cw > 1 && ch > 1) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.ceil(cw / 2));
+    c.height = Math.max(1, Math.ceil(ch / 2));
+    const x = c.getContext("2d");
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = "high";
+    x.drawImage(src, 0, 0, c.width, c.height);
+    src = c;
+    cw = c.width;
+    ch = c.height;
+  }
+  return src;
+}
+async function docMasks(masks) {
+  const out = [];
+  for (const m of masks) {
+    let pp;
+    try {
+      pp = pngParts(m.png);
+    } catch (e) {
+      out.push(m);
+      continue;
+    }
+    const [w2, h2, k] = docFit(pp.w, pp.h);
+    if (k >= 1) {
+      out.push(m);
+      continue;
+    }
+    try {
+      const im = await bytesToImage(m.png, "image/png"), src = halveTo(im, pp.w, pp.h, w2, h2);
+      const r = await renderBands(w2, h2, (ctx) => {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(src, 0, 0, w2, h2);
+      });
+      out.push({ ...m, png: r.png });
+    } catch (e) {
+      out.push(m);
+    }
+  }
+  return out;
+}
+async function docImgs(list) {
+  const out = [];
+  for (const it of list || []) {
+    const [w2, h2, k] = docFit(+it.w || 0, +it.h || 0);
+    if (!it.jpeg || k >= 1) {
+      out.push(it);
+      continue;
+    }
+    try {
+      const im = await bytesToImage(b64ToBytes(it.jpeg), "image/jpeg"), src = halveTo(im, it.w, it.h, w2, h2), c = document.createElement("canvas");
+      c.width = w2;
+      c.height = h2;
+      const x = c.getContext("2d");
+      x.imageSmoothingEnabled = true;
+      x.imageSmoothingQuality = "high";
+      x.drawImage(src, 0, 0, w2, h2);
+      out.push({ ...it, jpeg: c.toDataURL("image/jpeg", 0.9).split(",")[1] });
+    } catch (e) {
+      out.push(it);
+    }
+  }
+  return out;
+}
 function pngParts(png) {
   const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);
   let p = 8, w = 0, h = 0, ct = 0, bd = 0;

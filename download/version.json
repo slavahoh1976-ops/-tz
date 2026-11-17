@@ -1,13 +1,13 @@
 {
- "version": "3.0.2",
- "notes": "Версия 3.0.2: фигуры каше можно копировать — «Копия», «Копировать» / «Вставить», правая кнопка по фигуре, Ctrl+C / V / D; вставка в любую маску LED или проекции и в другой проект.",
+ "version": "3.0.5",
+ "notes": "Версия 3.0.5: в программе для Mac и в Safari видно содержимое выходов мэппинга; ТЗ (PDF/PPTX) открывается на всех iPhone; заливка фигур каше цветом.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "641f50de33e225c79d6eee4d347050bca16498601c7351e3e65cfe261233ee7f"
+  "sha256": "b6a7e24a65e5e59af20bed8668c11326de91cd131f3ec703f259d0c0d917ca2f"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "7f7c1423bc92bdc17143c7577ed7b50d33379e60a5d4bdff8e0f3fe04f8cfdb2"
+  "sha256": "3bfa08767cf59f816077afa7ca3f50eafe7ec33c50b4d2fafe6961ec30fb97b5"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
