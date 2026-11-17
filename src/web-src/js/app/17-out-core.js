@@ -325,6 +325,17 @@ const sliceScaled = (sl) => {
   return b[0] !== w[0] || b[1] !== w[1];
 };
 // ---- отрисовка слайса на выходе
+// 3.0.5: в Safari / WebKit (программа для Mac, iPhone) вырезание куска из большой картинки (drawImage с 9 аргументами)
+// у старых версий рисует пустоту — выходы мэппинга были чёрными. Там слайс рисуем как вход: картинку целиком,
+// обрезанную по рамке слайса (результат тот же). В Chrome / Edge / Android — прежний, более быстрый способ.
+let SLICE_CLIP = (() => {
+  try {
+    const u = navigator.userAgent || "";
+    return /AppleWebKit/.test(u) && !/(Chrome|Chromium|CriOS|Edg|OPR|Android)/.test(u);
+  } catch (e) {
+    return false;
+  }
+})();
 function paintSlice(ctx, srcC, sl, k) {
   const [ow, oh] = sliceOutWH(sl), s = srcC.s, r90 = sl.rot === 90 || sl.rot === 270, dw = r90 ? oh : ow, dh = r90 ? ow : oh;
   ctx.save();
@@ -342,6 +353,14 @@ function paintSlice(ctx, srcC, sl, k) {
   if (+sl.ra) {
     ctx.scale(dw * k / (sl.iw * s), dh * k / (sl.ih * s));
     ctx.rotate(-sl.ra * Math.PI / 180);
+    ctx.translate(-(sl.ix + sl.iw / 2) * s, -(sl.iy + sl.ih / 2) * s);
+    ctx.drawImage(srcC.cv, 0, 0);
+  } else if (SLICE_CLIP) {
+    ctx.beginPath();
+    ctx.rect(-dw * k / 2, -dh * k / 2, dw * k, dh * k);
+    ctx.clip();
+    // центр участка маски — в центр слайса на выходе
+    ctx.scale(dw * k / (sl.iw * s), dh * k / (sl.ih * s));
     ctx.translate(-(sl.ix + sl.iw / 2) * s, -(sl.iy + sl.ih / 2) * s);
     ctx.drawImage(srcC.cv, 0, 0);
   } else ctx.drawImage(srcC.cv, sl.ix * s, sl.iy * s, sl.iw * s, sl.ih * s, -dw * k / 2, -dh * k / 2, dw * k, dh * k);

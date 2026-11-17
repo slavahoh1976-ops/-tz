@@ -385,6 +385,7 @@ function drawMask(ctx, st, s, guides) {
       ctx.fill("nonzero");
       ctx.restore();
     }
+    drawShapeFills(ctx, st, s);
   }
   ctx.fillStyle = "rgb(64,64,64)";
   const bw = Math.max(1, Math.round(2 * s));
