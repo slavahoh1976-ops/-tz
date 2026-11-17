@@ -151,6 +151,11 @@ const tzCutOn = (c) => {
   const m = project.tz.cuts || {};
   return m[c.id] != null ? !!m[c.id] : true;
 };
+// 3.0.6: пример к нарезке (исходная маска с красными линиями разреза) — галочкой у каждой нарезки, по умолчанию есть
+const tzCutSrcOn = (c) => {
+  const m = project.tz.cutSrc || {};
+  return m[c.id] != null ? !!m[c.id] : true;
+};
 // 2.0.101: порядок масок и общих полей в ТЗ — project.tz.order (ключи «f:id» / «m:uid»), меняется перетаскиванием в списке.
 // Новые поля и маски — в конец; по умолчанию сначала поля, потом маски.
 function tzOrder() {
@@ -179,7 +184,7 @@ function tzItems() {
     if (ci) out.push({ kind: "cut", c: o.c, key: "c:" + o.c.id, name: o.c.name, ...ci });
     if (ci) {
       // 2.0.174: пример для ТЗ — исходная маска с разметкой и линиями разреза (отдельным файлом не сохраняется)
-      const G0 = cutGeom(o.c);
+      const G0 = tzCutSrcOn(o.c) && cutGeom(o.c);
       if (G0) out.push({ kind: "cutsrc", c: o.c, key: "cs:" + o.c.id, name: o.c.name + " — исходник", w: G0.W0, h: G0.H0, label: "".concat(G0.W0, "×").concat(G0.H0, "  |  ").concat(G0.st.name || "screen", " — исходная маска, красным — линии разреза (пример)") });
     }
     continue;
@@ -370,6 +375,14 @@ function refreshTZPanel() {
         tz.cuts = tz.cuts || {};
         tz.cuts[c.id] = on;
       }, "head", !ci || volTpl, o.k);
+      // 3.0.6: под нарезкой — пример исходной маски с линиями разреза (включить / выключить)
+      if (ci) {
+        const G0 = cutGeom(c);
+        row("↳ пример: исходная маска", G0 ? "".concat(G0.W0, "×").concat(G0.H0) : "", tzCutSrcOn(c), (on) => {
+          tz.cutSrc = tz.cutSrc || {};
+          tz.cutSrc[c.id] = on;
+        }, "sub", !tzCutOn(c) || volTpl || !G0);
+      }
     } else if (o.f) {
       const f = o.f, fi = fieldInfo(f);
       row(f.name, !fi ? "нет экранов" : volTpl ? "не в ТЗ «Волюметрик»" : "".concat(fi.w, "×").concat(fi.h), tzFieldOn(f), (on) => {

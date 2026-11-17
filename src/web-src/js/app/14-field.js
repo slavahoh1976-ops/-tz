@@ -69,6 +69,7 @@ function loadFieldState(d, raw) {
   // 2.0.114: порядок листов ТЗ и выбранный тип ТЗ — раньше при открытии сбрасывались
   if (Array.isArray(tz.order)) project.tz.order = tz.order.filter((k) => typeof k === "string" && /^[fmco]:/.test(k));
   project.tz.cuts = boolMap(tz.cuts);
+  project.tz.cutSrc = boolMap(tz.cutSrc);
   project.tz.outs = boolMap(tz.outs);
   if (typeof tz.tpl === "string" && TPL[tz.tpl]) project.tz.tpl = tz.tpl;
   keepRest(project.tz, tz);
