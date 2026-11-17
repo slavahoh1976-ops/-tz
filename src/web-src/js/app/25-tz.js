@@ -610,6 +610,7 @@ function tzChanged() {
 $("tDefault").onclick = () => {
   project.tz.fields = {};
   project.tz.cuts = {};
+  project.tz.cutSrc = {};
   project.tz.outs = {};
   delete project.tz.order;
   project.tz.masks = {};
