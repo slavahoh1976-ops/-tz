@@ -412,6 +412,8 @@ async function tplBlocks(label) {
   }
   const sps = (slide.match(/<p:sp>[\s\S]*?<\/p:sp>/g) || []).filter((x) => x.includes("<p:txBody>") && /<a:t>[^<]+<\/a:t>/.test(x));
   const blocks = sps.map((sp, idx) => tplBlock(label, idx === sps.length - 1 ? label : label + "#" + idx, idx, sp, clr, link));
+  // 3.0.8: шаблоны, первый лист которых изменён после отрисовки готовой картинки (PDF_BG), — лист рисуется программой
+  if (TPL_FRESH.includes(label)) for (const b of blocks) b.fresh = true;
   blocks.forEach((b) => tplCache[b.label] = b);
   tplCache[label + "@all"] = blocks;
   return blocks;
@@ -475,6 +477,11 @@ function reqText(label) {
   return typeof v === "string" ? v : null;
 }
 const tzPos = (k) => project.tz.pos && project.tz.pos[k] || null;
+// 3.0.8: в шаблонах Resolume и D3 в раздел 01 добавлен пункт «строго по маскам», раздел 02 сдвинут ниже —
+// их первый лист программа рисует сама (как при ручной правке), а не берёт готовую картинку
+const TPL_FRESH = ["Resolume", "D3"];
+// рисовать блок заново (а не вырезать из готовой картинки): правлен вручную или новее картинки
+const reqDraw = (info) => !!info.fresh || reqEdited(info);
 function reqEdited(info) {
   const v = reqText(info.label);
   return v != null && v.replace(/\r/g, "") !== info.md || !!tzPos("req:" + info.label);
@@ -961,7 +968,7 @@ async function buildPdf(label, masks, overview_) {
     return stream("/Type /XObject /Subtype /Image /Width ".concat(w, " /Height ").concat(h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode"), d);
   };
   const catalog = add(null), pagesId = add(null);
-  const blocks = await tplBlocks(label), edited = blocks.some(reqEdited);
+  const blocks = await tplBlocks(label), edited = blocks.some(reqDraw);
   const bg1 = jpeg(PDF_BG[PDF_BG[label] ? label : "Resolume"]), bg0 = edited ? jpeg(PDF_BG[bgKey("bare", label)]) : 0, bg2 = jpeg(PDF_BG[bgKey("masks", label)]);
   const pages = [], f = (n) => n.toFixed(4);
   const full = "q ".concat(f(PDF_W), " 0 0 ").concat(f(PDF_H), " 0 0 cm /BG Do Q\n");
@@ -986,7 +993,7 @@ async function buildPdf(label, masks, overview_) {
     const inClip = ([x0, y0, x1, y1], c) => x0 >= c[0] / EMU_PT - 1 && x1 <= (c[0] + c[2]) / EMU_PT + 1 && y0 >= PDF_H - (c[1] + c[3]) / EMU_PT - 1 && y1 <= PDF_H - c[1] / EMU_PT + 1;
     for (const info of blocks) {
       const c = clipOf(info);
-      if (!reqEdited(info)) {
+      if (!reqDraw(info)) {
         content += "q ".concat(f(c[0] / EMU_PT), " ").concat(f(PDF_H - (c[1] + c[3]) / EMU_PT), " ").concat(f(c[2] / EMU_PT), " ").concat(f(c[3] / EMU_PT), " re W n ").concat(f(PDF_W), " 0 0 ").concat(f(PDF_H), " 0 0 cm /F Do Q\n");
         links.filter(([r2]) => inClip(r2, c)).forEach(([r2, uri]) => ann.push(linkAnn(r2, uri)));
         continue;

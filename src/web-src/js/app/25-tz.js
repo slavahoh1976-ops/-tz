@@ -928,7 +928,7 @@ function drawTZ() {
   const k = sw / SLIDE_W;
   slides.forEach((sl, si) => {
     const x = x0 + si % cols * (sw + gap), y = y0 + Math.floor(si / cols) * (sh + gap + 16);
-    const blocks = tplCache[ui.tzTpl + "@all"], editedTitle = sl.kind === "title" && blocks && blocks.some(reqEdited);
+    const blocks = tplCache[ui.tzTpl + "@all"], editedTitle = sl.kind === "title" && blocks && blocks.some(reqDraw);
     const fullKey = PDF_BG[ui.tzTpl] ? ui.tzTpl : "Resolume";
     const bg = bgImg(sl.kind !== "title" ? bgKey("masks", ui.tzTpl) : editedTitle ? bgKey("bare", ui.tzTpl) : fullKey);
     c.fillStyle = "#fff";
@@ -939,7 +939,7 @@ function drawTZ() {
       const full = editedTitle ? bgImg(fullKey) : null, clips = PDF_CLIPS[ui.tzTpl] || [], selBlock = isReqSel(ui.tzSel) ? selBk() : null;
       for (const info of blocks) {
         const r = reqRect(info), tx = x + (r.x + info.ins.l) * k, ty = y + (r.y + info.ins.t) * k, tw = (r.w - 2 * info.ins.l) / PT;
-        const ed = reqEdited(info);
+        const ed = reqDraw(info);
         let th = Math.max(r.h * k, rtLayout(mctxRT, reqParas(info, reqTextOr(info)), tw, info.baseSz).h * kp);
         c.save();
         c.beginPath();
