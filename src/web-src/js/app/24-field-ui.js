@@ -151,10 +151,11 @@ const tzCutOn = (c) => {
   const m = project.tz.cuts || {};
   return m[c.id] != null ? !!m[c.id] : true;
 };
-// 3.0.6: пример к нарезке (исходная маска с красными линиями разреза) — галочкой у каждой нарезки, по умолчанию есть
+// 3.0.6: пример к нарезке (исходная маска с красными линиями разреза) — галочкой у каждой нарезки.
+// 3.0.7: по умолчанию выключен
 const tzCutSrcOn = (c) => {
   const m = project.tz.cutSrc || {};
-  return m[c.id] != null ? !!m[c.id] : true;
+  return m[c.id] != null ? !!m[c.id] : false;
 };
 // 2.0.101: порядок масок и общих полей в ТЗ — project.tz.order (ключи «f:id» / «m:uid»), меняется перетаскиванием в списке.
 // Новые поля и маски — в конец; по умолчанию сначала поля, потом маски.
@@ -274,16 +275,48 @@ function groupPer(arr, per, grid2) {
 }
 const imgGroups = (imgs) => groupPer(imgs, project.tz.imgPer | 0);
 // 2.0.146: своё число масок для отдельных слайдов (project.tz.maskPerS: {индекс слайда масок → число})
+// 3.0.7: при автоматической раскладке нарезка — на своём листе: только она (и её пример, если включён) и текст-пояснение
+const isCutItem = (m) => /^c:/.test(m && m.key || ""), isCutSrcItem = (m) => /^cs:/.test(m && m.key || "");
+function groupSub(masks, idx) {
+  return groupMasks(idx.map((k) => masks[k])).map((gr) => ({ hz: gr.hz, g: gr.g.map((k) => idx[k]) }));
+}
+function cutIdxAt(masks, i) {
+  return i + 1 < masks.length && isCutSrcItem(masks[i + 1]) ? [i, i + 1] : [i];
+}
+function groupAutoCuts(masks) {
+  const out = [];
+  let i = 0;
+  while (i < masks.length) {
+    if (isCutItem(masks[i]) || isCutSrcItem(masks[i])) {
+      const idx = isCutItem(masks[i]) ? cutIdxAt(masks, i) : [i];
+      out.push(...groupSub(masks, idx));
+      i += idx.length;
+      continue;
+    }
+    let j = i;
+    while (j < masks.length && !isCutItem(masks[j]) && !isCutSrcItem(masks[j])) j++;
+    const idx = [];
+    for (let k = i; k < j; k++) idx.push(k);
+    out.push(...groupSub(masks, idx));
+    i = j;
+  }
+  return out;
+}
 function groupMasksPlan(masks) {
   const per = project.tz.maskPer | 0, grid2 = project.tz.maskGrid, perS = project.tz.maskPerS || {};
-  if (!per && !Object.keys(perS).length) return groupMasks(masks);
+  if (!per && !Object.keys(perS).length) return groupAutoCuts(masks);
   const out = [];
   let i = 0, s = 0;
   while (i < masks.length) {
     const cnt = perS[s] > 0 ? perS[s] : per;
-    if (cnt > 0) {
+    if (isCutItem(masks[i]) || isCutSrcItem(masks[i])) {
+      // 3.0.7: нарезка всегда отдельным листом — и при ручном «Масок на слайде»
+      const idx = isCutItem(masks[i]) ? cutIdxAt(masks, i) : [i];
+      out.push(...groupSub(masks, idx));
+      i += idx.length;
+    } else if (cnt > 0) {
       const g = [];
-      for (let j = i; j < Math.min(masks.length, i + cnt); j++) g.push(j);
+      for (let j = i; j < Math.min(masks.length, i + cnt) && !isCutItem(masks[j]) && !isCutSrcItem(masks[j]); j++) g.push(j);
       const m = String(perS[s] > 0 ? "" : grid2 || "").match(/^(\d+)x(\d+)$/), fixed = m && +m[1] * +m[2] >= cnt ? { cols: +m[1], rows: +m[2] } : null;
       const orient = new Set(g.map((j) => masks[j].w >= masks[j].h));
       const anyVol = g.some((j) => volExtra(masks[j]));
@@ -291,7 +324,10 @@ function groupMasksPlan(masks) {
       out.push({ hz: mixed ? { mixed: g.map((j) => ({ w: masks[j].w, h: masks[j].h })) } : g.length === 1 ? true : fixed || autoGrid(masks, g), g });
       i += g.length;
     } else {
-      const grp = autoGroupOne(masks, i);
+      // «Авто» — не захватываем нарезку в лист к другим маскам
+      let end = i;
+      while (end < masks.length && !isCutItem(masks[end]) && !isCutSrcItem(masks[end])) end++;
+      const grp = autoGroupOne(masks.slice(0, end), i);
       out.push({ hz: grp.hz, g: grp.g });
       i = grp.next;
     }

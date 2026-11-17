@@ -1,13 +1,13 @@
 {
- "version": "3.0.6",
- "notes": "Версия 3.0.6: в ТЗ у каждой нарезки — галочка «пример: исходная маска» (полосу с линиями разреза можно убрать).",
+ "version": "3.0.7",
+ "notes": "Версия 3.0.7: в ТЗ каждая нарезка на своём листе с текстом-пояснением; пример исходной маски по умолчанию выключен.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "5624f1c034f6f4d15e3f79e90b72525106767386574c1349f6fb205178d54432"
+  "sha256": "4dc11376e90ffcd186c657fa52a9e1971e685373d43ca848166bb80935cf941e"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "7d1245dd4df38d13c71d73e57d3565e23c22c40e50ddbc8c239fa7c2a04c04f2"
+  "sha256": "d07bbca68a806d51c8026dd732c952a4ee52a60acb417bcfb41da2ed2d399bb4"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
