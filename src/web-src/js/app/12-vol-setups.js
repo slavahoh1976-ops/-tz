@@ -121,7 +121,7 @@ function volVmtd(A) {
 }
 // все файлы адресации одной конструкции; what — { madrix, madshow, td }
 async function volSetupFiles(st, what, dir) {
-  const A = volAddr(st), base = safeName(st.name || "volumetric"), out = [];
+  const A = volAddr(st), base = safeFile(st.name || "volumetric", "volumetric"), out = [];
   if (!A.strands.length) return out;
   if (what.madrix !== false) {
     busy("MADRIX: " + base + "…");
@@ -180,7 +180,7 @@ async function adrLocked(after) {
 async function volSetupAll(dir) {
   const what = tzVolWhat(), files = [], list = tzVolScreens(), many = list.length > 1;
   if (!what.madrix && !what.madshow && !what.td) return files;
-  for (const st of list) files.push(...await volSetupFiles(st, what, dir + (many ? safeName(st.name || "volumetric") + "/" : "")));
+  for (const st of list) files.push(...await volSetupFiles(st, what, dir + (many ? safeFile(st.name || "volumetric", "volumetric") + "/" : "")));
   return files;
 }
 async function exportVolSetup() {
@@ -232,7 +232,7 @@ async function exportTZ(label) {
       busy("Рендер ".concat(n + 1, " из ").concat(items.length, ": ").concat(it.w, "×").concat(it.h, "…"));
       await tick();
       const r = it.kind === "out" ? await renderOutPNG(it.m, it.scr) : it.kind === "cut" ? await renderCutPNG(it.c) : it.kind === "cutsrc" ? await renderBands(it.w, it.h, (ctx) => paintCutSrc(ctx, it.c, 1)) : it.kind === "field" ? await renderFieldPNG(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? await renderBands(it.w, it.h, (ctx) => volItemPaint(ctx, it)) : await renderPNG(it.st);
-      const base = it.kind === "out" ? outFileName(it.m, it.scr).replace(/\.png$/, "") : it.kind === "cut" ? cutFileBase(it.c) : it.kind === "cutsrc" ? cutFileBase(it.c) + "-исходник" : it.kind === "field" ? fieldFileBase(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? "".concat(safeName(it.st.name || "volumetric"), it.kind === "volcom" ? it.com ? "-коммутация-сверху" : "-вид-снизу" : "-3D") : maskFileBase(it.st);
+      const base = it.kind === "out" ? outFileName(it.m, it.scr).replace(/\.png$/, "") : it.kind === "cut" ? cutFileBase(it.c) : it.kind === "cutsrc" ? cutFileBase(it.c) + "-source" : it.kind === "field" ? fieldFileBase(it.f) : it.kind === "volcom" || it.kind === "vol3d" ? "".concat(safeFile(it.st.name || "volumetric", "volumetric"), it.kind === "volcom" ? it.com ? "-wiring-top" : "-bottom-view" : "-3D") : maskFileBase(it.st);
       pngs.push({ ...r, w: r.w || it.w, h: r.h || it.h, file: "".concat(folder).concat(uniq(base), ".png"), label: it.label, key: it.key, info: it.info, noFile: it.kind === "cutsrc" });
     }
     // 3.0.4: в документ — уменьшенные копии больших картинок (иначе часть iPhone показывает лист мешаниной)

@@ -38,20 +38,28 @@ function runsMdS(runs) {
   return out;
 }
 const rteBase = () => isReqSel(ui.tzSel) ? (tplCache[selBk()] || {}).baseSz || 10 : NOTE_SZ;
-function rteRender(el, paras, base) {
+// mds — исходная разметка строк: строка, которую не трогали, при чтении вернётся ровно такой (с подчёркиванием и размером шаблона)
+function rteRender(el, paras, base, mds) {
   const esc = (t) => xmlEsc(t);
   el.innerHTML = paras.map((runs) => {
+    // 3.0.9: пустая строка-отступ между разделами шаблона — своей (меньшей) высоты, в неё не пишут
+    if (runs.length && runs.every((r) => r.gap)) return '<div class="gap" contenteditable="false" style="font-size:'.concat((runs[0].sz / base).toFixed(3), 'em"><br></div>');
     const inner = runs.map((r) => {
       let h = esc(r.t);
       if (r.b) h = "<b>".concat(h, "</b>");
       if (r.link) h = '<span class="lnk">'.concat(h, "</span>");
       else if (r.color) h = '<font color="'.concat(r.color, '">').concat(h, "</font>");
       if (r.u && !r.link) h = '<span class="u">'.concat(h, "</span>");
-      if (r.sz && Math.abs(r.sz - base) > 1e-6) h = '<span data-sz="'.concat(r.sz, '" style="font-size:').concat((13 * r.sz / base).toFixed(1), 'px">').concat(h, "</span>");
+      if (r.sz && Math.abs(r.sz - base) > 1e-6) h = '<span data-sz="'.concat(r.sz, '" style="font-size:').concat((r.sz / base).toFixed(3), 'em">').concat(h, "</span>");
       return h;
     }).join("");
     return "<div>".concat(inner || "<br>", "</div>");
   }).join("");
+  if (mds) Array.from(el.children).forEach((d, i) => {
+    if (mds[i] == null || d.classList.contains("gap")) return;
+    d.dataset.o = mds[i];
+    d.dataset.h = d.innerHTML;
+  });
 }
 function rteRead(el) {
   const lines = [[]];
@@ -77,13 +85,18 @@ function rteRead(el) {
       if (n.dataset && n.dataset.sz) s2.sz = +n.dataset.sz;
       const block = tag === "DIV" || tag === "P";
       if (block && lines[lines.length - 1].length) lines.push([]);
+      if (block && n.dataset.o != null && n.innerHTML === n.dataset.h) {
+        lines[lines.length - 1].push({ raw: n.dataset.o });
+        lines.push([]);
+        continue;
+      }
       walk(n, s2);
       if (block) lines.push([]);
     }
   };
   walk(el, {});
   if (lines.length > 1 && !lines[lines.length - 1].length) lines.pop();
-  return lines.map(runsMdS).join("\n");
+  return lines.map((l) => l.length === 1 && l[0].raw != null ? l[0].raw : runsMdS(l)).join("\n");
 }
 let rteRange = null;
 document.addEventListener("selectionchange", () => {
@@ -164,7 +177,7 @@ function rteBar(opts) {
     el.querySelectorAll('font[size="7"]').forEach((f) => {
       const sp = document.createElement("span");
       sp.dataset.sz = v;
-      sp.style.fontSize = (13 * v / base).toFixed(1) + "px";
+      sp.style.fontSize = (v / base).toFixed(3) + "em";
       if (f.getAttribute("color")) {
         const c = document.createElement("font");
         c.setAttribute("color", f.getAttribute("color"));
@@ -244,7 +257,7 @@ function refreshTZText() {
       if (!had) return refreshTZText();
       const info = tplCache[bk];
       if (!info || ui.tzTpl !== tpl || ui.tzSel !== sel0 || document.activeElement === ta && ta.dataset.key === "req:" + bk) return;
-      rteRender(ta, reqParas(info, reqTextOr(info)), info.baseSz);
+      rteRender(ta, reqParas(info, reqTextOr(info)), info.baseSz, reqTextOr(info).replace(/\r/g, "").split("\n"));
       ta.dataset.key = "req:" + bk;
       requestDraw();
     }).catch((e) => {
@@ -253,7 +266,7 @@ function refreshTZText() {
     });
   } else if (document.activeElement !== ta || ta.dataset.key !== ui.tzSel) {
     const t = noteText(ui.tzSel);
-    if (t) rteRender(ta, mdParas(t), NOTE_SZ);
+    if (t) rteRender(ta, mdParas(t), NOTE_SZ, t.replace(/\r/g, "").split("\n"));
     else ta.innerHTML = "";
     ta.dataset.key = ui.tzSel;
   }
@@ -307,7 +320,7 @@ $("tTxtReset").onclick = () => {
   delete project.tz.req[selBk()];
   const info = tplCache[selBk()];
   if (info) {
-    rteRender($("tTxt"), reqParas(info, info.md), info.baseSz);
+    rteRender($("tTxt"), reqParas(info, info.md), info.baseSz, info.md.split("\n"));
   }
   $("tTxtReset").disabled = true;
   requestDraw();
@@ -928,7 +941,7 @@ function drawTZ() {
   const k = sw / SLIDE_W;
   slides.forEach((sl, si) => {
     const x = x0 + si % cols * (sw + gap), y = y0 + Math.floor(si / cols) * (sh + gap + 16);
-    const blocks = tplCache[ui.tzTpl + "@all"], editedTitle = sl.kind === "title" && blocks && blocks.some(reqDraw);
+    const blocks = tplCache[ui.tzTpl + "@all"], ipPk = ui.tzEdit ? ui.tzEdit.pk : null, editedTitle = sl.kind === "title" && blocks && (blocks.some(reqDraw) || !!ipPk && ipPk.startsWith("req:"));
     const fullKey = PDF_BG[ui.tzTpl] ? ui.tzTpl : "Resolume";
     const bg = bgImg(sl.kind !== "title" ? bgKey("masks", ui.tzTpl) : editedTitle ? bgKey("bare", ui.tzTpl) : fullKey);
     c.fillStyle = "#fff";
@@ -939,11 +952,12 @@ function drawTZ() {
       const full = editedTitle ? bgImg(fullKey) : null, clips = PDF_CLIPS[ui.tzTpl] || [], selBlock = isReqSel(ui.tzSel) ? selBk() : null;
       for (const info of blocks) {
         const r = reqRect(info), tx = x + (r.x + info.ins.l) * k, ty = y + (r.y + info.ins.t) * k, tw = (r.w - 2 * info.ins.l) / PT;
-        const ed = reqDraw(info);
+        const ip = ipPk === "req:" + info.label, ed = reqDraw(info);
         let th = Math.max(r.h * k, rtLayout(mctxRT, reqParas(info, reqTextOr(info)), tw, info.baseSz).h * kp);
         c.save();
         c.beginPath();
-        if (ed) {
+        if (ip) ; // правится на листе — текст показывает редактор поверх
+        else if (ed) {
           c.rect(x, y, sw, sh);
           c.clip();
           th = rtPaint(c, reqParas(info, reqTextOr(info)), tx, ty, tw, kp, info.baseSz, info.baseColor).h * kp;
@@ -954,7 +968,7 @@ function drawTZ() {
           c.drawImage(full, x, y, sw, sh);
         }
         c.restore();
-        if (info.label === selBlock) {
+        if (info.label === selBlock && !ip) {
           c.strokeStyle = "rgba(30,200,180,.85)";
           c.lineWidth = 1.5;
           c.strokeRect(tx - 3, ty - 2, tw * kp + 6, th + 4);
@@ -968,13 +982,15 @@ function drawTZ() {
     const drawNote = () => {
       if (!NL.note) return;
       const [nx, ny, nw, nh] = NL.note.rect;
-      c.save();
-      c.beginPath();
-      c.rect(x, y, sw, sh);
-      c.clip();
-      rtPaint(c, NL.note.paras, x + nx * k, y + ny * k, nw / PT, kp, NL.note.sz, "#222");
-      c.restore();
       const key2 = sl.kind === "ov" ? imgKey(sl.ims[0]) : noteKey(sl.g.map((i) => items[i]));
+      if (ipPk !== "note:" + key2) {
+        c.save();
+        c.beginPath();
+        c.rect(x, y, sw, sh);
+        c.clip();
+        rtPaint(c, NL.note.paras, x + nx * k, y + ny * k, nw / PT, kp, NL.note.sz, "#222");
+        c.restore();
+      }
       ui.tzHits.push({ pk: "note:" + key2, x: x + nx * k, y: y + ny * k, w: nw * k, h: nh * k, k, ex: nx, ey: ny, sx: x, sy: y, sw, sh });
     };
     const cell = (lay, img, text) => {
@@ -1026,7 +1042,8 @@ function drawTZ() {
     c.fillText("В ТЗ ничего не отмечено", pad, R.height - 10);
   }
   const hv = ui.tzDrag ? ui.tzDrag.hit : ui.tzHover;
-  if (hv) {
+  if (ui.tzEdit) tzIpPlace();
+  if (hv && !(ui.tzEdit && hv.pk === ui.tzEdit.pk)) {
     const h = ui.tzHits.find((q) => q.pk === hv.pk && q.sx === hv.sx && q.sy === hv.sy) || hv;
     c.save();
     c.setLineDash([4, 3]);

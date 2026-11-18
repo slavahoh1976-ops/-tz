@@ -447,12 +447,17 @@ function tplBlock(tpl, label, idx, sp, clr, link) {
       cur.xml.push(m[0]);
     }
     push();
+    // 3.0.9: пустой абзац-отступ между разделами — высота по его endParaRPr
+    const last = lines[lines.length - 1], ez = px.match(/<a:endParaRPr\b[^>]*\bsz="(\d+)"/);
+    if (last && !last.runs.length && ez && TPL_FRESH.includes(tpl)) last.gapSz = +ez[1] / 100;
   });
   const cnt = /* @__PURE__ */ new Map();
   for (const l of lines) l.xml.forEach((x, i) => {
     const r = l.runs[i];
     if (r.link || r.u || r.b) return;
     const rp = (x.match(/<a:rPr\b[^>]*?(?:\/>|>[\s\S]*?<\/a:rPr>)/) || [""])[0];
+    // 3.0.11: красные предупреждения — не основной текст блока (длинный пункт «ВНИМАНИЕ!» в D3 иначе делал весь блок красным)
+    if (/srgbClr val="FF0000"/i.test(rp)) return;
     if (rp) cnt.set(rp, (cnt.get(rp) || 0) + r.t.length);
   });
   let baseRpr = '<a:rPr lang="ru-RU" sz="1000" dirty="0"><a:latin typeface="Arial"/><a:cs typeface="Arial"/></a:rPr>', best = 0;
@@ -462,6 +467,7 @@ function tplBlock(tpl, label, idx, sp, clr, link) {
   }
   baseRpr = baseRpr.replace(/\s(b|u|i)="[^"]*"/g, "");
   const baseSz = +((baseRpr.match(/\bsz="(\d+)"/) || [])[1] || 1e3) / 100;
+  for (const l of lines) if (l.gapSz && l.gapSz < baseSz) l.runs = [{ t: "", sz: l.gapSz, gap: true }];
   const bodyPr = (sp.match(/<a:bodyPr\b[^>]*>/) || [""])[0], insA = (n, d) => {
     const m = bodyPr.match(new RegExp("\\b" + n + '="(\\d+)"'));
     return m ? +m[1] : d;
@@ -469,7 +475,10 @@ function tplBlock(tpl, label, idx, sp, clr, link) {
   const ins = { l: insA("lIns", 91440), t: insA("tIns", 45720) };
   const bc = baseRpr.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/), baseColor = bc ? "#" + bc[1] : "#000";
   const head = (lines[0] ? lines[0].runs.map((r) => r.t).join("") : "").replace(/\s+/g, " ").trim();
-  const title = head.length > 42 ? head.slice(0, 41) + "…" : head || "блок " + (idx + 1);
+  let title = head.length > 42 ? head.slice(0, 41) + "…" : head || "блок " + (idx + 1);
+  // 3.0.9: объединённый блок нескольких разделов — «Разделы 01–04»
+  const secs = lines.map((l) => (l.runs.map((r) => r.t).join("").match(/^\s*(\d\d)\s/) || [])[1]).filter(Boolean);
+  if (secs.length > 1 && lines.some((l) => l.gapSz)) title = "Разделы ".concat(secs[0], "–", secs[secs.length - 1]);
   return { tpl, idx, label, title, sp, paraXml, lines, rect, ins, baseRpr, baseSz, baseColor, md: lines.map((l) => l.md).join("\n") };
 }
 function reqText(label) {
@@ -477,9 +486,9 @@ function reqText(label) {
   return typeof v === "string" ? v : null;
 }
 const tzPos = (k) => project.tz.pos && project.tz.pos[k] || null;
-// 3.0.8: в шаблонах Resolume и D3 в раздел 01 добавлен пункт «строго по маскам», раздел 02 сдвинут ниже —
-// их первый лист программа рисует сама (как при ручной правке), а не берёт готовую картинку
-const TPL_FRESH = ["Resolume", "D3"];
+// 3.0.8: в шаблонах Resolume и D3 в раздел 01 добавлен пункт «строго по маскам»; 3.0.9: разделы первого листа
+// объединены в два блока (левая и правая колонка) — первый лист программа рисует сама, а не берёт готовую картинку
+const TPL_FRESH = ["Resolume", "D3", "MP4"];
 // рисовать блок заново (а не вырезать из готовой картинки): правлен вручную или новее картинки
 const reqDraw = (info) => !!info.fresh || reqEdited(info);
 function reqEdited(info) {
@@ -556,7 +565,8 @@ function rtLayout(ctx, paras, wPt, defSz = 10) {
   const lines = [];
   const font = (r) => "".concat(r.b ? "bold " : "").concat(r.sz || defSz, "px ").concat(RT_FONT);
   for (const runs of paras) {
-    const sz0 = Math.max(defSz, ...runs.map((r) => r.sz || defSz));
+    // высота строки — по самому крупному шрифту в ней (как в PowerPoint); пустая строка — по основному размеру
+    const sz0 = runs.length && runs.every((r) => r.gap) ? runs[0].sz : runs.some((r) => r.t) ? Math.max(...runs.filter((r) => r.t).map((r) => r.sz || defSz)) : defSz;
     let line = [], lw = 0;
     const flush = () => {
       lines.push({ segs: line, h: sz0 * RT_LH, sz: sz0 });
@@ -1077,12 +1087,51 @@ const safeName = (n, fb = "LED_Mask") => {
   const s = cleanName(String(n || "").trim()).replace(/^[ _]+|[ _]+$/g, "");
   return s || fb;
 };
+// 3.0.13: имена файлов масок — только латиница (некоторые медиасерверы не понимают кириллицу).
+// Частые слова переводятся на английский, остальное — транслитерация («Портал» → «Portal», «Жёлтый» → «Zheltyy»).
+const LAT_DICT = [
+  ["экран", "screen"], ["маск", "mask"], ["нарезк", "cut"], ["част", "part"], ["выход", "output"], ["групп", "group"],
+  ["лев", "left"], ["прав", "right"], ["центр", "center"], ["центральн", "center"], ["середин", "middle"], ["средн", "middle"],
+  ["верх", "top"], ["верхн", "upper"], ["низ", "bottom"], ["нижн", "lower"], ["передн", "front"], ["фронт", "front"],
+  ["задн", "backside"], ["задник", "backside"], ["зад", "backside"], ["тыл", "backside"], ["тыльн", "backside"], ["бок", "side"], ["боков", "side"], ["сцен", "stage"], ["портал", "portal"],
+  ["кулис", "wing"], ["подиум", "podium"], ["пол", "floor"], ["потолок", "ceiling"], ["потолк", "ceiling"], ["потолочн", "ceiling"],
+  ["колонн", "column"], ["столб", "column"], ["ряд", "row"], ["арк", "arch"], ["кольц", "ring"], ["круг", "circle"],
+  ["круглый", "round"], ["кругл", "round"], ["полукруг", "semicircle"], ["лини", "line"], ["куб", "cube"], ["фон", "background"],
+  ["основн", "main"], ["главн", "main"], ["дополнительн", "extra"], ["исходник", "source"], ["вид", "view"], ["снизу", "bottom"],
+  ["сверху", "top"], ["коммутаци", "wiring"], ["адресаци", "addressing"], ["тест", "test"], ["пол", "floor"], ["стен", "wall"],
+  ["зал", "hall"], ["балкон", "balcony"], ["лестниц", "stairs"], ["ступен", "steps"], ["вход", "entrance"], ["бар", "bar"],
+  ["мал", "small"], ["маленьк", "small"], ["больш", "big"], ["угл", "corner"], ["углов", "corner"], ["диагональн", "diagonal"],
+  ["вертикальн", "vertical"], ["горизонтальн", "horizontal"], ["треугольник", "triangle"], ["трапеци", "trapezoid"],
+  ["ромб", "rhombus"], ["сфер", "sphere"], ["шар", "ball"], ["лент", "strip"], ["полос", "stripe"], ["объект", "object"],
+  ["логотип", "logo"], ["букв", "letters"], ["цифр", "digits"], ["правый", "right"], ["левый", "left"], ["новый", "new"], ["нов", "new"],
+  ["край", "edge"], ["кра", "edge"], ["ресепшн", "reception"], ["ресепшен", "reception"], ["стол", "table"], ["трибун", "tribune"], ["кафедр", "lectern"], ["телевизор", "tv"], ["монитор", "monitor"], ["проектор", "projector"],
+  ["проекци", "projection"], ["окн", "window"], ["двер", "door"], ["ворот", "gate"], ["мост", "bridge"], ["башн", "tower"],
+];
+const LAT_END = ["", "а", "у", "е", "ом", "ой", "ою", "ы", "и", "ов", "ев", "ам", "ям", "ами", "ями", "ах", "ях", "ый", "ий", "ая", "яя", "ое", "ее", "ые", "ие", "ого", "его", "ому", "ему", "ей", "ую", "юю", "ым", "им", "ых", "их", "ыми", "ими", "ь", "ю", "я", "ии", "ия", "ию", "ией"];
+const LAT_MAP = new Map();
+for (const [st, en] of LAT_DICT) for (const e of LAT_END) if (!LAT_MAP.has(st + e)) LAT_MAP.set(st + e, en);
+const LAT_TR = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya", і: "i", ї: "yi", є: "ye", ґ: "g", ў: "u" };
+function toLatin(s) {
+  s = String(s == null ? "" : s).replace(/[Ѐ-ӿ]+/g, (w) => {
+    const lo = w.toLowerCase();
+    let r = LAT_MAP.get(lo);
+    if (r == null) r = Array.from(lo).map((c) => LAT_TR[c] != null ? LAT_TR[c] : "").join("");
+    // регистр как у исходного слова: ВСЁ ЗАГЛАВНЫМИ / С заглавной / строчными
+    if (w.length > 1 && w === w.toUpperCase()) return r.toUpperCase();
+    if (w[0] !== lo[0]) return r.charAt(0).toUpperCase() + r.slice(1);
+    return r;
+  });
+  // прочие не-латинские буквы: убрать диакритику (é → e), остальное — убрать
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "");
+}
+// имя файла маски/картинки/сетапа для медиасервера — только латиница
+const safeFile = (n, fb = "LED_Mask") => safeName(toLatin(n), fb);
 const pad2 = (n) => String(n).padStart(2, "0");
 // 2.0.108: имя файла маски — «1920x1080-» (размер, всегда авто) + часть, которую можно изменить (st.file); по умолчанию — название экрана
 const maskFileTail = (st) => String(st.file || "").trim() || st.name || "screen";
 const maskFileBase = (st) => {
   const [W, H] = dims(st);
-  return "".concat(W, "x").concat(H, "-").concat(safeName(maskFileTail(st)));
+  return "".concat(W, "x").concat(H, "-").concat(safeFile(maskFileTail(st)));
 };
 // 2.0.106: имя файла поля — «1920x1080-» (размер, всегда авто) + часть, которую можно изменить (f.file);
 // по умолчанию — «screens 1-2-3» (номера масок поля)
@@ -1097,7 +1146,7 @@ function fieldFilePre(f) {
 }
 function fieldFileBase(f) {
   const tail = String(f.file || "").trim() || fieldFileAuto(f);
-  return safeName(fieldFilePre(f) + tail, "screens").slice(0, 180);
+  return safeFile(fieldFilePre(f) + tail, "screens").slice(0, 180);
 }
 function uniqueNamer() {
   const used = /* @__PURE__ */ new Map();

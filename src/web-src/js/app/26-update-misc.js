@@ -334,7 +334,12 @@ pv.addEventListener("mousedown", (e) => {
   if (a && a !== document.body && a.blur && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) a.blur();
 });
 pv.addEventListener("selectstart", (e) => e.preventDefault());
-document.querySelector(".canvas-wrap") && document.querySelector(".canvas-wrap").addEventListener("selectstart", (e) => e.preventDefault());
+// 3.0.9: кроме текста, который правится прямо на листе
+document.querySelector(".canvas-wrap") && document.querySelector(".canvas-wrap").addEventListener("selectstart", (e) => {
+  const t = e.target, el = t && (t.nodeType === 1 ? t : t.parentNode);
+  if (el && el.closest && el.closest("[contenteditable=true]")) return;
+  e.preventDefault();
+});
 function setTitleRot(d) {
   const st = S();
   st.rotDeg = normDeg(d);

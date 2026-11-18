@@ -1421,7 +1421,7 @@ $("btnRedo").onclick = () => histGo(1);
 window.addEventListener("keydown", (e) => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey || !$("modal").hidden) return;
   const t = e.target, tag = t && t.tagName;
-  if (tag === "INPUT" && !["checkbox", "color", "range", "button"].includes(t.type) || tag === "TEXTAREA") return;
+  if (tag === "INPUT" && !["checkbox", "color", "range", "button"].includes(t.type) || tag === "TEXTAREA" || t && t.isContentEditable) return;
   const k = e.key.toLowerCase(), code = e.code;
   if ((k === "z" || k === "я" || code === "KeyZ") && !e.shiftKey) {
     e.preventDefault();

@@ -1996,3 +1996,106 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
 @keyframes verblink { 0%, 100% { background: transparent; } 50% { background: rgba(25,197,181,.32); box-shadow: 0 0 0 3px rgba(25,197,181,.25); } }
 @media (prefers-reduced-motion: reduce) { .verbtn.has-upd { animation: none; background: rgba(25,197,181,.22); } }
 .toolbar .b.verbtn.vtop { margin-left: auto; padding: 0 12px; border-radius: 12px; }
+
+/* 3.0.9: правка текста ТЗ прямо на листе */
+.tzbar.tzpanelbar,
+#tTxt:not(.ip) {
+  display: none;
+}
+.rte .gap {
+  line-height: 1.2;
+  user-select: none;
+}
+.rte.ip {
+  position: absolute;
+  z-index: 6;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  max-height: none;
+  resize: none;
+  overflow: visible;
+  font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
+  line-height: 1.2;
+  overflow-wrap: normal;
+  word-break: normal;
+  box-shadow: none;
+  outline: 1.5px dashed rgba(30, 200, 180, 0.9);
+  outline-offset: 3px;
+  caret-color: #e53935;
+}
+.rte.ip:focus {
+  box-shadow: none;
+}
+.rte.ip.over {
+  outline: 2px solid #e53935;
+}
+.rte.ip div {
+  margin: 0;
+}
+.rte.ip.ipfull {
+  position: fixed;
+  top: 54px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  width: auto !important;
+  padding: 14px 16px 40vh;
+  background: #fff;
+  outline: none;
+  overflow-y: auto;
+  line-height: 1.35;
+}
+.tzipbar {
+  position: absolute;
+  z-index: 7;
+  padding: 5px 6px;
+  background: var(--panel, #1b2229);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  max-width: calc(100% - 8px);
+}
+.tzipbar .tzbar {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.tzipbar.ipfull {
+  position: fixed;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0;
+  z-index: 61;
+  border-radius: 0;
+  max-width: none;
+}
+.tzipsw {
+  display: inline-flex;
+  gap: 3px;
+}
+.tzipsw .sw {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0;
+  cursor: pointer;
+}
+.tzipbar .b.accent {
+  margin-left: 4px;
+}
+.tzipover {
+  color: #ff6b6b;
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+.b.accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 700;
+}
