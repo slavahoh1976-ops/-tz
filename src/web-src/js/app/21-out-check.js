@@ -93,7 +93,7 @@ $("oResolume").onclick = async () => {
   const r = outResolumeXml(o);
   if (!r.slices) return status("Нет слайсов для выгрузки — разметьте источник", true);
   if (!await outExportCheck(o)) return;
-  const ok = await save(safeName(o.name, "Advanced Output") + ".xml", new Blob([r.xml], { type: "application/xml" }));
+  const ok = await save(safeFile(o.name, "Advanced Output") + ".xml", new Blob([r.xml], { type: "application/xml" }));
   if (ok !== false) status("Resolume: ".concat(r.screens, " ").concat(r.screens === 1 ? "выход" : r.screens < 5 ? "выхода" : "выходов", ", слайсов ").concat(r.slices).concat(r.layers ? ", слоёв " + r.layers + " (маска 1 — Слой 1)" : "", ". Размер композиции в Arena — ").concat(r.W, "×").concat(r.H).concat(r.other ? ". Не выгружены слайсы неотмеченных источников: " + r.other : "", "."), true);
 };
 $("oPNG").onclick = async () => {
@@ -123,7 +123,7 @@ $("oPNGAll").onclick = async () => {
     await tick();
     const z = await zip(files);
     busy("");
-    await save(safeName(o.name, "outputs") + ".zip", z);
+    await save(safeFile(o.name, "outputs") + ".zip", z);
   } catch (e) {
     busy("");
     status("Ошибка: " + e.message, true);

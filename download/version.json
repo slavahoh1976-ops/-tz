@@ -1,13 +1,13 @@
 {
- "version": "3.0.8",
- "notes": "ТЗ Resolume и D3: в разделе «01 Формат видео» новый выделенный пункт — видеоконтент делать строго по маскам из ТЗ (одна маска — один видеофайл), не делить маску на экраны и не собирать свои группы; изменения масок — только по согласованию с инженером сервера.",
+ "version": "3.0.14",
+ "notes": "Имена файлов масок — только латиницей: частые слова переводятся на английский (задник → backside), остальные — транслитерацией. ТЗ: текст правится прямо на листе, как в текстовом редакторе (двойной щелчок по тексту). Resolume и D3: новый пункт «ВНИМАНИЕ!» про маски, раздел 04 — в правом столбце, первый лист — два текстовых блока; MP4 — один блок.",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "91e911aeb7d35fccddecacf04b4f839ecc9bb97b4b6c0a2bb51598ff44ec282d"
+  "sha256": "8b306aa25d83287b422da0989af5e14a750a6d379941361a1d9d260d8f1ad7a9"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "660aec6735cc82a7a58316c630793407757a097f930cf49dbcd77848b511679a"
+  "sha256": "2b61612081ac700f1c3cef4c845b0508e899e0bbfc47215457f62704cbc16257"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"

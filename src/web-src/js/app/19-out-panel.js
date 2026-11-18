@@ -940,4 +940,4 @@ async function saveOutPNG(o, scr) {
     await tick();
   });
 }
-const outFileName = (o, scr) => safeName("".concat(scr.w, "x").concat(scr.h, "-").concat(o.name, " ").concat(scr.name), "output").slice(0, 180) + ".png";
+const outFileName = (o, scr) => safeFile("".concat(scr.w, "x").concat(scr.h, "-").concat(o.name, " ").concat(scr.name), "output").slice(0, 180) + ".png";

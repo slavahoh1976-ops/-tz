@@ -80,7 +80,7 @@ function cutFileAuto(c) {
 }
 function cutFileBase(c) {
   const G = cutGeom(c), tail = String(c.file || "").trim() || cutFileAuto(c);
-  return safeName((G ? "".concat(G.W, "x").concat(G.H, "-") : "") + tail, "нарезка").slice(0, 180);
+  return safeFile((G ? "".concat(G.W, "x").concat(G.H, "-") : "") + tail, "cut").slice(0, 180);
 }
 function cutInfo(c) {
   const G = cutGeom(c);

@@ -378,7 +378,7 @@ async function outTestPack(o) {
   if (!keys.length) return status("Нет масок для мэппинга", true);
   const tests = new Map(keys.map((k, i) => [k, testSrcCanvas(k, i)])), srcOf = (k) => tests.get(k) || (tests.set(k, testSrcCanvas(k, tests.size)), tests.get(k));
   const files = [], byLayer = outRoute(o) === "layers", CM0 = outComp(o, keys[0]);
-  const name = (t) => safeName(t, "test").slice(0, 160) + ".png";
+  const name = (t) => safeFile(t, "test").slice(0, 160) + ".png";
   const paintComp = (ctx, ks) => {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, CM0.W, CM0.H);
@@ -434,7 +434,7 @@ async function outTestPack(o) {
   await tick();
   const z = await zip(files);
   busy("");
-  await save(safeName(o.name, "mapping") + " — тест.zip", z);
+  await save(safeFile(o.name, "mapping") + "-test.zip", z);
 }
 $("oTestPack").onclick = async () => {
   const o = OC();
