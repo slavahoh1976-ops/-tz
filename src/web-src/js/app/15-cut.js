@@ -5,7 +5,7 @@
 // 2.0.119: текст по умолчанию для меток во всю длину — классическая фраза для проверки шрифтов
 const CUT_PANGRAM = "Съешь же ещё этих мягких французских булок, да выпей чаю";
 function freshCut(k, uid) {
-  return { id: newUid(), name: "Нарезка ".concat(k + 1), uid: uid || "", dir: "h", sizes: [], fit: true, fw: 3840, fh: 2160, gap: 0, sep: true, marks: true, big: { on: false, mode: "num", step: 0, text: CUT_PANGRAM }, info: { on: true, src: false, size: 0, color: "#FFFFFF", pos: "c" }, file: "" };
+  return { id: newUid(), name: "Нарезка ".concat(k + 1), uid: uid || "", dir: "h", sizes: [], fit: true, fw: 3840, fh: 2160, gap: 0, sep: true, marks: true, big: { on: false, mode: "num", step: 0, text: CUT_PANGRAM, op: 42 }, info: { on: true, src: false, size: 0, color: "#FFFFFF", pos: "c" }, file: "" };
 }
 function normCut(c, k) {
   const d = freshCut(k), q = c && typeof c === "object" ? c : {}, b = q.big && typeof q.big === "object" ? q.big : {}, i = q.info && typeof q.info === "object" ? q.info : {};
@@ -21,7 +21,7 @@ function normCut(c, k) {
     gap: Math.max(0, Math.min(2e3, pint(q.gap, 0))),
     sep: q.sep !== false,
     marks: q.marks !== false,
-    big: { on: !!b.on, mode: b.mode === "text" ? "text" : "num", step: Math.max(0, pint(b.step, 0)), text: typeof b.text === "string" ? b.text.slice(0, 200) : d.big.text },
+    big: { on: !!b.on, mode: b.mode === "text" ? "text" : "num", step: Math.max(0, pint(b.step, 0)), text: typeof b.text === "string" ? b.text.slice(0, 200) : d.big.text, op: Math.max(5, Math.min(100, b.op == null ? 42 : pint(b.op, 42))) },
     info: { on: i.on !== false, src: !!i.src, size: Math.max(0, pint(i.size, 0)), color: typeof i.color === "string" && /^#[0-9a-f]{6}$/i.test(i.color) ? i.color.toUpperCase() : "#FFFFFF", pos: ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"].includes(i.pos) ? i.pos : "c" },
     file: typeof q.file === "string" ? q.file.slice(0, 120) : ""
   };
@@ -85,7 +85,7 @@ function cutFileBase(c) {
 function cutInfo(c) {
   const G = cutGeom(c);
   if (!G) return null;
-  return { w: G.W, h: G.H, label: "".concat(G.W, "×").concat(G.H, "  |  ").concat(G.st.name || "screen", " — нарезка на ").concat(G.parts.length, " ").concat(G.parts.length < 5 ? "части" : "частей") };
+  return { w: G.W, h: G.H, label: tzLab({ res: "".concat(G.W, "×").concat(G.H), name: "".concat(G.st.name || "screen", " — нарезка на ").concat(G.parts.length, " ").concat(G.parts.length < 5 ? "части" : "частей"), file: cutFileBase(c) + ".png" }) };
 }
 // крупные метки во всю длину исходного экрана (рисуются до нарезки — режутся вместе с маской)
 // ширина ячейки цифры = самая широкая цифра текущего шрифта (ctx.font уже задан)
@@ -97,8 +97,10 @@ function digitCell(ctx) {
 function paintCutBig(ctx, c, G, s) {
   const B = c.big, len = G.h ? G.W0 : G.H0, th = G.thick;
   ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.42)";
-  ctx.strokeStyle = "rgba(0,0,0,0.55)";
+  // 3.0.15: прозрачность меток настраивается (op — непрозрачность, %; по умолчанию 42 — как раньше)
+  const op = Math.max(0.05, Math.min(1, (B.op == null ? 42 : B.op) / 100));
+  ctx.fillStyle = "rgba(255,255,255,".concat(op.toFixed(3), ")");
+  ctx.strokeStyle = "rgba(0,0,0,".concat(Math.min(1, op * 1.31).toFixed(3), ")");
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const put = (txt, pos, fs, tabular) => {
@@ -444,6 +446,8 @@ function refreshCutPanel() {
   $("cBigStep").value = c.big.step || "";
   $("cBigStep").placeholder = G ? String(G.h ? G.st.cabRows : G.st.cabCols) : "";
   $("cBigText").value = c.big.text;
+  $("cBigOp").value = 100 - (c.big.op == null ? 42 : c.big.op);
+  $("cBigOpV").textContent = 100 - (c.big.op == null ? 42 : c.big.op) + "%";
   $("cBigStepRow").hidden = c.big.mode !== "num";
   $("cBigTextRow").hidden = c.big.mode !== "text";
   $("cInfoOn").checked = c.info.on;
@@ -557,6 +561,15 @@ $("cBigMode").onchange = (e) => {
 $("cBigStep").onchange = (e) => {
   CC().big.step = Math.max(0, pint(e.target.value, 0));
   cutChanged(true);
+};
+// ползунок показывает прозрачность: 0% — метки белые сплошные, 95% — почти не видны
+$("cBigOp").oninput = (e) => {
+  const t = Math.max(0, Math.min(95, pint(e.target.value, 58)));
+  CC().big.op = 100 - t;
+  CC().big.on = true;
+  $("cBigOn").checked = true;
+  $("cBigOpV").textContent = t + "%";
+  cutChanged(false);
 };
 $("cBigText").oninput = (e) => {
   CC().big.text = e.target.value.slice(0, 200);

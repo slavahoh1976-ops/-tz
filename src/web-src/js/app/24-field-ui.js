@@ -129,11 +129,28 @@ $("fPNG").onclick = async () => {
   }
 };
 ui.images = [];
+// 3.0.15: подпись над маской в ТЗ — из выбранных частей: разрешение, название, размер, имя файла
+const TZ_LAB0 = { res: true, name: true, phys: true, file: false };
+const tzLabOpt = () => ({ ...TZ_LAB0, ...project.tz.lab || {} });
+const tzLabAny = () => {
+  const o = tzLabOpt();
+  return o.res || o.name || o.phys || o.file;
+};
+// рамка раскладки слайда масок: подписи нет совсем — маска занимает и её место
+const tzLabBox = (B) => tzLabAny() ? B : { ...B, noLab: true };
+function tzLab(p) {
+  const o = tzLabOpt(), parts = [];
+  if (o.res && p.res) parts.push(p.res);
+  if (o.name && p.name) parts.push(p.name);
+  if (o.phys && p.phys) parts.push(p.phys);
+  if (o.file && p.file) parts.push(p.file);
+  return parts.join("  |  ");
+}
 function fieldInfo(f) {
   const rs = fieldRects(f), b = fieldBBox(rs);
   if (!b) return null;
   const ph = fieldPhys(rs, b);
-  return { w: b.w, h: b.h, label: "".concat(b.w, "×").concat(b.h, "  |  ").concat(f.name).concat(ph && f.title.meters ? "  |  ".concat(compactM(ph.w), "х").concat(compactM(ph.h), " м") : "") };
+  return { w: b.w, h: b.h, label: tzLab({ res: "".concat(b.w, "×").concat(b.h), name: f.name, phys: ph && f.title.meters ? "".concat(compactM(ph.w), "х").concat(compactM(ph.h), " м") : "", file: fieldFileBase(f) + ".png" }) };
 }
 const inAnyField = (uid) => project.fields.some((f) => f.items.some((it) => it.uid === uid));
 const tzFieldOn = (f) => {
@@ -175,7 +192,7 @@ function tzItems() {
     if (volOnly || !tzOutOn(m) || !outSrc(m)) continue;
     for (const scr of m.screens) {
       if (!m.slices.some((q) => q.on && q.scr === scr.id)) continue;
-      out.push({ kind: "out", m, scr, key: "o:" + m.id + ":" + scr.id, name: "".concat(m.name, " · ").concat(scr.name), w: scr.w, h: scr.h, label: "".concat(scr.w, "×").concat(scr.h, "  |  ").concat(m.name, " — ").concat(scr.name) });
+      out.push({ kind: "out", m, scr, key: "o:" + m.id + ":" + scr.id, name: "".concat(m.name, " · ").concat(scr.name), w: scr.w, h: scr.h, label: tzLab({ res: "".concat(scr.w, "×").concat(scr.h), name: "".concat(m.name, " — ").concat(scr.name), file: outFileName(m, scr) }) });
     }
     continue;
   }
@@ -186,7 +203,7 @@ function tzItems() {
     if (ci) {
       // 2.0.174: пример для ТЗ — исходная маска с разметкой и линиями разреза (отдельным файлом не сохраняется)
       const G0 = tzCutSrcOn(o.c) && cutGeom(o.c);
-      if (G0) out.push({ kind: "cutsrc", c: o.c, key: "cs:" + o.c.id, name: o.c.name + " — исходник", w: G0.W0, h: G0.H0, label: "".concat(G0.W0, "×").concat(G0.H0, "  |  ").concat(G0.st.name || "screen", " — исходная маска, красным — линии разреза (пример)") });
+      if (G0) out.push({ kind: "cutsrc", c: o.c, key: "cs:" + o.c.id, name: o.c.name + " — исходник", w: G0.W0, h: G0.H0, label: tzLab({ res: "".concat(G0.W0, "×").concat(G0.H0), name: "".concat(G0.st.name || "screen", " — исходная маска, красным — линии разреза (пример)") }) });
     }
     continue;
   }
@@ -203,15 +220,15 @@ function tzItems() {
     // 2.0.52: волюметрик попадает только в ТЗ «Волюметрик»; что именно — галочками «Маска», «Коммутация», «3D-вид»
     if (isVol && !volTz) continue;
     if (!isVol && volTz) continue;
-    if (!isVol || VOL_MASK_UI && tz.volMask === true) out.push({ kind: "mask", st, key: "m:" + st.uid, name: st.name || "screen", w, h, label: "".concat(w, "×").concat(h, "  |  ").concat(st.name || "screen", "  |  ").concat(physText(st)) });
+    if (!isVol || VOL_MASK_UI && tz.volMask === true) out.push({ kind: "mask", st, key: "m:" + st.uid, name: st.name || "screen", w, h, label: tzLab({ res: "".concat(w, "×").concat(h), name: st.name || "screen", phys: physText(st), file: maskFileBase(st) + ".png" }) });
     if (isVol) {
       const nm = st.name || "volumetric", W2 = 1600;
       // 2.0.58: две схемы — вид сверху с коммутацией и вид снизу (лицевая сторона) без коммутации
       if (tz.volCom !== false) {
-        out.push({ kind: "volcom", side: "top", com: true, st, key: "vc:" + st.uid, name: nm + " — коммутация", w: W2, h: volComH(st, W2), label: "Коммутация  |  ".concat(nm, "  |  вид сверху") });
-        out.push({ kind: "volcom", side: "bottom", com: false, st, key: "vb:" + st.uid, name: nm + " — вид снизу", w: W2, h: volComH(st, W2), label: "Вид снизу (лицевая сторона)  |  ".concat(nm) });
+        out.push({ kind: "volcom", side: "top", com: true, st, key: "vc:" + st.uid, name: nm + " — коммутация", w: W2, h: volComH(st, W2), label: tzLab({ name: "Коммутация  |  ".concat(nm, "  |  вид сверху") }) });
+        out.push({ kind: "volcom", side: "bottom", com: false, st, key: "vb:" + st.uid, name: nm + " — вид снизу", w: W2, h: volComH(st, W2), label: tzLab({ name: "Вид снизу (лицевая сторона)  |  ".concat(nm) }) });
       }
-      if (tz.vol3d !== false) out.push({ kind: "vol3d", st, key: "v3:" + st.uid, name: nm + " — 3D", w: W2, h: VOL3D_H, label: "3D-вид  |  ".concat(nm, "  |  ").concat(physText(st)) });
+      if (tz.vol3d !== false) out.push({ kind: "vol3d", st, key: "v3:" + st.uid, name: nm + " — 3D", w: W2, h: VOL3D_H, label: tzLab({ name: "3D-вид  |  ".concat(nm), phys: physText(st) }) });
     }
   }
   }
@@ -345,7 +362,7 @@ function evenScaleMap(groups, items) {
     g.forEach((mi, j) => {
       const it = items[mi];
       if (!it || it.info) return;
-      const lay = maskCellLayout(hz, g.length, j, it.w, it.h, BOX), sc = lay.image[2] / Math.max(1, it.w), key = it.w + "x" + it.h;
+      const lay = maskCellLayout(hz, g.length, j, it.w, it.h, tzLabBox(BOX)), sc = lay.image[2] / Math.max(1, it.w), key = it.w + "x" + it.h;
       if (map[key] == null || sc < map[key]) map[key] = sc;
     });
   }
@@ -461,6 +478,8 @@ function refreshTZPanel() {
     gs.innerHTML = '<option value="">Авто — маски крупнее всего</option>' + gridOptions(n2).map((G) => '<option value="'.concat(G.cols, "x").concat(G.rows, '">').concat(G.cols, " по горизонтали × ").concat(G.rows, " по вертикали").concat(G.cols === 1 ? " (столбиком)" : G.rows === 1 ? " (в ряд)" : "", "</option>")).join("");
     gs.value = gridOptions(n2).some((G) => "".concat(G.cols, "x").concat(G.rows) === tz.maskGrid) ? tz.maskGrid : "";
     $("tEvenSize").checked = tz.evenSize !== false;
+    const lo = tzLabOpt();
+    for (const k of ["res", "name", "phys", "file"]) $("tLab_" + k).checked = !!lo[k];
   }
   $("tOvInfo").textContent = n ? tz.overview ? "Картинок: ".concat(n, " на ").concat(ns, " ").concat(ns === 1 ? "слайде" : "слайдах", " (").concat(ns === 1 ? "слайд 2" : "слайды 2–" + (ns + 1), "), порядок как в списке") : "Картинок: ".concat(n, " — галочка снята, слайды не добавятся") : "Картинок нет — слайды не добавятся.";
   syncTzTpl();

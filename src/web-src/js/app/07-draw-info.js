@@ -70,20 +70,41 @@ function drawInfo(ctx, st, s) {
   lines.forEach((l, i) => ctx.fillText(l, x + pad, y + pad + i * lh));
   ctx.restore();
 }
-function drawBlock(ctx, lines, gap, cx, cy, deg) {
+// 3.0.22: TX_HIDE — текст, который сейчас правится прямо на маске: на холсте его не рисуем, на его месте — поле правки
+let TX_HIDE = null;
+function drawBlock(ctx, lines, gap, cx, cy, deg, sty, owner) {
+  if (owner && owner === TX_HIDE) return;
+  sty = sty || null;
+  const keep = TX_STY;
+  TX_STY = sty;
   const b = blockSize(lines, gap);
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(-deg * Math.PI / 180);
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
+  if (sty && sty.op) ctx.globalAlpha *= sty.op / 100;
   let y = -b.h / 2;
   lines.forEach(([t, sz], i) => {
-    ctx.font = "".concat(sz, "px ").concat(FONT);
-    if (t) ctx.fillText(t, -b.ms[i].w / 2, y + b.ms[i].asc);
+    ctx.font = txFont(sz, sty);
+    // 3.0.16: выравнивание строк многострочного текста — по левому / правому краю блока
+    const x = sty && sty.al === "l" ? -b.w / 2 : sty && sty.al === "r" ? b.w / 2 - b.ms[i].w : -b.ms[i].w / 2;
+    if (t) {
+      if (sty && sty.ow) {
+        ctx.save();
+        ctx.shadowColor = "transparent";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = Math.max(0.5, sz * sty.ow / 100);
+        ctx.strokeStyle = sty.oc || "#000";
+        ctx.strokeText(t, x, y + b.ms[i].asc);
+        ctx.restore();
+      }
+      ctx.fillText(t, x, y + b.ms[i].asc);
+    }
     y += b.ms[i].h + gap;
   });
   ctx.restore();
+  TX_STY = keep;
 }
 function cornerList(st, black) {
   const out = [];
@@ -197,7 +218,8 @@ function normalizeScreen(d) {
   }
   st.extraLabels = (Array.isArray(d.extraLabels) ? d.extraLabels : []).filter((x) => x && typeof x === "object").map((x) => {
     var _a2;
-    return { text: String((_a2 = x.text) != null ? _a2 : "Текст"), size: +x.size || 120, x: +x.x || 0, y: +x.y || 0, rotation: +x.rotation || 0, ...(typeof x.color === "string" && /^#[0-9a-f]{6}$/i.test(x.color) ? { color: x.color.toUpperCase() } : {}) };
+    const sty = normSty(x.sty);
+    return { text: String((_a2 = x.text) != null ? _a2 : "Текст"), size: +x.size || 120, x: +x.x || 0, y: +x.y || 0, rotation: +x.rotation || 0, ...(typeof x.color === "string" && /^#[0-9a-f]{6}$/i.test(x.color) ? { color: x.color.toUpperCase() } : {}), ...(sty ? { sty } : {}) };
   });
   st.titleOffsetX = +d.titleOffsetX || 0;
   st.textSets = {};
@@ -206,6 +228,7 @@ function normalizeScreen(d) {
     if (q && typeof q === "object") st.textSets[k] = { l1: !!q.l1, l2: !!q.l2, l3: !!q.l3, ox: +q.ox || 0, oy: +q.oy || 0 };
   }
   st.titleOffsetY = +d.titleOffsetY || 0;
+  st.tSty = normSty(d.tSty); // 3.0.16: стиль основного текста
   st.titleColor = typeof d.titleColor === "string" && /^#[0-9a-f]{6}$/i.test(d.titleColor) ? d.titleColor.toUpperCase() : null; // 2.0.97: цвет основного текста (null — как в режиме)
   st.persistentContours = (Array.isArray(d.persistentContours) ? d.persistentContours : []).map((c) => ({ col: pint(c.col, 0), row: pint(c.row, 0), cols: pint(c.cols, 0), rows: pint(c.rows, 0) })).filter((c) => c.cols > 0 && c.rows > 0);
   st.showPersistentContour = d.showPersistentContour == null ? true : !!d.showPersistentContour;
@@ -219,6 +242,7 @@ function normalizeScreen(d) {
   }
   st.cacheLine = d.cacheLine == null ? true : !!d.cacheLine;
   st.cacheLineW = Math.max(1, Math.min(200, pint(d.cacheLineW, 6)));
+  st.cacheLineDash = d.cacheLineDash === true; // 3.0.21: пунктир
   st.cacheDim = d.cacheDim == null ? 45 : Math.max(0, Math.min(100, +d.cacheDim || 0));
   st.cacheLineA = d.cacheLineA == null ? 100 : Math.max(5, Math.min(100, +d.cacheLineA || 100));
   st.cacheLineColor = typeof d.cacheLineColor === "string" && /^#[0-9a-f]{6}$/i.test(d.cacheLineColor) ? d.cacheLineColor.toUpperCase() : "#FFFFFF";

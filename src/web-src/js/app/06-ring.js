@@ -495,6 +495,7 @@ function drawMask(ctx, st, s, guides) {
         ctx.globalAlpha = Math.max(0.05, Math.min(1, (st.cacheLineA == null ? 100 : +st.cacheLineA) / 100));
         ctx.strokeStyle = st.cacheLineColor || "#FFFFFF";
         ctx.lineWidth = cw;
+        if (st.cacheLineDash) ctx.setLineDash([cw * 3, cw * 2]);
         ctx.stroke();
         ctx.restore();
       };
@@ -589,11 +590,11 @@ function drawMask(ctx, st, s, guides) {
   }
   ctx.fillStyle = st.titleColor || "#fff";
   const lines = titleLines(st, s);
-  drawBlock(ctx, lines, TITLE_GAP * s, W * s / 2 + (st.titleOffsetX || 0) * s, H * s / 2 - (st.titleOffsetY || 0) * s, titleRot(st));
+  drawBlock(ctx, lines, TITLE_GAP * s, W * s / 2 + (st.titleOffsetX || 0) * s, H * s / 2 - (st.titleOffsetY || 0) * s, titleRot(st), st.tSty, st);
   for (const it of st.extraLabels || []) {
     const fs = Math.min(900, Math.max(6, +it.size || 120)) * s;
     ctx.fillStyle = it.color || "#fff";
-    drawBlock(ctx, [[it.text || "Текст", fs]], 0, W * s / 2 + (+it.x || 0) * s, H * s / 2 - (+it.y || 0) * s, +it.rotation || 0);
+    drawBlock(ctx, [[it.text || "Текст", fs]], 0, W * s / 2 + (+it.x || 0) * s, H * s / 2 - (+it.y || 0) * s, +it.rotation || 0, it.sty, it);
   }
   drawInfo(ctx, st, s);
   ctx.restore();

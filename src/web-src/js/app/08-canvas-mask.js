@@ -229,19 +229,34 @@ function draw() {
       pctx.setLineDash([4, 3]);
       pctx.strokeRect(f.cx - f.w / 2 - 6, f.cy - f.h / 2 - 4, f.w + 12, f.h + 8);
       pctx.restore();
+      centerMark(f.cx, f.cy, false);
     }
+  }
+  if (ui.shapeHover >= 0 && !act && st.cacheShapes && st.cacheShapes[ui.shapeHover] && ui.shapeHover !== ui.selShape) {
+    const c = st.cacheShapes[ui.shapeHover], cx = L.ox + c.x * s, cy = L.oy + c.y * s;
+    pctx.save();
+    pctx.strokeStyle = "#ffdb0d";
+    pctx.lineWidth = 1.5;
+    pctx.setLineDash([5, 4]);
+    shapePath(pctx, c, cx, cy, c.w / 2 * s, c.h / 2 * s);
+    pctx.stroke();
+    pctx.restore();
+    centerMark(cx, cy, false);
   }
   pctx.lineWidth = 2;
   pctx.strokeStyle = "#ffff00";
-  if (ui.textMode === 0) {
+  if (ui.textMode === 0 && TX_HIDE !== st) {
     const f = titleFrame();
     pctx.strokeRect(f.cx - f.w / 2 - 8, f.cy - f.h / 2 - 6, f.w + 16, f.h + 12);
+    centerMark(f.cx, f.cy, true);
   }
   if (ui.selLabel >= 0 && st.extraLabels[ui.selLabel]) {
     for (const i of selExtras()) {
+      if (TX_HIDE === st.extraLabels[i]) continue;
       const f = labelFrame(i);
       pctx.lineWidth = 1.5;
       pctx.strokeRect(f.cx - f.w / 2 - 4, f.cy - f.h / 2 - 3, f.w + 8, f.h + 6);
+      centerMark(f.cx, f.cy, true);
     }
   }
   if (ui.txGuides && ui.txGuides.length) {
@@ -320,13 +335,13 @@ function textHoverAt(x, y, e) {
   return null;
 }
 function titleFrame() {
-  const st = L.st, s = L.scale, b = blockSize(titleLines(st, s), TITLE_GAP * s);
+  const st = L.st, s = L.scale, b = withSty(st.tSty, () => blockSize(titleLines(st, s), TITLE_GAP * s));
   const a = titleRot(st) * Math.PI / 180, cs = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a));
   const w = b.w * cs + b.h * sn, h = b.w * sn + b.h * cs;
   return { cx: L.ox + L.W * s / 2 + st.titleOffsetX * s, cy: L.oy + L.H * s / 2 - st.titleOffsetY * s, w, h };
 }
 function labelFrame(i) {
-  const st = L.st, s = L.scale, it = st.extraLabels[i], m = measure(it.text || "Текст", Math.max(6, it.size) * s);
+  const st = L.st, s = L.scale, it = st.extraLabels[i], m = withSty(it.sty, () => measure(it.text || "Текст", Math.max(6, it.size) * s));
   // 2.0.38: рамка с учётом любого поворота (как у основного текста) — для выбора мышью и магнита
   const a = (+it.rotation || 0) * Math.PI / 180, cs = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a));
   const w = m.w * cs + m.h * sn, h = m.w * sn + m.h * cs;
@@ -571,8 +586,11 @@ pv.addEventListener("pointerdown", (e) => {
   // 2.0.81: в проекции и ТВ кабинетов нет — текст выбирается и двигается мышью сразу, без «Активного текста»
   // 2.0.94: и в LED (инструмент «Выбор») — щелчок по тексту выбирает его; Alt — выделять кабинеты под текстом
   if (st.kind === "proj" || st.kind === "tv" || st.kind === "ring" || (!st.kind || st.kind === "led") && (ui.tool || "select") === "select" && !e.altKey) {
-    const hitF = (f) => Math.abs(x - f.cx) <= f.w / 2 + 10 && Math.abs(y - f.cy) <= f.h / 2 + 10;
-    for (let i = (st.extraLabels || []).length - 1; i >= 0; i--) if (hitF(labelFrame(i))) {
+    // 3.0.23: текст выбирается и двигается только за крестик в центре (как фигура); щелчок по буквам — кабинет под ними
+    // на смартфоне (без быстрой панели) — как раньше: касание в любое место надписи
+    const pcSel = document.documentElement.classList.contains("pc") && e.pointerType === "mouse";
+    const hitC = (f) => pcSel ? Math.hypot(x - f.cx, y - f.cy) <= 16 : Math.abs(x - f.cx) <= f.w / 2 + 10 && Math.abs(y - f.cy) <= f.h / 2 + 10;
+    for (let i = (st.extraLabels || []).length - 1; i >= 0; i--) if (hitC(labelFrame(i))) {
       const sel = selExtras();
       if ((e.shiftKey || e.ctrlKey || e.metaKey) && sel.length) {
         // 2.0.110: Shift / Ctrl / ⌘ + щелчок — добавить текст к выбранным или убрать
@@ -595,16 +613,18 @@ pv.addEventListener("pointerdown", (e) => {
       }
       ui.textMode = i + 1;
       ui.selLabel = i;
+      selOnly("text");
       refreshTextList();
       syncTextControls();
       act = { kind: "label", i, x, y };
       requestDraw();
       return;
     }
-    if (titleLines(st, L.scale).length && hitF(titleFrame())) {
+    if (titleLines(st, L.scale).length && hitC(titleFrame())) {
       clearSelMore();
       ui.textMode = 0;
       ui.selLabel = -1;
+      selOnly("text");
       refreshTextList();
       syncTextControls();
       act = { kind: "title", x, y };
@@ -622,17 +642,36 @@ pv.addEventListener("pointerdown", (e) => {
   }
   if (ui.textMode === 0) {
     const f = titleFrame();
-    if (Math.abs(x - f.cx) <= f.w / 2 + 14 && Math.abs(y - f.cy) <= f.h / 2 + 14) {
+    if (e.pointerType === "mouse" ? Math.hypot(x - f.cx, y - f.cy) <= 16 : Math.abs(x - f.cx) <= f.w / 2 + 14 && Math.abs(y - f.cy) <= f.h / 2 + 14) {
       act = { kind: "title", x, y };
       return;
     }
   } else if (ui.textMode > 0 && st.extraLabels[ui.textMode - 1]) {
     const i = ui.textMode - 1, f = labelFrame(i);
-    if (Math.abs(x - f.cx) <= f.w / 2 + 14 && Math.abs(y - f.cy) <= f.h / 2 + 14) {
+    if (e.pointerType === "mouse" ? Math.hypot(x - f.cx, y - f.cy) <= 16 : Math.abs(x - f.cx) <= f.w / 2 + 14 && Math.abs(y - f.cy) <= f.h / 2 + 14) {
       ui.selLabel = i;
       act = { kind: "label", i, x, y };
       requestDraw();
       return;
+    }
+  }
+  // 3.0.18–3.0.19: фигура выбирается щелчком мыши: в LED — по крестику в центре (внутри — кабинеты), в проекции и ТВ — в любом месте внутри
+  ui.lastPtr = e.pointerType;
+  if (typeof shapesHere === "function" && shapesHere(st) && (ui.tool || "select") === "select" && !e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && !ui.bezDraw) {
+    const si = shapeEdgeAt(st, x, y, !!st.kind && st.kind !== "led");
+    if (si >= 0) {
+      ui.selShape = si;
+      selOnly("shape");
+      syncShapes();
+      act = { kind: "shape", i: si, x, y };
+      requestDraw();
+      return;
+    }
+    // щелчок мимо фигуры — выбор с неё снимается (как в Keynote)
+    if (ui.selShape >= 0) {
+      ui.selShape = -1;
+      syncShapes();
+      requestDraw();
     }
   }
   if (st.kind === "ring") {
@@ -662,6 +701,8 @@ pv.addEventListener("pointerdown", (e) => {
     return;
   }
   const k = key(...cell);
+  // 3.0.19: выбор — только одного вида: выбираем кабинеты — текст и фигура снимаются
+  if (!(alt || ui.tool === "black" && !ctrl && !shift)) selOnly("cab");
   if (alt || ui.tool === "black" && !ctrl && !shift) {
     const target = !st.blackCabinets.includes(k);
     act = { kind: "black", target };
@@ -736,7 +777,22 @@ pv.addEventListener("pointermove", (e) => {
         ui.textHover = th;
         requestDraw();
       }
-      pv.style.cursor = th ? "move" : "";
+      // 3.0.19: фигура под мышью — пунктир по контуру и крестик в центре (щелчок по крестику — выбрать)
+      let sh = -1, onC = false;
+      if (!th && typeof shapesHere === "function" && L && shapesHere(L.st) && (ui.tool || "select") === "select" && !ui.bezDraw) {
+        sh = shapeAt(L.st, p[0], p[1]);
+        if (sh === ui.selShape) sh = -1;
+        if (sh >= 0) {
+          const c = L.st.cacheShapes[sh];
+          onC = Math.hypot(p[0] - (L.ox + c.x * L.scale), p[1] - (L.oy + c.y * L.scale)) <= 16 || !!L.st.kind && L.st.kind !== "led";
+        }
+      }
+      if (sh !== (ui.shapeHover == null ? -1 : ui.shapeHover)) {
+        ui.shapeHover = sh;
+        requestDraw();
+      }
+      const onT = th && Math.hypot(p[0] - th.f.cx, p[1] - th.f.cy) <= 16;
+      pv.style.cursor = onT || onC ? "pointer" : "";
       const h = cell ? key(...cell) : null;
       if (h !== (ui.hover && key(...ui.hover))) {
         ui.hover = cell;
@@ -1118,4 +1174,77 @@ function syncTVPixUI() {
   }
   $("pxNums").checked = X.nums !== false;
   $("pxRowsShade").checked = X.shade !== false;
+}
+
+// 3.0.19: фигура под курсором — у крестика в центре; inside — и в любом месте внутри фигуры. Верхняя фигура — первой
+function shapeEdgeAt(st, x, y, inside) {
+  if (!L) return -1;
+  const list = st.cacheShapes || [], s0 = L.scale, c2 = mctx;
+  c2.save();
+  c2.setTransform(1, 0, 0, 1, 0, 0);
+  c2.lineWidth = 24;
+  try {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const c = list[i], cx = L.ox + c.x * s0, cy = L.oy + c.y * s0;
+      if (Math.hypot(x - cx, y - cy) <= (ui.lastPtr === "mouse" ? 16 : 30)) return i;
+      if (!inside) continue;
+      shapePath(c2, c, cx, cy, c.w / 2 * s0, c.h / 2 * s0);
+      if (c2.isPointInPath(x, y, "evenodd")) return i;
+    }
+  } finally {
+    c2.restore();
+  }
+  return -1;
+}
+
+// 3.0.19: выбрано может быть только одно: кабинеты, фигура или текст — остальное снимается
+function selOnly(kind) {
+  if (kind !== "text" && ui.textMode >= 0) {
+    clearSelMore();
+    ui.textMode = -1;
+    ui.selLabel = -1;
+    refreshTextList();
+    syncTextControls();
+  }
+  if (kind !== "shape" && ui.selShape >= 0) {
+    ui.selShape = -1;
+    syncShapes();
+  }
+  if (kind !== "cab" && ui.selected && ui.selected.size) {
+    ui.selected.clear();
+    ui.anchor = null;
+    if (typeof syncPaintUI === "function") syncPaintUI();
+  }
+}
+
+// 3.0.22: центр объекта — крестик при наведении, жёлтая точка с плюсом у выбранного (текст и фигура одинаково)
+function centerMark(cx, cy, sel) {
+  pctx.save();
+  pctx.setLineDash([]);
+  if (sel) {
+    pctx.fillStyle = "#ffdb0d";
+    pctx.strokeStyle = "#1b1b1b";
+    pctx.lineWidth = 1.5;
+    pctx.beginPath();
+    pctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    pctx.fill();
+    pctx.stroke();
+    pctx.beginPath();
+    pctx.moveTo(cx - 4.5, cy);
+    pctx.lineTo(cx + 4.5, cy);
+    pctx.moveTo(cx, cy - 4.5);
+    pctx.lineTo(cx, cy + 4.5);
+    pctx.stroke();
+  } else {
+    pctx.strokeStyle = "#ffdb0d";
+    pctx.lineWidth = 2;
+    pctx.beginPath();
+    pctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    pctx.moveTo(cx - 13, cy);
+    pctx.lineTo(cx + 13, cy);
+    pctx.moveTo(cx, cy - 13);
+    pctx.lineTo(cx, cy + 13);
+    pctx.stroke();
+  }
+  pctx.restore();
 }
