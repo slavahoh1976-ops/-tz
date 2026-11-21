@@ -658,6 +658,12 @@ $("tMaskWhich").addEventListener("change", (e) => {
   ui.tzMaskWhich = e.target.value;
   refreshTZPanel();
 });
+// 3.0.15: что писать над маской в ТЗ
+for (const k of ["res", "name", "phys", "file"]) $("tLab_" + k).addEventListener("change", (e) => {
+  project.tz.lab[k] = e.target.checked;
+  tzChanged();
+  scheduleHistory();
+});
 $("tEvenSize").addEventListener("change", (e) => {
   project.tz.evenSize = e.target.checked;
   tzChanged();
@@ -1000,7 +1006,7 @@ function drawTZ() {
       c.font = "".concat(Math.max(3, labelPt(text, lw) * 12700 * k), "px Arial, sans-serif");
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.fillText(text, x + (lx + lw / 2) * k, y + (ly + lh / 2) * k, lw * k);
+      if (text) c.fillText(text, x + (lx + lw / 2) * k, y + (ly + lh / 2) * k, lw * k);
       c.textAlign = "left";
       c.textBaseline = "alphabetic";
     };
@@ -1011,7 +1017,7 @@ function drawTZ() {
     });
     if (sl.kind === "g") sl.g.forEach((mi, j) => {
       const it = items[mi];
-      const lay = maskCellLayout(sl.hz, sl.g.length, j, it.w, it.h, NL.box, it.info, !!NL.note, evenSc(emap, it));
+      const lay = maskCellLayout(sl.hz, sl.g.length, j, it.w, it.h, tzLabBox(NL.box), it.info, !!NL.note, evenSc(emap, it));
       if (lay.info) {
         const [tx, ty, tw, th] = lay.info;
         infoPaint(c, infoFit(it.info, tw, th), x + tx * k, y + ty * k, k * PT);

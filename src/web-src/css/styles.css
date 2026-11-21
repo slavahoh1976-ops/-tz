@@ -2099,3 +2099,349 @@ html[data-kind=ring] .cache-sec .refFit [data-f="cab"] { display: none !importan
   border-color: var(--accent);
   font-weight: 700;
 }
+
+/* 3.0.16–3.0.17: панель быстрых настроек (как в Keynote) — только на ПК, только на странице «Маска»;
+   видна одна строка — для выбранного объекта */
+.fbar {
+  display: none;
+  flex-direction: column;
+  padding: 5px 8px;
+  margin: 0 0 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12px;
+  position: relative;
+}
+html.pc[data-page=mask] .fbar {
+  display: flex;
+}
+html.pc[data-mode=vol] .fbar {
+  display: none;
+}
+.fb-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-height: 40px;
+}
+.fb-row[hidden] {
+  display: none;
+}
+.fb-hint {
+  color: var(--muted, #9aa5b1);
+  margin-left: 8px;
+}
+.fb-who {
+  font-weight: 700;
+  color: var(--accent);
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0 4px 0 6px;
+}
+.fb-lbl {
+  color: var(--muted, #9aa5b1);
+  margin-left: 4px;
+}
+.fb-val {
+  min-width: 34px;
+  text-align: center;
+}
+.fb-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 3px;
+}
+.fbar select,
+.fbar input[type=number] {
+  height: 28px;
+  padding: 0 6px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.fb-font {
+  width: 140px;
+}
+.fb-size {
+  width: 82px;
+}
+.fb-num {
+  width: 76px;
+}
+#fbLine {
+  width: 104px;
+}
+.fb-n {
+  width: 56px;
+}
+.fb-col {
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+}
+.fb-b {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.fb-b:hover {
+  border-color: var(--accent);
+}
+.fb-b[aria-pressed=true] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.fb-al {
+  display: inline-flex;
+  gap: 2px;
+}
+.fb-big {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 2px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 10.5px;
+  line-height: 1.2;
+}
+.fb-big:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.fb-pw {
+  position: relative;
+  display: inline-flex;
+}
+.fb-pop {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(4, 36px);
+  gap: 4px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.fb-pop.fb-pos {
+  grid-template-columns: repeat(3, 32px);
+}
+.fb-pop[hidden] {
+  display: none;
+}
+.fb-pop button {
+  width: 100%;
+  height: 34px;
+  min-width: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.fb-pop button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* 3.0.22: правка текста прямо на маске (двойной щелчок) — текст на своём месте, тонкая рамка, как в Keynote */
+.mtxed {
+  position: absolute;
+  z-index: 8;
+  padding: 2px 8px;
+  border: 1px solid rgba(220, 220, 220, 0.75);
+  background: transparent;
+  white-space: pre;
+  transform-origin: center center;
+  pointer-events: auto;
+}
+.mtxed > div {
+  white-space: pre;
+}
+.mtxed-line {
+  outline: none;
+  caret-color: currentColor;
+  min-width: 0.6em;
+  cursor: text;
+}
+.mtxed-line::selection {
+  background: rgba(255, 180, 190, 0.75);
+}
+/* подписи «Доп. текст 1» / «Фигура 1» в строке не нужны — вместо них кнопки «Текст» / «Фигуры» */
+#fbWho,
+#fbShWho {
+  display: none;
+}
+
+/* 3.0.18: строка кабинетов — значки */
+.fb-who2 {
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  margin: 0 2px 0 4px;
+}
+.fb-sw {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: inline-block;
+}
+.fb-rot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fb-rot[hidden] {
+  display: none;
+}
+.fb-pop.fb-list {
+  grid-template-columns: 1fr;
+  min-width: 120px;
+}
+.fb-pop.fb-list button {
+  justify-content: flex-start;
+  padding: 0 8px;
+  white-space: nowrap;
+  height: 30px;
+}
+
+/* 3.0.19: цвет выделенных кабинетов — как квадрат «Цвет кабинетов» слева */
+.fb-csw {
+  width: 34px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+}
+.fb-csw.empty {
+  background: repeating-linear-gradient(45deg, transparent 0 4px, rgba(255, 255, 255, 0.12) 4px 8px);
+}
+.fb-pop.fb-pal {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 232px;
+}
+.fb-pop.fb-pal[hidden] {
+  display: none;
+}
+.fb-palh {
+  font-size: 11px;
+  color: var(--muted, #9aa5b1);
+}
+.fb-palg {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+.fb-pop.fb-pal .fb-palg button {
+  height: 22px;
+  min-width: 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.fb-pop.fb-pal > .fb-b {
+  width: 100%;
+  height: 28px;
+}
+
+/* 3.0.19: «Текст» и «Фигуры» — всегда в начале панели, рядом — строка выбранного */
+.fbar {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.fb-ins {
+  display: flex;
+  gap: 5px;
+  padding-right: 8px;
+  border-right: 1px solid var(--line);
+  align-self: stretch;
+  align-items: center;
+}
+.fbar > .fb-row {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 3.0.20: строка фигуры — все её настройки */
+.fb-grp2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.fb-grp2[hidden] {
+  display: none;
+}
+.fb-seg {
+  display: inline-flex;
+  gap: 2px;
+}
+.fb-seg .fb-b {
+  padding: 0 6px;
+}
+.fbar input[type=number].fb-n {
+  width: 58px;
+}
+.fb-b:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.fbar input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  text-align: center;
+}
+.fbar input[type=number]::-webkit-inner-spin-button,
+.fbar input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.fbar input[type=number].fb-n {
+  width: 50px;
+}
+/* 3.0.21: с инверсией значки «гасить / затемнить» — тёмная фигура, светлое вокруг */
+#fbShMode.inv button[data-m=off] svg rect,
+#fbShMode.inv button[data-m=dim] svg rect {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+#fbShMode.inv button[data-m=off] svg circle {
+  fill: currentColor;
+}
+#fbShMode.inv button[data-m=dim] svg circle {
+  fill: currentColor;
+  fill-opacity: 0.45;
+}

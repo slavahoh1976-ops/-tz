@@ -2,7 +2,7 @@ function freshField(k) {
   return { id: newUid(), name: k ? "Общее поле ".concat(k + 1) : "Общее поле", items: [], title: { on: true, x: 0, y: 0, size: 0, meters: false }, stack: false };
 }
 function freshFieldState() {
-  return { fields: [], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { tpl2: true, tpl3: true, fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskPerS: {}, evenSize: true, maskGrid: "", req: {}, notes: {}, pos: {} } };
+  return { fields: [], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { tpl2: true, tpl3: true, fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskPerS: {}, evenSize: true, lab: { res: true, name: true, phys: true, file: false }, maskGrid: "", req: {}, notes: {}, pos: {} } };
 }
 function loadFieldState(d, raw) {
   const seen = /* @__PURE__ */ new Set();
@@ -65,7 +65,7 @@ function loadFieldState(d, raw) {
     }
     return o;
   };
-  project.tz = { fields: boolMap(tz.fields), masks: boolMap(tz.masks), overview: tz.overview == null ? true : !!tz.overview, projZip: tz.projZip !== false, volMask: tz.volMask === true, volCom: tz.volCom !== false, vol3d: tz.vol3d !== false, volInfo: tz.volInfo !== false, adrMadrix: tz.adrMadrix === true, adrMadshow: tz.adrMadshow === true, adrTd: tz.adrTd === true, imgPer: Math.max(0, Math.min(3, pint(tz.imgPer, 0))), maskPer: Math.max(0, Math.min(10, pint(tz.maskPer, 0))), maskPerS: (() => { const o = {}, src = tz.maskPerS && typeof tz.maskPerS === "object" ? tz.maskPerS : {}; for (const kk of Object.keys(src)) { const v = pint(src[kk], 0); if (/^\d+$/.test(kk) && v >= 1 && v <= 10) o[kk] = v; } return o; })(), evenSize: tz.evenSize !== false, maskGrid: /^\d+x\d+$/.test(tz.maskGrid || "") ? tz.maskGrid : "", req: strMap(tz.req), notes: strMap(tz.notes), pos: posMap(tz.pos) };
+  project.tz = { fields: boolMap(tz.fields), masks: boolMap(tz.masks), overview: tz.overview == null ? true : !!tz.overview, projZip: tz.projZip !== false, volMask: tz.volMask === true, volCom: tz.volCom !== false, vol3d: tz.vol3d !== false, volInfo: tz.volInfo !== false, adrMadrix: tz.adrMadrix === true, adrMadshow: tz.adrMadshow === true, adrTd: tz.adrTd === true, imgPer: Math.max(0, Math.min(3, pint(tz.imgPer, 0))), maskPer: Math.max(0, Math.min(10, pint(tz.maskPer, 0))), maskPerS: (() => { const o = {}, src = tz.maskPerS && typeof tz.maskPerS === "object" ? tz.maskPerS : {}; for (const kk of Object.keys(src)) { const v = pint(src[kk], 0); if (/^\d+$/.test(kk) && v >= 1 && v <= 10) o[kk] = v; } return o; })(), evenSize: tz.evenSize !== false, lab: (() => { const l = tz.lab && typeof tz.lab === "object" ? tz.lab : {}; return { res: l.res !== false, name: l.name !== false, phys: l.phys !== false, file: l.file === true }; })(), maskGrid: /^\d+x\d+$/.test(tz.maskGrid || "") ? tz.maskGrid : "", req: strMap(tz.req), notes: strMap(tz.notes), pos: posMap(tz.pos) };
   // 2.0.114: порядок листов ТЗ и выбранный тип ТЗ — раньше при открытии сбрасывались
   if (Array.isArray(tz.order)) project.tz.order = tz.order.filter((k) => typeof k === "string" && /^[fmco]:/.test(k));
   // 3.0.9: первый лист Resolume, D3 и MP4 — два блока вместо десяти; правки старых блоков к ним не подходят — сбрасываем

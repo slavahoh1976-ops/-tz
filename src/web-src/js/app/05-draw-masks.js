@@ -1,5 +1,5 @@
 function drawPlateTitle(ctx, st, s, W, H, invert, noPlate) {
-  const lines = titleLines(st, s), b = blockSize(lines, TITLE_GAP * s), tx = W * s / 2 + (st.titleOffsetX || 0) * s, ty = H * s / 2 - (st.titleOffsetY || 0) * s;
+  const lines = titleLines(st, s), b = withSty(st.tSty, () => blockSize(lines, TITLE_GAP * s)), tx = W * s / 2 + (st.titleOffsetX || 0) * s, ty = H * s / 2 - (st.titleOffsetY || 0) * s;
   if (!noPlate) {
     ctx.fillStyle = invert ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.6)";
     const a = -titleRot(st) * Math.PI / 180;
@@ -16,13 +16,13 @@ function drawPlateTitle(ctx, st, s, W, H, invert, noPlate) {
   }
   const defC = invert ? "#000" : "#fff";
   ctx.fillStyle = st.titleColor || defC;
-  drawBlock(ctx, lines, TITLE_GAP * s, tx, ty, titleRot(st));
+  drawBlock(ctx, lines, TITLE_GAP * s, tx, ty, titleRot(st), st.tSty, st);
   // 2.0.96: дополнительные тексты — тем же цветом и с той же тенью, что основной (раньше в ТВ выходили чёрными)
   for (const it of st.extraLabels || []) {
     const fs2 = Math.min(900, Math.max(6, +it.size || 120)) * s;
     if (noPlate) ctx.shadowBlur = Math.max(1, fs2 * 0.05);
     ctx.fillStyle = it.color || defC;
-    drawBlock(ctx, [[it.text || "Текст", fs2]], 0, W * s / 2 + (+it.x || 0) * s, H * s / 2 - (+it.y || 0) * s, +it.rotation || 0);
+    drawBlock(ctx, [[it.text || "Текст", fs2]], 0, W * s / 2 + (+it.x || 0) * s, H * s / 2 - (+it.y || 0) * s, +it.rotation || 0, it.sty, it);
   }
   ctx.restore();
 }
@@ -351,10 +351,10 @@ function drawDome(ctx, st, s, guides, g) {
   // 2.0.80: подложка и каше-фигуры и в режиме купола
   if (REF_ON_CANVAS) drawRefImage(ctx, st, s);
   drawCachePx(ctx, st, s, Dp, Dp);
-  const lines = titleLines(st, s), b = blockSize(lines, TITLE_GAP * s), tx = c + (st.titleOffsetX || 0) * s, ty = Dp * 0.62 - (st.titleOffsetY || 0) * s;
+  const lines = titleLines(st, s), b = withSty(st.tSty, () => blockSize(lines, TITLE_GAP * s)), tx = c + (st.titleOffsetX || 0) * s, ty = Dp * 0.62 - (st.titleOffsetY || 0) * s;
   void b; // 2.0.76: под текстом проекции больше нет чёрного прямоугольника
   ctx.fillStyle = st.titleColor || tc;
-  drawBlock(ctx, lines, TITLE_GAP * s, tx, ty, titleRot(st));
+  drawBlock(ctx, lines, TITLE_GAP * s, tx, ty, titleRot(st), st.tSty, st);
   if (P.bar) {
     const bw = D * 0.36, bh = D * 0.03, bx = (D - bw) / 2, by = Math.max(D * 0.7, (ty + b.h / 2 + 24 * s) / s), X = (v) => v * s, cols = ["#FFFFFF", "#FFFF00", "#00FFFF", "#00FF00", "#FF00FF", "#FF0000", "#0000FF", "#000000"];
     cols.forEach((cl, i) => {
@@ -373,7 +373,7 @@ function drawDome(ctx, st, s, guides, g) {
   for (const it of st.extraLabels || []) {
     const fs2 = Math.min(900, Math.max(6, +it.size || 120)) * s;
     ctx.fillStyle = it.color || tc; // 2.0.96/2.0.97: доп. текст купола — своим цветом или цветом текста
-    drawBlock(ctx, [[it.text || "Текст", fs2]], 0, c + (+it.x || 0) * s, c - (+it.y || 0) * s, +it.rotation || 0);
+    drawBlock(ctx, [[it.text || "Текст", fs2]], 0, c + (+it.x || 0) * s, c - (+it.y || 0) * s, +it.rotation || 0, it.sty, it);
   }
   drawInfo(ctx, st, s);
   ctx.restore();
@@ -572,14 +572,14 @@ function drawProj(ctx, st, s, guides) {
     ctx.lineWidth = Math.max(1, 2 * s);
     ctx.stroke();
   }
-  const lines = titleLines(st, s), b = blockSize(lines, TITLE_GAP * s), tx = W * s / 2 + (st.titleOffsetX || 0) * s, ty = H * s / 2 - (st.titleOffsetY || 0) * s;
+  const lines = titleLines(st, s), b = withSty(st.tSty, () => blockSize(lines, TITLE_GAP * s)), tx = W * s / 2 + (st.titleOffsetX || 0) * s, ty = H * s / 2 - (st.titleOffsetY || 0) * s;
   void b; // 2.0.76: под текстом проекции больше нет чёрного прямоугольника
   ctx.fillStyle = st.titleColor || tc;
-  drawBlock(ctx, lines, TITLE_GAP * s, tx, ty, titleRot(st));
+  drawBlock(ctx, lines, TITLE_GAP * s, tx, ty, titleRot(st), st.tSty, st);
   for (const it of st.extraLabels || []) {
     const fs2 = Math.min(900, Math.max(6, +it.size || 120)) * s;
     ctx.fillStyle = it.color || tc;
-    drawBlock(ctx, [[it.text || "Текст", fs2]], 0, W * s / 2 + (+it.x || 0) * s, H * s / 2 - (+it.y || 0) * s, +it.rotation || 0);
+    drawBlock(ctx, [[it.text || "Текст", fs2]], 0, W * s / 2 + (+it.x || 0) * s, H * s / 2 - (+it.y || 0) * s, +it.rotation || 0, it.sty, it);
   }
   drawInfo(ctx, st, s);
   ctx.restore();
@@ -623,6 +623,8 @@ function drawCachePx(ctx, st, s, Wp, Hp) {
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = color;
     ctx.lineWidth = w;
+    // 3.0.21: пунктирная линия по краю фигур
+    if (st.cacheLineDash) ctx.setLineDash([w * 3, w * 2]);
     ctx.stroke();
     ctx.restore();
   };
@@ -952,9 +954,39 @@ function fmtCabLabel(st, c, r, cols, rows) {
   }
 }
 const mctx = document.createElement("canvas").getContext("2d");
+// 3.0.16: стиль текста (панель форматирования на ПК): шрифт, жирный, курсив, выравнивание, обводка, прозрачность.
+// TX_STY — стиль, которым сейчас меряется и рисуется текст (null — как раньше: Gill Sans, обычный).
+const TX_FONTS = [["", "Gill Sans"], ["Arial, Helvetica, sans-serif", "Arial"], ["Helvetica, Arial, sans-serif", "Helvetica"], ["Verdana, Geneva, sans-serif", "Verdana"], ["Tahoma, Verdana, sans-serif", "Tahoma"], ["\"Trebuchet MS\", Helvetica, sans-serif", "Trebuchet MS"], ["Impact, \"Arial Black\", sans-serif", "Impact"], ["Georgia, \"Times New Roman\", serif", "Georgia"], ["\"Times New Roman\", Times, serif", "Times New Roman"], ["\"Courier New\", Courier, monospace", "Courier New"]];
+let TX_STY = null;
+function withSty(sty, fn) {
+  const keep = TX_STY;
+  TX_STY = sty || null;
+  try {
+    return fn();
+  } finally {
+    TX_STY = keep;
+  }
+}
+const txFont = (size, sty = TX_STY) => "".concat(sty && sty.i ? "italic " : "", sty && sty.b ? "bold " : "", Math.max(0.5, size), "px ", sty && sty.font || FONT);
+function normSty(o) {
+  if (!o || typeof o !== "object") return null;
+  const r = {};
+  if (typeof o.font === "string" && TX_FONTS.some((f) => f[0] === o.font) && o.font) r.font = o.font;
+  if (o.b) r.b = true;
+  if (o.i) r.i = true;
+  if (o.al === "l" || o.al === "r") r.al = o.al;
+  const op = +o.op;
+  if (op >= 5 && op < 100) r.op = Math.round(op);
+  const ow = +o.ow;
+  if (ow > 0) {
+    r.ow = Math.min(100, Math.round(ow));
+    r.oc = typeof o.oc === "string" && /^#[0-9a-f]{6}$/i.test(o.oc) ? o.oc.toUpperCase() : "#000000";
+  }
+  return Object.keys(r).length ? r : null;
+}
 function measure(text, size) {
   var _a, _b;
-  mctx.font = "".concat(Math.max(0.5, size), "px ").concat(FONT);
+  mctx.font = txFont(size);
   const m = mctx.measureText(text || "");
   const asc = (_a = m.fontBoundingBoxAscent) != null ? _a : size * 0.92, desc = (_b = m.fontBoundingBoxDescent) != null ? _b : size * 0.26;
   return { w: m.width, h: asc + desc, asc };

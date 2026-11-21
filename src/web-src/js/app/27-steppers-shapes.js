@@ -71,7 +71,7 @@ stepper("physH", (d) => stepCabs("h", d));
 // Шаг — из атрибута step (иначе 1). Поля, у которых свои кнопки, уже обёрнуты — их не трогаем.
 function stepAll(root) {
   for (const i of (root || document).querySelectorAll('input[type="number"], input.calc')) {
-    if (i.closest(".stp") || i.hidden) continue;
+    if (i.closest(".stp") || i.closest(".fbar") || i.hidden) continue; // 3.0.20: в быстрой панели — без ▲▼, компактно
     const st = parseFloat(i.getAttribute("step"));
     stepInput(i, st > 0 ? st : 1);
   }

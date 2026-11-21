@@ -244,6 +244,8 @@ const labelPt = (text, wEmu) => {
 // 2.0.147: раскладка слайда со смешанной ориентацией — полосами: горизонтальные во всю ширину сверху,
 // вертикальные рядом под ними (ряд меняется при смене ориентации или при заполнении). Маски — максимально крупно.
 function mixedBandCells(dims, B = BOX) {
+  // 3.0.15: подпись над маской выключена (B.noLab) — её место отдаётся маске
+  const LH = B && B.noLab ? 0 : LABEL_H, LG = B && B.noLab ? 0 : LABEL_GAP;
   const rows = [];
   for (let i = 0; i < dims.length; i++) {
     const h0 = dims[i].w >= dims[i].h, lim = h0 ? 3 : 4, last = rows[rows.length - 1];
@@ -254,12 +256,12 @@ function mixedBandCells(dims, B = BOX) {
   const info = rows.map((r) => {
     const sumR = r.a.reduce((t, i) => t + dims[i].w / Math.max(1, dims[i].h), 0);
     const hImg = (B.w - GAP * (r.a.length - 1)) / Math.max(1e-6, sumR);
-    return { hImg, band: LABEL_H + LABEL_GAP + hImg };
+    return { hImg, band: LH + LG + hImg };
   });
   const totNat = info.reduce((t, r) => t + r.band, 0) + GAP * (rows.length - 1);
-  const avail = B.h, labels = rows.length * (LABEL_H + LABEL_GAP) + GAP * (rows.length - 1);
+  const avail = B.h, labels = rows.length * (LH + LG) + GAP * (rows.length - 1);
   const f = totNat > avail ? (avail - labels) / Math.max(1, totNat - labels) : 1;
-  const bands = info.map((r) => ({ hImg: r.hImg * f, band: LABEL_H + LABEL_GAP + r.hImg * f }));
+  const bands = info.map((r) => ({ hImg: r.hImg * f, band: LH + LG + r.hImg * f }));
   const totH = bands.reduce((t, r) => t + r.band, 0) + GAP * (rows.length - 1);
   let y = B.y + Math.max(0, Math.floor((avail - totH) / 2));
   const cells = [];
@@ -269,7 +271,7 @@ function mixedBandCells(dims, B = BOX) {
     const rowW = ws.reduce((t, v) => t + v, 0) + GAP * (r.a.length - 1);
     let x = B.x + Math.max(0, Math.floor((B.w - rowW) / 2));
     r.a.forEach((i, k) => {
-      cells[i] = { label: [x, y, ws[k], LABEL_H], image: [x, y + LABEL_H + LABEL_GAP, ws[k], Math.round(hImg)] };
+      cells[i] = { label: [x, y, ws[k], LH], image: [x, y + LH + LG, ws[k], Math.round(hImg)] };
       x += ws[k] + GAP;
     });
     y += bands[ri].band + GAP;
@@ -277,8 +279,10 @@ function mixedBandCells(dims, B = BOX) {
   return cells;
 }
 function maskCellLayout(hz, n, j, w, h, B = BOX, info, topAlign, fixedScale) {
+  // 3.0.15: подпись над маской выключена (B.noLab) — её место отдаётся маске
+  const LH = B && B.noLab ? 0 : LABEL_H, LG = B && B.noLab ? 0 : LABEL_GAP;
   if (hz && typeof hz === "object" && hz.mixed) {
-    const cell = mixedBandCells(hz.mixed, B)[j] || { label: [B.x, B.y, 1, LABEL_H], image: [B.x, B.y, 1, 1] };
+    const cell = mixedBandCells(hz.mixed, B)[j] || { label: [B.x, B.y, 1, LH], image: [B.x, B.y, 1, 1] };
     if (fixedScale > 0) {
       // одинаковый размер — ужимаем до общего масштаба, но не больше ячейки; центрируем в ячейке
       const [ix, iy, iw, ih] = cell.image, ew = Math.min(iw, Math.round(w * fixedScale)), eh = Math.min(ih, Math.round(h * fixedScale));
@@ -293,24 +297,24 @@ function maskCellLayout(hz, n, j, w, h, B = BOX, info, topAlign, fixedScale) {
     const full = span ? B.w : cw, x0 = span ? B.x : cx0;
     const G = hz && typeof hz === "object" ? hz : { cols: 1, rows: 1 };
     const chh = Math.floor((B.h - GAP * (G.rows - 1)) / G.rows), cy0 = B.y + Math.floor(j / G.cols) * (chh + GAP);
-    const ih = Math.max(1, chh - LABEL_H - LABEL_GAP), iwMax = Math.round(full * 0.56), tw = full - iwMax - GAP;
+    const ih = Math.max(1, chh - LH - LG), iwMax = Math.round(full * 0.56), tw = full - iwMax - GAP;
     const sc = Math.min(iwMax / Math.max(1, w), ih / Math.max(1, h)), ew = Math.round(w * sc), eh = Math.round(h * sc);
-    const by = cy0 + Math.floor((chh - (LABEL_H + LABEL_GAP + eh)) / 2), iy = by + LABEL_H + LABEL_GAP;
+    const by = cy0 + Math.floor((chh - (LH + LG + eh)) / 2), iy = by + LH + LG;
     void cell, void chT;
-    return { label: [x0, by, full, LABEL_H], image: [x0 + iwMax - ew, iy, ew, eh], info: [x0 + iwMax + GAP, iy, tw, eh] };
+    return { label: [x0, by, full, LH], image: [x0 + iwMax - ew, iy, ew, eh], info: [x0 + iwMax + GAP, iy, tw, eh] };
   }
   const G = hz && typeof hz === "object" ? hz : hz ? { cols: 1, rows: n } : { cols: n, rows: 1 };
   // spanLast: последняя картинка одна в своём ряду — во всю ширину (волюметрик: вид сверху и снизу рядом, 3D под ними)
   const span = G.spanLast && j === n - 1 && j % G.cols === 0;
   const cw = span ? B.w : Math.floor((B.w - GAP * (G.cols - 1)) / G.cols), chh = Math.floor((B.h - GAP * (G.rows - 1)) / G.rows);
   const cx0 = span ? B.x : B.x + j % G.cols * (cw + GAP), cy0 = B.y + Math.floor(j / G.cols) * (chh + GAP);
-  const ih = Math.max(1, chh - LABEL_H - LABEL_GAP);
+  const ih = Math.max(1, chh - LH - LG);
   // 2.0.146: fixedScale — одинаковые по разрешению маски одного размера на разных слайдах; не больше, чем помещается в ячейку
   const fit = Math.min(cw / Math.max(1, w), ih / Math.max(1, h)), sc = fixedScale > 0 ? Math.min(fixedScale, fit) : fit;
   const ew = Math.round(w * sc), eh = Math.round(h * sc);
   // 2.0.146: topAlign — при пояснительном тексте маска прижимается кверху ячейки, ближе к тексту
-  const by = topAlign ? cy0 : cy0 + Math.floor((chh - (LABEL_H + LABEL_GAP + eh)) / 2), ix = cx0 + Math.floor((cw - ew) / 2);
-  return { label: [cx0, by, cw, LABEL_H], image: [ix, by + LABEL_H + LABEL_GAP, ew, eh] };
+  const by = topAlign ? cy0 : cy0 + Math.floor((chh - (LH + LG + eh)) / 2), ix = cx0 + Math.floor((cw - ew) / 2);
+  return { label: [cx0, by, cw, LH], image: [ix, by + LH + LG, ew, eh] };
 }
 // 2.0.60: вид сверху, вид снизу и 3D волюметрика — вместе на одном листе (по 3), отдельно от масок
 const volExtra = (m) => /^v[cb3]:/.test(m.key || "");
@@ -725,14 +729,14 @@ async function buildPptx(tplB64, masks, overview, label) {
     const items = groups[gi].kind === "img" ? groups[gi].ims.map((im) => ({ png: im.jpeg, w: im.w, h: im.h, label: im.caption || "", ext: "jpeg", key: imgKey(im) })) : g.map((mi) => masks[mi]);
     const NL = noteLayout(noteText(noteKey(items)), noteKey(items));
     items.forEach((m, j) => {
-      const lay = maskCellLayout(hz, items.length, j, m.w, m.h, NL.box, m.info, !!NL.note, groups[gi].kind === "img" ? 0 : evenSc(emap, m)), [cx0, cy0, cw] = lay.label;
+      const lay = maskCellLayout(hz, items.length, j, m.w, m.h, groups[gi].kind === "img" ? NL.box : tzLabBox(NL.box), m.info, !!NL.note, groups[gi].kind === "img" ? 0 : evenSc(emap, m)), [cx0, cy0, cw] = lay.label;
       if (lay.info) {
         // «Информация» волюметрика — обычный текст на слайде (можно править в PowerPoint)
         const [tx, ty, tw, th] = lay.info, fit = infoFit(m.info, tw, th), sz = Math.round(fit.pt * 100);
         const paras = fit.rows.map((r) => '<a:p><a:pPr><a:lnSpc><a:spcPct val="112000"/></a:lnSpc></a:pPr><a:r><a:rPr lang="ru-RU" sz="'.concat(sz, '"').concat(r.b ? ' b="1"' : "", '><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:rPr><a:t>').concat(xmlEsc(r.t), "</a:t></a:r></a:p>")).join("");
         shapes.push('<p:sp><p:nvSpPr><p:cNvPr id="'.concat(150 + j, '" name="Vol info ').concat(j + 1, '"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="').concat(tx, '" y="').concat(ty, '"/><a:ext cx="').concat(tw, '" cy="').concat(th, '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="none" lIns="0" rIns="0" tIns="0" bIns="0" anchor="t"/><a:lstStyle/>').concat(paras, "</p:txBody></p:sp>"));
       }
-      shapes.push('<p:sp><p:nvSpPr><p:cNvPr id="'.concat(100 + j, '" name="Mask info ').concat(j + 1, '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="').concat(cx0, '" y="').concat(cy0, '"/><a:ext cx="').concat(cw, '" cy="').concat(LABEL_H, '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="none" lIns="0" rIns="0" tIns="0" bIns="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="ru-RU" sz="').concat(Math.round(labelPt(m.label, cw) * 100), '"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:rPr><a:t>').concat(xmlEsc(m.label), '</a:t></a:r><a:endParaRPr lang="ru-RU" sz="1100"/></a:p></p:txBody></p:sp>'));
+      if (m.label) shapes.push('<p:sp><p:nvSpPr><p:cNvPr id="'.concat(100 + j, '" name="Mask info ').concat(j + 1, '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="').concat(cx0, '" y="').concat(cy0, '"/><a:ext cx="').concat(cw, '" cy="').concat(LABEL_H, '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="none" lIns="0" rIns="0" tIns="0" bIns="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="ru-RU" sz="').concat(Math.round(labelPt(m.label, cw) * 100), '"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:latin typeface="Arial"/><a:ea typeface="Arial"/><a:cs typeface="Arial"/></a:rPr><a:t>').concat(xmlEsc(m.label), '</a:t></a:r><a:endParaRPr lang="ru-RU" sz="1100"/></a:p></p:txBody></p:sp>'));
       const [x, y, ew, eh] = lay.image;
       const img = "mask_".concat(gi + 1, "_").concat(j + 1, ".").concat(m.ext || "png");
       put("ppt/media/" + img, m.png);
@@ -782,8 +786,10 @@ function bytesToImage(bytes, mime) {
     im.src = u;
   });
 }
+// 3.0.15: по просьбе — маски и картинки в PPTX/PDF снова в оригинальном разрешении (без уменьшения)
+const DOC_SHRINK = false;
 const docFit = (w, h) => {
-  const k = Math.min(1, DOC_MAX / Math.max(1, w, h));
+  const k = DOC_SHRINK ? Math.min(1, DOC_MAX / Math.max(1, w, h)) : 1;
   return [Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k)), k];
 };
 // уменьшение по шагам вдвое — тонкие линии и номера кабинетов не пропадают
@@ -1046,19 +1052,23 @@ async function buildPdf(label, masks, overview_) {
     let content = full;
     const nc = await notePdf(NL, xo, "N0");
     for (let j = 0; j < g.length; j++) {
-      const m = masks[g[j]], lay = maskCellLayout(hz, g.length, j, m.w, m.h, NL.box, m.info, !!NL.note, evenSc(emapPdf, m));
+      const m = masks[g[j]], lay = maskCellLayout(hz, g.length, j, m.w, m.h, tzLabBox(NL.box), m.info, !!NL.note, evenSc(emapPdf, m));
       if (lay.info) {
         const [tx, ty, tw, th] = toPdf(lay.info), inf = await infoImage(m.info, tw, th);
         xo.push(["I" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(inf.w, " /Height ").concat(inf.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), inf.data)]);
         content += "q ".concat(f(tw), " 0 0 ").concat(f(th), " ").concat(f(tx), " ").concat(f(ty), " cm /I").concat(j, " Do Q\n");
       }
       const [lx, ly, lw, lh] = toPdf(lay.label), [ix, iy, iw, ih] = toPdf(lay.image);
-      const lab = await labelImage(m.label, lw, lh);
-      const lid = stream("/Type /XObject /Subtype /Image /Width ".concat(lab.w, " /Height ").concat(lab.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), lab.data);
+      const lab = m.label ? await labelImage(m.label, lw, lh) : null;
+      const lid = lab && stream("/Type /XObject /Subtype /Image /Width ".concat(lab.w, " /Height ").concat(lab.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), lab.data);
       const pp = pngParts(m.png);
       const mid = stream("/Type /XObject /Subtype /Image /Width ".concat(pp.w, " /Height ").concat(pp.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ").concat(pp.w, " >>"), pp.idat);
-      xo.push(["L" + j, lid], ["M" + j, mid]);
-      content += "q ".concat(f(lw), " 0 0 ").concat(f(lh), " ").concat(f(lx), " ").concat(f(ly), " cm /L").concat(j, " Do Q\nq ").concat(f(iw), " 0 0 ").concat(f(ih), " ").concat(f(ix), " ").concat(f(iy), " cm /M").concat(j, " Do Q\n");
+      if (lid) {
+        xo.push(["L" + j, lid]);
+        content += "q ".concat(f(lw), " 0 0 ").concat(f(lh), " ").concat(f(lx), " ").concat(f(ly), " cm /L").concat(j, " Do Q\n");
+      }
+      xo.push(["M" + j, mid]);
+      content += "q ".concat(f(iw), " 0 0 ").concat(f(ih), " ").concat(f(ix), " ").concat(f(iy), " cm /M").concat(j, " Do Q\n");
     }
     page(xo, content + nc);
   }
