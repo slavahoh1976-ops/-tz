@@ -91,6 +91,19 @@ function tzIpSwatches() {
     tzIpSw.appendChild(b);
   }
 }
+// 3.0.30: на компьютере (есть быстрое меню) панель правки — в строке «Текст» быстрого меню, на телефоне — над текстом
+const tzIpTool = tzIpBar.firstChild;
+function tzIpDock(on) {
+  const slot = $("fbTTEd");
+  if (on && slot && document.documentElement.classList.contains("pc")) {
+    slot.appendChild(tzIpTool);
+    slot.hidden = false;
+    return true;
+  }
+  if (tzIpTool.parentNode !== tzIpBar) tzIpBar.appendChild(tzIpTool);
+  if (slot) slot.hidden = true;
+  return false;
+}
 function tzIpStart(pk, lx, ly, forceFull) {
   if (ui.tzEdit && ui.tzEdit.pk === pk) return;
   if (ui.tzEdit) tzIpStop(true);
@@ -114,7 +127,9 @@ function tzIpStart(pk, lx, ly, forceFull) {
   tzIpBar.classList.toggle("ipfull", ed.full);
   $("wrap").appendChild(tzIpTa);
   tzIpSwatches();
-  tzIpBar.hidden = false;
+  ed.dock = !ed.full && tzIpDock(true);
+  tzIpBar.hidden = ed.dock;
+  if (typeof fbQueue === "function") fbQueue();
   $("tTxtEdit").hidden = true;
   requestDraw();
 }
@@ -127,7 +142,9 @@ function tzIpStop(quiet) {
   tzIpTa.removeAttribute("style");
   tzIpHome.after(tzIpTa);
   tzIpBar.hidden = true;
+  tzIpDock(false);
   $("tTxtEdit").hidden = false;
+  if (typeof fbQueue === "function") fbQueue();
   if (!quiet) {
     ui.tzZoom = ed.zoom0;
     ui.tzView = ed.view0;
@@ -148,7 +165,7 @@ function tzIpPlace() {
     ed.fit = false;
     let z = Math.max(1, Math.min(6, 15 / (base * h.k * PT)));
     z = Math.max(1, Math.min(z, (W - 48) / h.w));
-    ui.tzView = { z, x: W / 2 - (h.x + h.w / 2) * z, y: 64 - h.y * z };
+    ui.tzView = { z, x: W / 2 - (h.x + h.w / 2) * z, y: (ed.dock ? 16 : 64) - h.y * z };
     tzViewClamp();
     requestDraw();
     return;
@@ -163,6 +180,18 @@ function tzIpPlace() {
     s.top = top + "px";
     s.width = h.w * V.z + "px";
     s.fontSize = base * kz + "px";
+    // 3.0.24: поле с колонками — текст течёт по колонкам, как на листе
+    const cols = isReq ? reqCols(info) : null;
+    if (cols) {
+      s.columnCount = cols.n;
+      s.columnGap = cols.gapPt * kz + "px";
+      s.columnFill = "auto";
+      s.height = cols.hPt * kz + "px";
+      s.width = (reqRect(info).w - 2 * info.ins.l) / PT * kz + "px";
+    } else {
+      s.columnCount = "";
+      s.height = "";
+    }
     const boxH = isReq ? (reqRect(info).h - info.ins.t) * h.k * V.z : h.h * V.z;
     s.minHeight = Math.max(base * kz * RT_LH, Math.min(boxH, H)) + "px";
     // панель — над блоком, если не помещается — под ним
@@ -178,7 +207,7 @@ function tzIpPlace() {
   let over = false;
   if (isReq) {
     const r = reqRect(info), tw = (r.w - 2 * info.ins.l) / PT;
-    over = rtLayout(mctxRT, reqParas(info, reqTextOr(info)), tw, info.baseSz).h * PT > r.h - info.ins.t + 2000;
+    over = reqTextFit(info, reqParas(info, reqTextOr(info)), tw).over;
   }
   tzIpTa.classList.toggle("over", over);
   tzIpOver.hidden = !over;
@@ -218,7 +247,7 @@ tzIpTa.addEventListener("wheel", (e) => {
 window.addEventListener("pointerdown", (e) => {
   if (!ui.tzEdit) return;
   const t = e.target;
-  if (tzIpTa.contains(t) || tzIpBar.contains(t)) return;
+  if (tzIpTa.contains(t) || tzIpBar.contains(t) || tzIpTool.contains(t)) return;
   tzIpStop();
 }, true);
 window.addEventListener("resize", () => ui.tzEdit && requestDraw());

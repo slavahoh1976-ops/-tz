@@ -432,7 +432,12 @@ function tplBlock(tpl, label, idx, sp, clr, link) {
   const body = sp.slice(sp.indexOf("<a:lstStyle/>") + 13, sp.lastIndexOf("</p:txBody>"));
   const paraXml = body.match(/<a:p\b(?:\s[^>]*)?>[\s\S]*?<\/a:p>/g) || [];
   const lines = [];
+  // 3.0.24: свойства абзаца — межстрочный интервал (%) и отступы до/после (pt), как в PowerPoint
+  const paraPpr = paraXml.map((px) => (px.match(/<a:pPr\b[^>]*?(?:\/>|>[\s\S]*?<\/a:pPr>)/) || [""])[0]);
+  const pprSp = (pp) => ({ lh: +((pp.match(/<a:lnSpc><a:spcPct val="(\d+)"/) || [])[1] || 0) / 1e5, lhPt: +((pp.match(/<a:lnSpc><a:spcPts val="(\d+)"/) || [])[1] || 0) / 100, sb: +((pp.match(/<a:spcBef><a:spcPts val="(\d+)"/) || [])[1] || 0) / 100, sa: +((pp.match(/<a:spcAft><a:spcPts val="(\d+)"/) || [])[1] || 0) / 100 });
+  const bp = sp.match(/<a:bodyPr\b[^>]*>/), cols = Math.max(1, +((bp && bp[0].match(/\bnumCol="(\d+)"/)) || [])[1] || 1), colGap = +((bp && bp[0].match(/\bspcCol="(\d+)"/)) || [])[1] || 0;
   paraXml.forEach((px, pi) => {
+    const ps = pprSp(paraPpr[pi]), first = lines.length;
     let cur = { runs: [], xml: [], para: pi };
     const push = () => {
       cur.md = runsMd(cur.runs);
@@ -451,6 +456,13 @@ function tplBlock(tpl, label, idx, sp, clr, link) {
       cur.xml.push(m[0]);
     }
     push();
+    // интервал — у всех строк абзаца, отступ «до» — у первой, «после» — у последней
+    for (let q = first; q < lines.length; q++) {
+      lines[q].lh = ps.lh;
+      lines[q].lhPt = ps.lhPt;
+      if (q === first) lines[q].sb = ps.sb;
+      if (q === lines.length - 1) lines[q].sa = ps.sa;
+    }
     // 3.0.9: пустой абзац-отступ между разделами — высота по его endParaRPr
     const last = lines[lines.length - 1], ez = px.match(/<a:endParaRPr\b[^>]*\bsz="(\d+)"/);
     if (last && !last.runs.length && ez && TPL_FRESH.includes(tpl)) last.gapSz = +ez[1] / 100;
@@ -464,6 +476,13 @@ function tplBlock(tpl, label, idx, sp, clr, link) {
     if (/srgbClr val="FF0000"/i.test(rp)) return;
     if (rp) cnt.set(rp, (cnt.get(rp) || 0) + r.t.length);
   });
+  const pcnt = new Map();
+  for (const pp of paraPpr) pcnt.set(pp, (pcnt.get(pp) || 0) + 1);
+  let basePpr = "", pbest = 0;
+  for (const [k, v] of pcnt) if (v > pbest && !/<a:buChar/.test(k)) {
+    pbest = v;
+    basePpr = k;
+  }
   let baseRpr = '<a:rPr lang="ru-RU" sz="1000" dirty="0"><a:latin typeface="Arial"/><a:cs typeface="Arial"/></a:rPr>', best = 0;
   for (const [k, v] of cnt) if (v > best) {
     best = v;
@@ -483,7 +502,7 @@ function tplBlock(tpl, label, idx, sp, clr, link) {
   // 3.0.9: объединённый блок нескольких разделов — «Разделы 01–04»
   const secs = lines.map((l) => (l.runs.map((r) => r.t).join("").match(/^\s*(\d\d)\s/) || [])[1]).filter(Boolean);
   if (secs.length > 1 && lines.some((l) => l.gapSz)) title = "Разделы ".concat(secs[0], "–", secs[secs.length - 1]);
-  return { tpl, idx, label, title, sp, paraXml, lines, rect, ins, baseRpr, baseSz, baseColor, md: lines.map((l) => l.md).join("\n") };
+  return { tpl, idx, label, title, sp, paraXml, paraPpr, basePpr, baseSp: pprSp(basePpr), cols, colGap, lines, rect, ins, baseRpr, baseSz, baseColor, md: lines.map((l) => l.md).join("\n") };
 }
 function reqText(label) {
   const v = project.tz.req && project.tz.req[label];
@@ -523,9 +542,29 @@ function reqMatch(info, text) {
   }
   return { lines: b, map };
 }
+// 3.0.24: колонки поля шаблона (numCol/spcCol) — для превью и PDF
+function reqCols(info) {
+  if (!info || !(info.cols > 1)) return null;
+  return { n: info.cols, gapPt: (info.colGap || 0) / PT, hPt: (reqRect(info).h - info.ins.t) / PT };
+}
+// высота текста блока (с колонками — самой высокой колонки) и не вылез ли он за поле
+function reqTextFit(info, paras, twPt) {
+  const cols = reqCols(info), cw = cols ? (twPt - cols.gapPt * (cols.n - 1)) / cols.n : twPt, L2 = rtLayout(mctxRT, paras, cw, info.baseSz);
+  if (!cols) return { h: L2.h, over: L2.h * PT > reqRect(info).h - info.ins.t + 2000 };
+  const C = rtColumns(L2, cols);
+  return { h: C.h, over: C.lastY > cols.hPt + 0.5 };
+}
 function reqParas(info, text) {
   const { lines, map } = reqMatch(info, text);
-  return lines.map((l, j) => map[j] >= 0 ? info.lines[map[j]].runs : mdRuns(l, { sz: info.baseSz }));
+  return lines.map((l, j) => {
+    const o = map[j] >= 0 ? info.lines[map[j]] : null, r = (o ? o.runs : mdRuns(l, { sz: info.baseSz })).slice();
+    const ps = o || info.baseSp || {};
+    r.lh = ps.lh || 0;
+    r.lhPt = ps.lhPt || 0;
+    r.sb = ps.sb || 0;
+    r.sa = ps.sa || 0;
+    return r;
+  });
 }
 function reqXml(info, text) {
   const { lines, map } = reqMatch(info, text), out = [], rels = [];
@@ -555,12 +594,12 @@ function reqXml(info, text) {
         j += span.length;
         continue;
       }
-      out.push("<a:p>".concat(info.lines[oi].xml.join("")).concat(endP, "</a:p>"));
+      out.push("<a:p>".concat((info.paraPpr || [])[pi] || "", info.lines[oi].xml.join("")).concat(endP, "</a:p>"));
       j++;
       continue;
     }
     const runs = mdRuns(lines[j]);
-    out.push("<a:p>".concat(runs.map((r) => newRun(r.t, r.b, r.link, r.color, r.sz)).join("")).concat(endP, "</a:p>"));
+    out.push("<a:p>".concat(info.basePpr || "", runs.map((r) => newRun(r.t, r.b, r.link, r.color, r.sz)).join("")).concat(endP, "</a:p>"));
     j++;
   }
   return { xml: out.join(""), rels };
@@ -571,9 +610,12 @@ function rtLayout(ctx, paras, wPt, defSz = 10) {
   for (const runs of paras) {
     // высота строки — по самому крупному шрифту в ней (как в PowerPoint); пустая строка — по основному размеру
     const sz0 = runs.length && runs.every((r) => r.gap) ? runs[0].sz : runs.some((r) => r.t) ? Math.max(...runs.filter((r) => r.t).map((r) => r.sz || defSz)) : defSz;
+    // 3.0.24: межстрочный интервал абзаца (как в PowerPoint: 100% = 1,2 размера) и отступы до/после
+    // точный интервал в пунктах (spcPts) — как есть
+    const lh = runs.lhPt || sz0 * (runs.lh ? RT_LH * runs.lh : RT_LH), n0 = lines.length;
     let line = [], lw = 0;
     const flush = () => {
-      lines.push({ segs: line, h: sz0 * RT_LH, sz: sz0 });
+      lines.push({ segs: line, h: lh, lh, pre: 0, post: 0, sz: sz0 });
       line = [];
       lw = 0;
     };
@@ -592,29 +634,53 @@ function rtLayout(ctx, paras, wPt, defSz = 10) {
       }
     }
     flush();
+    if (runs.sb) {
+      lines[n0].pre = runs.sb;
+      lines[n0].h += runs.sb;
+    }
+    if (runs.sa) {
+      lines[lines.length - 1].post = runs.sa;
+      lines[lines.length - 1].h += runs.sa;
+    }
   }
   return { lines, h: lines.reduce((a, l) => a + l.h, 0), font };
 }
-function rtPaint(ctx, paras, x0, y0, wPt, k, defSz = 10, color = "#000") {
+// 3.0.24: раскладка по колонкам (поле с двумя колонками, как в PowerPoint): колонка заполняется до высоты поля, дальше — следующая
+function rtColumns(L2, cols) {
+  const out = [];
+  let c = 0, y = 0, hMax = 0;
+  for (const ln of L2.lines) {
+    if (cols && c < cols.n - 1 && y > 0 && y + ln.h - ln.post > cols.hPt) {
+      c++;
+      y = 0;
+    }
+    out.push({ ln, c, y });
+    y += ln.h;
+    hMax = Math.max(hMax, y);
+  }
+  return { items: out, h: hMax, last: c, lastY: y };
+}
+function rtPaint(ctx, paras, x0, y0, wPt, k, defSz = 10, color = "#000", cols) {
   ctx.save();
   ctx.scale(k, k);
-  const L2 = rtLayout(ctx, paras, wPt, defSz), links = [];
-  let y = 0;
+  // cols: { n, gapPt, hPt } — колонки поля; ширина одной = (вся − промежутки) / n
+  const cw = cols && cols.n > 1 ? (wPt - cols.gapPt * (cols.n - 1)) / cols.n : wPt;
+  const L2 = rtLayout(ctx, paras, cw, defSz), links = [], CL = rtColumns(L2, cols && cols.n > 1 ? cols : null);
   ctx.textBaseline = "alphabetic";
-  for (const ln of L2.lines) {
-    const base = y + ln.sz * 0.905 + (ln.h - ln.sz * 1.117) / 2;
+  for (const { ln, c, y } of CL.items) {
+    const cx = c * (cw + (cols ? cols.gapPt : 0));
+    const base = y + ln.pre + ln.sz * 0.905 + (ln.lh - ln.sz * 1.117) / 2;
     for (const sg of ln.segs) {
       ctx.font = L2.font(sg);
       ctx.fillStyle = sg.color || (sg.link ? "#0563C1" : color);
-      const X = x0 / k + sg.x, Y = y0 / k + base;
+      const X = x0 / k + cx + sg.x, Y = y0 / k + base;
       ctx.fillText(sg.t, X, Y);
       if (sg.u || sg.link) ctx.fillRect(X, Y + (sg.sz || defSz) * 0.12, sg.w, Math.max(0.5, (sg.sz || defSz) * 0.07));
-      if (sg.link) links.push({ x: sg.x, y, w: sg.w, h: ln.h, url: sg.link });
+      if (sg.link) links.push({ x: cx + sg.x, y: y + ln.pre, w: sg.w, h: ln.lh, url: sg.link });
     }
-    y += ln.h;
   }
   ctx.restore();
-  return { h: y, links };
+  return { h: CL.h, links, over: !!cols && CL.lastY > cols.hPt + 0.5 };
 }
 const mctxRT = document.createElement("canvas").getContext("2d");
 const NOTE_SZ = 12;
@@ -653,13 +719,13 @@ function noteShapeXml(id, note) {
   const ps = note.paras.map((runs) => "<a:p>".concat(runs.map((r) => "<a:r>".concat(rp(r.b, r.link ? "#0563C1" : r.color, r.sz), "<a:t>").concat(xmlEsc(r.t), "</a:t></a:r>")).join(""), '<a:endParaRPr lang="ru-RU" sz="').concat(sz, '" dirty="0"/></a:p>')).join("");
   return '<p:sp><p:nvSpPr><p:cNvPr id="'.concat(id, '" name="Свой текст"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="').concat(x, '" y="').concat(y, '"/><a:ext cx="').concat(w, '" cy="').concat(h, '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" rtlCol="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>').concat(ps, "</p:txBody></p:sp>");
 }
-async function rtImage(paras, wPt, hPt, defSz, defColor = "#000", k = 4) {
+async function rtImage(paras, wPt, hPt, defSz, defColor = "#000", k = 4, cols) {
   const W = Math.max(1, Math.round(wPt * k)), H = Math.max(1, Math.round(hPt * k));
   const cv = document.createElement("canvas");
   cv.width = W;
   cv.height = H;
   const c = cv.getContext("2d", { willReadFrequently: true });
-  const r = rtPaint(c, paras, 0, 0, wPt, k, defSz, defColor);
+  const r = rtPaint(c, paras, 0, 0, wPt, k, defSz, defColor, cols);
   const px = c.getImageData(0, 0, W, H).data, rgb = new Uint8Array(W * H * 3), al = new Uint8Array(W * H);
   for (let i = 0, j = 0, q = 0; i < px.length; i += 4, j += 3, q++) {
     const a = px[i + 3];
@@ -1015,8 +1081,8 @@ async function buildPdf(label, masks, overview_) {
         continue;
       }
       const r = reqRect(info), tx = (r.x + info.ins.l) / EMU_PT, ty = (r.y + info.ins.t) / EMU_PT, tw = (r.w - 2 * info.ins.l) / EMU_PT;
-      const paras = reqParas(info, reqTextOr(info)), th = Math.max(4, Math.min(PDF_H - ty - 2, rtLayout(mctxRT, paras, tw, info.baseSz).h + 4));
-      const img = await rtImage(paras, tw, th, info.baseSz, info.baseColor), name = "T" + info.idx;
+      const paras = reqParas(info, reqTextOr(info)), th = Math.max(4, Math.min(PDF_H - ty - 2, reqTextFit(info, paras, tw).h + 4));
+      const img = await rtImage(paras, tw, th, info.baseSz, info.baseColor, 4, reqCols(info)), name = "T" + info.idx;
       xo.push([name, textImg(img)]);
       content += "q ".concat(f(tw), " 0 0 ").concat(f(th), " ").concat(f(tx), " ").concat(f(PDF_H - ty - th), " cm /").concat(name, " Do Q\n");
       img.links.filter((l) => l.y < th).forEach((l) => ann.push(linkAnn([f(tx + l.x), f(PDF_H - ty - l.y - l.h), f(tx + l.x + l.w), f(PDF_H - ty - l.y)], l.url)));

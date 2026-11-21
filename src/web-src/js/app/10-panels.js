@@ -689,6 +689,12 @@ $("cabRotOn").onchange = () => {
   syncCabRotUI();
   requestDraw();
 };
+$("cabMoveOn").onchange = () => {
+  cabMoveOn = $("cabMoveOn").checked;
+  try { localStorage.setItem("ledmask.cabMoveOn", cabMoveOn ? "1" : "0"); } catch (e) {}
+  syncCabRotUI();
+  requestDraw();
+};
 $("cabRotCCW").onclick = () => ledRotateSel(-45);
 $("cabRotCW").onclick = () => ledRotateSel(45);
 $("cabRot0").onclick = () => ledRotateSel(0, 0);
