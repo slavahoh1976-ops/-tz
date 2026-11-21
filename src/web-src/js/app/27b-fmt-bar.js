@@ -268,11 +268,23 @@ const fbOpt = (sel, v) => {
   sel.value = s;
 };
 function fbSync() {
-  if (!document.documentElement.classList.contains("pc") || document.documentElement.dataset.page !== "mask") return;
+  if (!document.documentElement.classList.contains("pc")) return;
+  if (document.documentElement.dataset.page === "field") return fbSyncField();
+  if (document.documentElement.dataset.page === "tz") return fbSyncTz();
+  for (const id of ["fbT", "fbTT", "fbTI"]) $(id).hidden = true;
+  if (document.documentElement.dataset.page !== "mask") return;
+  for (const id of ["fbF", "fbFM"]) $(id).hidden = true;
   const st = S();
   if (!st) return;
   const ctx = fbContext(st);
   $("fbNone").hidden = ctx !== "none";
+  {
+    const ledM = !st.kind || st.kind === "led";
+    for (const id of ["fbAC0", "fbAC"]) {
+      $(id).hidden = !ledM;
+      $(id).setAttribute("aria-pressed", String(!!st.autoContour));
+    }
+  }
   $("fbText").hidden = ctx !== "text";
   $("fbShape").hidden = ctx !== "shape";
   $("fbCab").hidden = ctx !== "cab";
@@ -319,8 +331,19 @@ function fbSync() {
     $("fbCabLast").style.background = $("lastSw").style.background || "";
     // поворот — только если он разрешён в «Поворот кабинетов»
     $("fbCabRot").hidden = !$("cabRotOn").checked;
+    $("fbCabMv").setAttribute("aria-pressed", String(!!$("cabMoveOn").checked));
+    $("fbCabRo").setAttribute("aria-pressed", String(!!$("cabRotOn").checked));
+    $("fbCabMv").hidden = $("fbCabRo").hidden = !led;
   }
 }
+for (const [id, src] of [["fbCabMv", "cabMoveOn"], ["fbCabRo", "cabRotOn"]]) $(id).onclick = () => {
+  fbFire(src, !$(src).checked, "change");
+  fbSync();
+};
+for (const id of ["fbAC0", "fbAC"]) $(id).onclick = () => {
+  fbFire("autoContour", !$("autoContour").checked, "change");
+  fbSync();
+};
 let fbQ = 0;
 function fbQueue() {
   if (fbQ) return;
@@ -454,3 +477,176 @@ pv.addEventListener("dblclick", (e) => {
   mtxStart(h);
 });
 fbSync();
+
+// ---- 3.0.25: общее поле — строка поля и строка выбранной на поле маски (зеркало полей слева)
+const FB_F_NUM = [["fbFX", "fX"], ["fbFY", "fY"], ["fbFCX", "fCX"], ["fbFCY", "fCY"], ["fbFRot", "fRotIn"]];
+for (const [id, src] of FB_F_NUM) $(id).addEventListener("input", (e) => {
+  fbFire(src, e.target.value, "input");
+  fbQueue();
+});
+for (const [id, src] of [["fbFAdd", "fAdd"], ["fbFDel", "fDelete"], ["fbFRen", "fRename"], ["fbFAll", "fAll"], ["fbFRow", "fRow"], ["fbFCol", "fCol"], ["fbFTMinus", "fTitleMinus"], ["fbFTPlus", "fTitlePlus"], ["fbFTCenter", "fTitleCenter"], ["fbFRCCW", "fRotCCW"], ["fbFRCW", "fRotCW"], ["fbFR0", "fRot0"], ["fbFZTop", "fZTop"], ["fbFZUp", "fZUp"], ["fbFZDown", "fZDown"], ["fbFZBot", "fZBottom"]]) $(id).onclick = fbClick(src);
+for (const [id, src] of [["fbFMag", "fMagnet"], ["fbFMMag", "fMagnet"], ["fbFStack", "fStack"], ["fbFTitle", "fTitle"], ["fbFMeters", "fMeters"]]) $(id).onclick = () => {
+  fbFire(src, !$(src).checked, "change");
+  fbSync();
+};
+$("fbFSel").onchange = (e) => {
+  fbFire("fSel", e.target.value, "change");
+  fbSync();
+};
+$("fbFTSize").onchange = (e) => {
+  fbFire("fTitleSize", e.target.value, "change");
+  fbSync();
+};
+// убрать выбранную маску с поля — та же галочка в списке слева
+$("fbFOff").onclick = () => {
+  const cb = document.querySelector("#fList .fitem.sel input[type=checkbox]");
+  if (cb && cb.checked) cb.click();
+  fbSync();
+};
+$("fbFCopy").onclick = () => {
+  copyField();
+  fbSync();
+};
+$("fbFFile").addEventListener("input", (e) => fbFire("fFile", e.target.value, "input"));
+$("fbFFile").addEventListener("change", (e) => {
+  fbFire("fFile", e.target.value, "change");
+  fbSync();
+});
+for (const id of ["fbFPick", "fbFMPick"]) $(id).onchange = (e) => {
+  fbFire("fSelPick", e.target.value, "change");
+  fbSync();
+};
+function fbPickMirror(id) {
+  const a = $(id), b = $("fSelPick");
+  if (a.dataset.src !== b.innerHTML) {
+    a.dataset.src = b.innerHTML;
+    a.innerHTML = b.innerHTML;
+    for (const o of a.options) o.textContent = o.value ? o.textContent.replace(/ · \d+×\d+$/, "") : "Маска…";
+  }
+  setVal(a, b.value);
+}
+function fbSyncField() {
+  for (const id of ["fbNone", "fbText", "fbShape", "fbCab", "fbT", "fbTT", "fbTI"]) $(id).hidden = true;
+  const f = CF(), sel = fld.sel && f.items.find((it) => it.uid === fld.sel);
+  $("fbF").hidden = !!sel;
+  $("fbFM").hidden = !sel;
+  if (sel) {
+    const st = project.screens.find((q) => q.uid === sel.uid);
+    fbPickMirror("fbFMPick");
+    const sz = ($("fSelSize").textContent.match(/\d+×\d+/) || [""])[0];
+    setTxt($("fbFMSize"), sz);
+    setTxt($("fbFMZ"), ($("fZVal").textContent.match(/\d+ из \d+/) || [""])[0].replace(" из ", "/"));
+    $("fbFMMag").setAttribute("aria-pressed", String(!!$("fMagnet").checked));
+    for (const [id, src] of FB_F_NUM) if (document.activeElement !== $(id)) $(id).value = $(src).value;
+    return;
+  }
+  if ($("fbFSel").innerHTML !== $("fSel").innerHTML) $("fbFSel").innerHTML = $("fSel").innerHTML;
+  setVal($("fbFSel"), $("fSel").value);
+  fbPickMirror("fbFPick");
+  $("fbFDel").disabled = $("fDelete").disabled;
+  setTxt($("fbFFilePre"), $("fFilePre").textContent);
+  if (document.activeElement !== $("fbFFile")) {
+    $("fbFFile").value = $("fFile").value;
+    $("fbFFile").placeholder = $("fFile").placeholder || "";
+  }
+  if (!$("fbFTSize").options.length && $("fTitleSize").options.length) $("fbFTSize").innerHTML = $("fTitleSize").innerHTML;
+  setVal($("fbFTSize"), $("fTitleSize").value);
+  for (const [id, src] of [["fbFMag", "fMagnet"], ["fbFStack", "fStack"], ["fbFTitle", "fTitle"], ["fbFMeters", "fMeters"]]) $(id).setAttribute("aria-pressed", String(!!$(src).checked));
+}
+
+// ---- 3.0.26: «Формирование ТЗ» — общая строка; щелчок по тексту на листе — строка текста; выбран пункт списка — его строка
+let fbTzText = null, fbTzPrev = { pick: "", txt: null }, fbTzCtx = "none";
+function fbTzDown(e) {
+  const h = tzHitAt(tzLocal(e));
+  fbTzText = h ? h.pk : null;
+  fbQueue();
+}
+function fbTMirror(id, src) {
+  const a = $(id), b = $(src);
+  if (a.innerHTML !== b.innerHTML) a.innerHTML = b.innerHTML;
+  setVal(a, b.value);
+  a.disabled = b.disabled;
+}
+for (const [id, src] of [["fbTTpl", "tTpl"], ["fbTTplSub", "tTplSub"], ["fbTWhich", "tMaskWhich"], ["fbTPer", "tMaskPer"]]) $(id).onchange = (e) => {
+  fbFire(src, e.target.value, "change");
+  fbSync();
+};
+$("fbTEven").onclick = () => {
+  fbFire("tEvenSize", !$("tEvenSize").checked, "change");
+  fbSync();
+};
+for (const k of ["res", "name", "phys", "file"]) $("fbTL" + k).onclick = () => {
+  fbFire("tLab_" + k, !$("tLab_" + k).checked, "change");
+  fbSync();
+};
+for (const [id, src] of [["fbTDef", "tDefault"], ["fbTOvAdd", "tOvPick"], ["fbTOvClr", "tOvClear"], ["fbTTxtEd", "tTxtEdit"], ["fbTTEdit", "tTxtEdit"], ["fbTTReset", "tTxtReset"], ["fbTTPos", "tTxtPos"], ["fbTITop", "tOrdTop"], ["fbTIUp", "tOrdUp"], ["fbTIDown", "tOrdDown"], ["fbTIBot", "tOrdBottom"]]) $(id).onclick = fbClick(src);
+$("fbTIOn").onclick = () => {
+  const cb = document.querySelector("#tList .fitem.sel input[type=checkbox]");
+  if (cb && !cb.disabled) cb.click();
+  fbSync();
+};
+$("fbTIClr").onclick = () => {
+  ui.tzPick = "";
+  for (const x of document.querySelectorAll("#tList .fitem.sel")) x.classList.remove("sel");
+  if (typeof syncTzOrdBtns === "function") syncTzOrdBtns();
+  fbSync();
+};
+const FB_T_TOG = [["fbTOv", "tOverview"], ["fbTProj", "tSaveProj"], ["fbTVmask", "tVolMask"], ["fbTVcom", "tVolCom"], ["fbTV3d", "tVol3d"], ["fbTVinfo", "tVolInfo"], ["fbTVmadrix", "tVolMadrix"], ["fbTVmadshow", "tVolMadshow"], ["fbTVtd", "tVolTd"]];
+for (const [id, src] of FB_T_TOG) $(id).onclick = () => {
+  fbFire(src, !$(src).checked, "change");
+  fbSync();
+};
+for (const [id, src] of [["fbTGrid", "tMaskGrid"], ["fbTImgPer", "tImgPer"]]) $(id).onchange = (e) => {
+  fbFire(src, e.target.value, "change");
+  fbSync();
+};
+function fbSyncTz() {
+  for (const id of ["fbNone", "fbText", "fbShape", "fbCab", "fbF", "fbFM"]) $(id).hidden = true;
+  const pick = ui.tzPick || "", txt = ui.tzEdit ? ui.tzEdit.pk : fbTzText;
+  // что изменилось последним — то и показываем
+  if (pick && pick !== fbTzPrev.pick) fbTzCtx = "item";
+  else if (txt && txt !== fbTzPrev.txt) fbTzCtx = "text";
+  else if (!txt && fbTzPrev.txt) fbTzCtx = pick ? "item" : "none";
+  fbTzPrev = { pick, txt };
+  if (fbTzCtx === "item" && !pick) fbTzCtx = txt ? "text" : "none";
+  if (fbTzCtx === "text" && !txt) fbTzCtx = pick ? "item" : "none";
+  if (ui.tzEdit) fbTzCtx = "text";
+  $("fbT").hidden = fbTzCtx !== "none";
+  $("fbTT").hidden = fbTzCtx !== "text";
+  $("fbTI").hidden = fbTzCtx !== "item";
+  if (fbTzCtx === "none") {
+    fbTMirror("fbTTpl", "tTpl");
+    fbTMirror("fbTTplSub", "tTplSub");
+    $("fbTTplSub").hidden = $("tTplSubRow").hidden;
+    fbTMirror("fbTWhich", "tMaskWhich");
+    fbTMirror("fbTPer", "tMaskPer");
+    $("fbTEven").setAttribute("aria-pressed", String(!!$("tEvenSize").checked));
+    for (const k of ["res", "name", "phys", "file"]) $("fbTL" + k).setAttribute("aria-pressed", String(!!$("tLab_" + k).checked));
+    fbTMirror("fbTGrid", "tMaskGrid");
+    $("fbTGrid").hidden = $("tMaskGridRow").hidden;
+    fbTMirror("fbTImgPer", "tImgPer");
+    const ovn = $("tImgs").children.length;
+    setTxt($("fbTOvN"), ovn ? String(ovn) : "");
+    $("fbTOvClr").disabled = !ovn;
+    for (const [id, src] of FB_T_TOG) $(id).setAttribute("aria-pressed", String(!!$(src).checked));
+    $("fbTVol").hidden = $("tVolWhat").hidden;
+    $("fbTVolSet").hidden = $("tVolSetRow").hidden;
+    $("fbTVolSep").hidden = $("tVolWhat").hidden && $("tVolSetRow").hidden;
+  } else if (fbTzCtx === "text") {
+    setTxt($("fbTTWho"), txt.startsWith("note:") ? "Подпись слайда" : "Текст шаблона");
+    const ed = !!(ui.tzEdit && ui.tzEdit.dock);
+    $("fbTTEdit").hidden = ed;
+    $("fbTTReset").hidden = ed || $("tTxtReset").hidden;
+    $("fbTTPos").hidden = ed || $("tTxtPos").hidden;
+  } else {
+    const row = document.querySelector("#tList .fitem.sel");
+    const parts = row ? [...row.querySelectorAll("span")].map((x) => x.textContent.trim()).filter(Boolean) : [];
+    setTxt($("fbTIWho"), (parts.length ? parts.join(" · ") : row ? row.textContent.trim() : "Пункт").slice(0, 48));
+    const cb = row && row.querySelector("input[type=checkbox]");
+    $("fbTIOn").setAttribute("aria-pressed", String(!!(cb && cb.checked)));
+    $("fbTIOn").disabled = !cb || cb.disabled;
+    for (const [id, src] of [["fbTITop", "tOrdTop"], ["fbTIUp", "tOrdUp"], ["fbTIDown", "tOrdDown"], ["fbTIBot", "tOrdBottom"]]) $(id).disabled = $(src).disabled;
+  }
+}
+// выбор строки в списке ТЗ не перерисовывает лист — обновляем панель сами
+$("tList").addEventListener("click", () => setTimeout(fbQueue, 0));

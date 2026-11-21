@@ -396,6 +396,8 @@ function ledSelPri(st) {
 }
 // точка поворота выбранного кабинета / группы на экране
 // 2.0.193: поворот кабинетов включается галочкой (по умолчанию выключен — нет зелёной точки, нельзя случайно повернуть)
+// 3.0.32: двигать кабинеты мышью — тоже галочкой (по умолчанию выключено)
+let cabMoveOn = (() => { try { return localStorage.getItem("ledmask.cabMoveOn") === "1"; } catch (e) { return false; } })();
 let cabRotOn = (() => { try { return localStorage.getItem("ledmask.cabRotOn") === "1"; } catch (e) { return false; } })();
 function ledRotInfo(st) {
   if (!cabRotOn) return null;
@@ -491,6 +493,7 @@ function syncCabRotUI() {
   const st = S(), inp = $("cabRotIn");
   if (!inp) return;
   $("cabRotOn").checked = cabRotOn;
+  $("cabMoveOn").checked = cabMoveOn;
   $("cabRotBox").hidden = !cabRotOn;
   const nRot = Object.keys(st.cabRot || {}).length, oi = $("cabRotOffInfo");
   oi.textContent = !cabRotOn && nRot ? "Повёрнуто кабинетов: ".concat(nRot, " — их углы сохраняются. Вернуть 0°: «Сбросить сдвиг и поворот».") : "";
@@ -930,6 +933,13 @@ pv.addEventListener("pointermove", (e) => {
   } else if (act.kind === "cabMove") {
     // перетаскивание выбранных кабинетов мышью (сдвиг cabShift)
     if (!act.moved && Math.hypot(p[0] - act.x0, p[1] - act.y0) <= 4) return;
+    if (!cabMoveOn) {
+      if (!act.warned) {
+        act.warned = true;
+        status("Двигать кабинеты выключено — включите «Двигать кабинеты» в «Смещении» или в быстром меню", true);
+      }
+      return;
+    }
     act.moved = true;
     const dxm = Math.round((p[0] - act.x0) / s), dym = Math.round(-(p[1] - act.y0) / s);
     st.cabShift = st.cabShift || {};

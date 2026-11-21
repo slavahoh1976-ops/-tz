@@ -2445,3 +2445,48 @@ html.pc[data-mode=vol] .fbar {
   fill: currentColor;
   fill-opacity: 0.45;
 }
+
+/* 3.0.25: быстрая панель и на «Общем поле» (только ПК) */
+html.pc[data-page=field] .fbar {
+  display: flex;
+}
+html[data-page=field] .fbar .fb-ins {
+  display: none;
+}
+.fbar input[type=number].fb-n2 {
+  width: 64px;
+}
+
+/* 3.0.26: быстрая панель и в «Формировании ТЗ» (только ПК) */
+html.pc[data-page=tz] .fbar {
+  display: flex;
+}
+html[data-page=tz] .fbar .fb-ins {
+  display: none;
+}
+.fb-b.fb-save {
+  background: var(--red, #c62828);
+  border-color: var(--red, #c62828);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 3.0.27: компактное быстрое меню общего поля */
+.fbar select.fb-pick{max-width:170px}
+.fbar .fb-dim{opacity:.6;font-size:11px;white-space:nowrap}
+#fbFM .fb-n2,#fbF .fb-n2{width:58px}
+
+.fbar input.fb-file{width:120px;height:28px;background:var(--bg,#111);color:inherit;border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12px}
+#fbTVol[hidden],#fbTVolSet[hidden]{display:none}
+
+.fbar select.fb-pick,#fbTWhich,#fbTTpl,#fbFSel{max-width:130px}
+#fbTTxtSel{max-width:110px}
+
+/* 3.0.30: на ПК панель правки текста ТЗ живёт в быстром меню */
+.fb-ted{display:inline-flex;align-items:center}
+.fb-ted[hidden]{display:none}
+.fb-ted .tzbar{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.fb-ted .tzbar .b{min-height:28px;padding:0 9px;font-size:12px}
+.fb-ted .tzbar select{height:28px;font-size:12px}
+.fb-ted .tzipsw .sw{width:20px;height:20px}
+.fb-ted .b.accent{margin-left:4px}

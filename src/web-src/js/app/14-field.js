@@ -2,7 +2,7 @@ function freshField(k) {
   return { id: newUid(), name: k ? "Общее поле ".concat(k + 1) : "Общее поле", items: [], title: { on: true, x: 0, y: 0, size: 0, meters: false }, stack: false };
 }
 function freshFieldState() {
-  return { fields: [], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { tpl2: true, tpl3: true, fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskPerS: {}, evenSize: true, lab: { res: true, name: true, phys: true, file: false }, maskGrid: "", req: {}, notes: {}, pos: {} } };
+  return { fields: [], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { tpl2: true, tpl3: true, tpl4: true, tpl5: true, fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskPerS: {}, evenSize: true, lab: { res: true, name: true, phys: true, file: false }, maskGrid: "", req: {}, notes: {}, pos: {} } };
 }
 function loadFieldState(d, raw) {
   const seen = /* @__PURE__ */ new Set();
@@ -82,6 +82,19 @@ function loadFieldState(d, raw) {
     for (const k of Object.keys(project.tz.pos)) if (oldMp4(k)) delete project.tz.pos[k];
   }
   project.tz.tpl3 = true;
+  // 3.0.24: первый лист Resolume, D3 и MP4 — одно поле с двумя колонками; правки прежних блоков сбрасываем
+  if (tz.tpl4 !== true) {
+    const old4 = (k) => /^(req:)?(Resolume|D3|MP4)(#\d+)?$/.test(k);
+    for (const k of Object.keys(project.tz.req)) if (old4(k)) delete project.tz.req[k];
+    for (const k of Object.keys(project.tz.pos)) if (old4(k)) delete project.tz.pos[k];
+  }
+  project.tz.tpl4 = true;
+  // 3.0.28: шрифт первого листа уменьшен (на телефонах текст вылезал); прежний текст с крупным шрифтом сбрасываем
+  if (tz.tpl5 !== true) {
+    const old5 = (k) => /^(req:)?(Resolume|D3|MP4)(#\d+)?$/.test(k);
+    for (const k of Object.keys(project.tz.req)) if (old5(k)) delete project.tz.req[k];
+  }
+  project.tz.tpl5 = true;
   project.tz.cuts = boolMap(tz.cuts);
   project.tz.cutSrc = boolMap(tz.cutSrc);
   project.tz.outs = boolMap(tz.outs);
@@ -474,7 +487,11 @@ pv.addEventListener("pointerdown", (e) => {
   if (ui.page === "mask") return;
   if (e.button === 2) return;
   e.stopImmediatePropagation();
-  if (ui.page === "tz") return tzPointer(e, "down");
+  if (ui.page === "tz") {
+    // 3.0.26: быстрая панель ТЗ — по чему щёлкнули (текст на листе или пустое место)
+    if (typeof fbTzDown === "function") fbTzDown(e);
+    return tzPointer(e, "down");
+  }
   if (ui.page === "out") return outPointer(e, "down");
   if (ui.page === "cut") return cutPointer(e, "down");
   if (ui.page !== "field") return;
@@ -622,6 +639,10 @@ pv.addEventListener("pointerleave", (e) => {
       fld.titleHover = false;
       requestDraw();
     }
+    if (ui.page === "tz" && ui.tzHover && !ui.tzDrag) {
+      ui.tzHover = null;
+      requestDraw();
+    }
   }
 }, true);
 pv.addEventListener("wheel", (e) => {
@@ -720,6 +741,9 @@ function fieldChanged(full) {
 }
 function refreshFieldPanel() {
   if (ui.page !== "field") return;
+  // 3.0.25: поле создаётся при первом обращении (CF) — создаём его до проверки, иначе панель писала «Полей пока нет»
+  // и выбор был пуст, хотя поле уже на холсте, — приходилось добавлять второе
+  CF();
   scheduleFieldStrip();
   const has = project.fields.length > 0;
   $("fBody").hidden = !has;

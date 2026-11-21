@@ -53,7 +53,9 @@ function rteRender(el, paras, base, mds) {
       if (r.sz && Math.abs(r.sz - base) > 1e-6) h = '<span data-sz="'.concat(r.sz, '" style="font-size:').concat((r.sz / base).toFixed(3), 'em">').concat(h, "</span>");
       return h;
     }).join("");
-    return "<div>".concat(inner || "<br>", "</div>");
+    // 3.0.24: интервал и отступы абзаца — как на листе
+    const st2 = (runs.lhPt ? "line-height:".concat((runs.lhPt / base).toFixed(3), "em;") : runs.lh ? "line-height:".concat((RT_LH * runs.lh).toFixed(3), ";") : "") + (runs.sb ? "margin-top:".concat((runs.sb / base).toFixed(3), "em;") : "") + (runs.sa ? "margin-bottom:".concat((runs.sa / base).toFixed(3), "em;") : "");
+    return "<div".concat(st2 ? ' style="'.concat(st2, '"') : "", ">").concat(inner || "<br>", "</div>");
   }).join("");
   if (mds) Array.from(el.children).forEach((d, i) => {
     if (mds[i] == null || d.classList.contains("gap")) return;
@@ -959,14 +961,14 @@ function drawTZ() {
       for (const info of blocks) {
         const r = reqRect(info), tx = x + (r.x + info.ins.l) * k, ty = y + (r.y + info.ins.t) * k, tw = (r.w - 2 * info.ins.l) / PT;
         const ip = ipPk === "req:" + info.label, ed = reqDraw(info);
-        let th = Math.max(r.h * k, rtLayout(mctxRT, reqParas(info, reqTextOr(info)), tw, info.baseSz).h * kp);
+        let th = Math.max(r.h * k, reqTextFit(info, reqParas(info, reqTextOr(info)), tw).h * kp);
         c.save();
         c.beginPath();
         if (ip) ; // правится на листе — текст показывает редактор поверх
         else if (ed) {
           c.rect(x, y, sw, sh);
           c.clip();
-          th = rtPaint(c, reqParas(info, reqTextOr(info)), tx, ty, tw, kp, info.baseSz, info.baseColor).h * kp;
+          th = rtPaint(c, reqParas(info, reqTextOr(info)), tx, ty, tw, kp, info.baseSz, info.baseColor, reqCols(info)).h * kp;
         } else if (full) {
           const cr = clips[info.idx] || [info.rect.x, info.rect.y, info.rect.w, info.rect.h];
           c.rect(x + cr[0] * k, y + cr[1] * k, cr[2] * k, cr[3] * k);
@@ -1050,13 +1052,18 @@ function drawTZ() {
   const hv = ui.tzDrag ? ui.tzDrag.hit : ui.tzHover;
   if (ui.tzEdit) tzIpPlace();
   if (hv && !(ui.tzEdit && hv.pk === ui.tzEdit.pk)) {
-    const h = ui.tzHits.find((q) => q.pk === hv.pk && q.sx === hv.sx && q.sy === hv.sy) || hv;
+    // 3.0.29: рамка — только по блоку из текущей раскладки (раньше при сдвиге макета рисовалась старая рамка мимо текста)
+    const same = ui.tzHits.filter((q) => q.pk === hv.pk);
+    const h = same.find((q) => q.sx === hv.sx && q.sy === hv.sy) || (same.length === 1 ? same[0] : null);
+    if (h) {
     c.save();
     c.setLineDash([4, 3]);
     c.strokeStyle = "#1ec8b4";
     c.lineWidth = 1.2;
     c.strokeRect(h.x - 3, h.y - 2, h.w + 6, h.h + 4);
     c.restore();
+    if (!ui.tzDrag) ui.tzHover = h;
+    } else if (!ui.tzDrag) ui.tzHover = null;
   }
 }
 ui.tzHits = [];
