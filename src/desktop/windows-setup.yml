@@ -1,0 +1,95 @@
+name: Windows Setup
+
+# Собирает установочную версию для Windows из index.html (та же программа, что и сайт)
+# и исходника оболочки desktop/windows/ledmask_win.py: PyInstaller (папка, без распаковки при каждом запуске)
+# + установщик Inno Setup. Проверка: тихая установка и самотест программы.
+# Результат — в Releases → «windows-setup-latest» → LED-Pixel-Mask-Generator-Setup.exe.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "desktop/windows/**"
+      - ".github/workflows/windows-setup.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Зависимости
+        run: |
+          python -m pip install --upgrade pip
+          pip install pywebview==5.4 pyinstaller icoextract
+
+      - name: Сборка программы (папка)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force build_win/web | Out-Null
+          Copy-Item index.html build_win/web/index.html
+          Set-Content -Encoding ascii build_win/installed.txt "installed"
+          icoextract download/LED-Pixel-Mask-Generator-Windows.exe desktop/windows/app.ico
+          pyinstaller --noconfirm --onedir --windowed --name "LED Pixel Mask Generator" `
+            --icon desktop/windows/app.ico `
+            --add-data "build_win/web;web" --add-data "build_win/installed.txt;." `
+            --collect-all webview desktop/windows/ledmask_win.py
+          Get-ChildItem "dist/LED Pixel Mask Generator" | Select-Object -First 20
+
+      - name: Установщик (Inno Setup)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          $ver = (Get-Content src/VERSION -Raw).Trim()
+          & $iscc "/DAppVersion=$ver" desktop/windows/setup.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+          Get-Item dist-setup/LED-Pixel-Mask-Generator-Setup.exe | Format-List Name,Length
+          (Get-FileHash dist-setup/LED-Pixel-Mask-Generator-Setup.exe -Algorithm SHA256).Hash
+
+      - name: Проверка — тихая установка и самотест
+        shell: pwsh
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          $dir = "$env:RUNNER_TEMP\ledmask-inst"
+          # ждём только сам установщик (запущенную им программу закрываем)
+          $i = Start-Process dist-setup/LED-Pixel-Mask-Generator-Setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$dir" -PassThru
+          $i.WaitForExit(300000) | Out-Null
+          Start-Sleep 5
+          Get-ChildItem $dir | Select-Object -First 10
+          $st = "$env:RUNNER_TEMP\selftest"
+          New-Item -ItemType Directory -Force $st | Out-Null
+          Get-Process "LED Pixel Mask Generator" -ErrorAction SilentlyContinue | Stop-Process -Force
+          $env:LEDMASK_SELFTEST = $st
+          $p = Start-Process "$dir\LED Pixel Mask Generator.exe" -PassThru
+          $ok = $p.WaitForExit(240000)
+          if (-not $ok) { $p.Kill() }
+          Get-ChildItem $st
+          if (Test-Path "$st\selftest.log") { Get-Content "$st\selftest.log" } else { "NO SELFTEST LOG" }
+          Copy-Item "$st\selftest.log" selftest.log -ErrorAction SilentlyContinue
+
+      - name: Публикация в Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag=windows-setup-latest
+          files=dist-setup/LED-Pixel-Mask-Generator-Setup.exe
+          [ -f selftest.log ] && files="$files selftest.log"
+          gh release delete $tag --yes --cleanup-tag 2>/dev/null || true
+          gh release create $tag $files \
+            --title "LED Pixel Mask Generator для Windows (установщик) — сборка ${{ github.run_number }}" \
+            --notes "Установщик для Windows 10/11: ставится для текущего пользователя без прав администратора." \
+            --target "$GITHUB_SHA" --prerelease --latest=false

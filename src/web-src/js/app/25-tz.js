@@ -636,6 +636,10 @@ $("tOverview").onchange = (e) => {
   project.tz.overview = e.target.checked;
   tzChanged();
 };
+$("tSvg").onchange = (e) => {
+  project.tz.svgMasks = e.target.checked;
+  scheduleAutosave();
+};
 $("tSaveProj").onchange = (e) => {
   project.tz.projZip = e.target.checked;
   scheduleAutosave();
@@ -1005,7 +1009,7 @@ function drawTZ() {
       const [lx, ly, lw, lh] = lay.label, [ix, iy, iw, ih] = lay.image;
       if (img) c.drawImage(img, x + ix * k, y + iy * k, iw * k, ih * k);
       c.fillStyle = "#222";
-      c.font = "".concat(Math.max(3, labelPt(text, lw) * 12700 * k), "px Arial, sans-serif");
+      c.font = "".concat(Math.max(3, labelPt(text, lw) * 12700 * k), 'px "LMG Sans", Arial, sans-serif');
       c.textAlign = "center";
       c.textBaseline = "middle";
       if (text) c.fillText(text, x + (lx + lw / 2) * k, y + (ly + lh / 2) * k, lw * k);
