@@ -80,6 +80,19 @@ jobs:
           if (Test-Path "$st\selftest.log") { Get-Content "$st\selftest.log" } else { "NO SELFTEST LOG" }
           Copy-Item "$st\selftest.log" selftest.log -ErrorAction SilentlyContinue
 
+      - name: Сравнение — самотест переносной версии (только тестовая ветка)
+        if: github.ref_name != 'main'
+        shell: pwsh
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          $st = "$env:RUNNER_TEMP\selftest-portable"
+          New-Item -ItemType Directory -Force $st | Out-Null
+          $env:LEDMASK_SELFTEST = $st
+          $p = Start-Process download/LED-Pixel-Mask-Generator-Windows.exe -PassThru
+          if (-not $p.WaitForExit(240000)) { $p.Kill() }
+          if (Test-Path "$st\selftest.log") { Copy-Item "$st\selftest.log" selftest-portable.log; Get-Content selftest-portable.log } else { "NO LOG" }
+
       - name: Публикация в Releases
         env:
           GH_TOKEN: ${{ github.token }}
@@ -89,6 +102,7 @@ jobs:
           if [ "$GITHUB_REF_NAME" != "main" ]; then tag=windows-setup-test; fi
           files=dist-setup/LED-Pixel-Mask-Generator-Setup.exe
           [ -f selftest.log ] && files="$files selftest.log"
+          [ -f selftest-portable.log ] && files="$files selftest-portable.log"
           gh release delete $tag --yes --cleanup-tag 2>/dev/null || true
           gh release create $tag $files \
             --title "LED Pixel Mask Generator для Windows (установщик) — сборка ${{ github.run_number }}" \
