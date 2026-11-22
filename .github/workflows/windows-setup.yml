@@ -19,6 +19,7 @@ permissions:
 jobs:
   setup:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -60,9 +61,13 @@ jobs:
       - name: Проверка — тихая установка и самотест
         shell: pwsh
         continue-on-error: true
+        timeout-minutes: 8
         run: |
           $dir = "$env:RUNNER_TEMP\ledmask-inst"
-          Start-Process dist-setup/LED-Pixel-Mask-Generator-Setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$dir" -Wait
+          # ждём только сам установщик (запущенную им программу закрываем)
+          $i = Start-Process dist-setup/LED-Pixel-Mask-Generator-Setup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$dir" -PassThru
+          $i.WaitForExit(300000) | Out-Null
+          Start-Sleep 5
           Get-ChildItem $dir | Select-Object -First 10
           $st = "$env:RUNNER_TEMP\selftest"
           New-Item -ItemType Directory -Force $st | Out-Null
