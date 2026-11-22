@@ -11,5 +11,9 @@
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
+ },
+ "windows_setup": {
+  "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Setup.exe",
+  "sha256": "5041c44add4e5b8742646187b67093f0b0d643810616cc9b7a6172440baffd94"
  }
 }
