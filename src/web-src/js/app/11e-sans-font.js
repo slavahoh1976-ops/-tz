@@ -1,31 +1,85 @@
-// 3.0.39: встроенный шрифт LMG Sans (урезанная и переименованная копия Liberation Sans 2.1.5, SIL OFL 1.1 —
-// размеры букв как у Arial). Им набираются текст ТЗ, подписи над масками и заметки — на экране и в PDF одинаково,
-// а в PDF текст идёт в кривых (контуры букв из этого шрифта), поэтому увеличивается без потери качества.
+// 3.0.39–3.0.43: встроенные шрифты (на экране и в PDF/SVG одинаково, в PDF/SVG — кривыми):
+//  • LMG Sans — урезанная и переименованная копия Liberation Sans 2.1.5 (SIL OFL 1.1, размеры букв как у Arial) — текст ТЗ и подписи;
+//  • LMG Mask X — урезанные копии свободных шрифтов (SIL OFL 1.1), похожих на Gill Sans, — надписи на масках; выбор — в разделе «Текст» маски.
+//    SLsans и SLsans Round — шрифты автора программы (только обычное начертание; жирный — утолщением, как у браузера; «×» — свой).
+//    Шрифты с зарезервированными именами (PT Sans, Source, Lato, Istok) внутри переименованы; лицензии — в исходниках (fonts/LICENSE-*).
 const SANS_FAMILY = "LMG Sans";
-const SANS_B64 = { r: "{{b64:fonts/LMGSans-Regular.ttf}}", b: "{{b64:fonts/LMGSans-Bold.ttf}}", i: "{{b64:fonts/LMGSans-Italic.ttf}}", bi: "{{b64:fonts/LMGSans-BoldItalic.ttf}}" };
-let SANS_FACES = [];
+const MASK_FONTS = [["SR", "SLsans Round (по умолчанию)"], ["SL", "SLsans"], ["F", "Fira Sans"], ["P", "PT Sans"], ["S", "на основе Source Sans 3"], ["L", "на основе Lato"], ["Y", "Ysabeau Office"], ["C", "Scada"], ["J", "Jost"], ["I", "на основе Istok"]];
+const BUNDLED_B64 = {
+  "LMG Sans": { r: "{{b64:fonts/LMGSans-Regular.ttf}}", b: "{{b64:fonts/LMGSans-Bold.ttf}}", i: "{{b64:fonts/LMGSans-Italic.ttf}}", bi: "{{b64:fonts/LMGSans-BoldItalic.ttf}}" },
+  "LMG Mask SL": { r: "{{b64:fonts/SLsans-Regular.ttf}}" },
+  "LMG Mask SR": { r: "{{b64:fonts/SLsansRound-Regular.ttf}}" },
+  "LMG Mask P": { r: "{{b64:fonts/LMGMaskP-Regular.ttf}}", b: "{{b64:fonts/LMGMaskP-Bold.ttf}}" },
+  "LMG Mask F": { r: "{{b64:fonts/LMGMaskF-Regular.ttf}}", b: "{{b64:fonts/LMGMaskF-Bold.ttf}}" },
+  "LMG Mask S": { r: "{{b64:fonts/LMGMaskS-Regular.ttf}}", b: "{{b64:fonts/LMGMaskS-Bold.ttf}}" },
+  "LMG Mask L": { r: "{{b64:fonts/LMGMaskL-Regular.ttf}}", b: "{{b64:fonts/LMGMaskL-Bold.ttf}}" },
+  "LMG Mask Y": { r: "{{b64:fonts/LMGMaskY-Regular.ttf}}", b: "{{b64:fonts/LMGMaskY-Bold.ttf}}" },
+  "LMG Mask C": { r: "{{b64:fonts/LMGMaskC-Regular.ttf}}", b: "{{b64:fonts/LMGMaskC-Bold.ttf}}" },
+  "LMG Mask J": { r: "{{b64:fonts/LMGMaskJ-Regular.ttf}}", b: "{{b64:fonts/LMGMaskJ-Bold.ttf}}" },
+  "LMG Mask I": { r: "{{b64:fonts/LMGMaskI-Regular.ttf}}", b: "{{b64:fonts/LMGMaskI-Bold.ttf}}" }
+};
+const BUNDLED_FACES = {};
+for (const k of Object.keys(BUNDLED_B64)) BUNDLED_FACES[k] = [];
+let SANS_FACES = BUNDLED_FACES["LMG Sans"];
 const SANS_READY = (async () => {
-  const faces = [];
-  for (const k of ["r", "b", "i", "bi"]) {
-    try {
-      const bytes = ufUnB64(SANS_B64[k]), f = Object.assign({ bytes, file: "LMGSans-" + k }, ufParse(bytes));
-      f.weight = k.indexOf("b") === 0 ? 700 : 400;
-      f.italic = k.indexOf("i") >= 0;
-      faces.push(f);
-      const ff = new FontFace(SANS_FAMILY, bytes, { weight: f.weight === 700 ? "700" : "400", style: f.italic ? "italic" : "normal" });
-      await ff.load();
-      document.fonts.add(ff);
-    } catch (e) {
-      console.warn("LMG Sans", k, e);
+  for (const fam of Object.keys(BUNDLED_B64)) {
+    for (const k of Object.keys(BUNDLED_B64[fam])) {
+      try {
+        const bytes = ufUnB64(BUNDLED_B64[fam][k]), f = Object.assign({ bytes, file: fam + "-" + k }, ufParse(bytes));
+        f.weight = k.indexOf("b") === 0 ? 700 : 400;
+        f.italic = k.indexOf("i") >= 0;
+        BUNDLED_FACES[fam].push(f);
+        const ff = new FontFace(fam, bytes, { weight: f.weight === 700 ? "700" : "400", style: f.italic ? "italic" : "normal" });
+        await ff.load();
+        document.fonts.add(ff);
+      } catch (e) {
+        console.warn(fam, k, e);
+      }
     }
   }
-  SANS_FACES = faces;
   if (typeof requestDraw === "function") requestDraw();
 })();
-function sansPick(bold, ital) {
-  if (!SANS_FACES.length) return null;
+// начертание встроенного семейства для жирности/курсива (как подбирает браузер)
+function bundledPick(fam, bold, ital) {
+  const fs = BUNDLED_FACES[fam];
+  if (!fs || !fs.length) return null;
   const sc = (f) => ((f.weight >= 600) === bold ? 2 : 0) + (f.italic === ital ? 1 : 0);
-  let best = SANS_FACES[0];
-  for (const f of SANS_FACES) if (sc(f) > sc(best)) best = f;
+  let best = fs[0];
+  for (const f of fs) if (sc(f) > sc(best)) best = f;
   return { face: best, fakeBold: bold && best.weight < 600, fakeItal: ital && !best.italic };
+}
+const sansPick = (bold, ital) => bundledPick(SANS_FAMILY, bold, ital);
+// шрифт надписей масок — один на проект (project.tz.maskFont), недостающие знаки — из LMG Sans
+const FONT_SYS = '"Gill Sans", "Gill Sans MT", GillSans, Calibri, "Segoe UI", system-ui, sans-serif';
+const maskFontKey = () => {
+  const k = project && project.tz && project.tz.maskFont;
+  return MASK_FONTS.some((f) => f[0] === k) ? k : "SR";
+};
+function applyMaskFont() {
+  FONT = '"LMG Mask '.concat(maskFontKey(), '", "LMG Sans", ').concat(FONT_SYS);
+  const sel = $("mFont"), fb = $("fbMFont");
+  if (sel && sel.value !== maskFontKey()) sel.value = maskFontKey();
+  if (fb && fb.value !== maskFontKey()) fb.value = maskFontKey();
+}
+for (const id of ["mFont", "fbMFont"]) {
+  const el = $(id);
+  if (!el) continue;
+  el.innerHTML = MASK_FONTS.map(([k, n]) => '<option value="'.concat(k, '">').concat(n, "</option>")).join("");
+  el.onchange = (e) => {
+    project.tz.maskFont = e.target.value;
+    applyMaskFont();
+    if (typeof changed === "function") changed();
+    else requestDraw();
+  };
+}
+{
+  // при каждой перерисовке — шрифт текущего проекта (загрузка, новый проект, отмена)
+  const rd0 = requestDraw;
+  requestDraw = function () {
+    try {
+      applyMaskFont();
+    } catch (e) {
+    }
+    return rd0.apply(this, arguments);
+  };
 }

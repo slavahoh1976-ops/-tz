@@ -89,7 +89,6 @@
       </div></div>
       <label class="chk"><input type="checkbox" id="tSaveProj" checked> Файл проекта в архив</label>
       <label class="chk" id="tSvgRow" title="Папка SVG в архиве ТЗ: каждая маска и поле вектором (кривыми) — для дизайнеров и печати. Надписи на масках — кривыми, если подключён свой шрифт."><input type="checkbox" id="tSvg"> SVG-маски в архив (папка SVG)</label>
-      <div class="ctl" style="flex-wrap:wrap;gap:4px 8px"><span title="Шрифт надписей на масках. Файлы .ttf подключаете вы — они хранятся только в этой программе (браузере) и в сайт/сборки не попадают. В PDF ТЗ Resolume, D3 и MP4 надписи этим шрифтом — в кривых (вектор).">Шрифт надписей</span><span class="hint" id="tFontInfo" style="flex:1 1 140px"></span><button class="b" id="tFontAdd" title="Подключить свои файлы шрифта (.ttf): обычный, жирный, курсив; шрифты без кириллицы — для недостающих знаков (например, «×»)">Подключить…</button><button class="b" id="tFontClear" title="Отключить свой шрифт" hidden>✕</button><input type="file" id="tFontFile" accept=".ttf,.otf,font/ttf,font/otf" multiple hidden></div>
       <div class="btns"><button class="x" id="tSave">Сохранить ТЗ Resolume</button></div>
       <p class="hint" id="tNote">ZIP с папкой: PPTX по шаблону, такой же PDF и PNG каждой маски и поля и файл проекта.</p>
     </div></details>
@@ -472,6 +471,7 @@
     </div></details>
 
     <details class="sec no-vol" open><summary>ТЕКСТ</summary><div class="sec-body">
+      <div class="row" title="Шрифт всех надписей на масках проекта (размеры, номера кабинетов, названия, тексты). Встроен в программу; в PDF и SVG — кривыми."><label for="mFont">Шрифт</label><div class="ctl"><select id="mFont" class="grow"></select></div></div>
       <div class="tgroup">ДОПОЛНИТЕЛЬНЫЕ ТЕКСТЫ</div><!-- 2.0.39: наверху раздела -->
       <div class="btns"><button class="b" id="btnAddText">+ Добавить</button><button class="b" id="btnCopyText" title="Копия выбранного текста со всеми настройками (Ctrl+D). Ctrl+C / Ctrl+V — скопировать и вставить, в том числе в другую маску">Копировать</button><button class="b" id="btnEditText">Изменить текст</button><button class="b" id="btnDelText" title="Удалить выбранный доп. текст (клавиша Delete)">Удалить</button></div>
       <div class="row"><label for="activeText">Активный текст</label><div class="ctl"><select id="activeText" class="grow"></select></div></div>
@@ -682,7 +682,7 @@
          Видна одна строка — для того, что выбрано: текст, фигура, кабинеты; ничего не выбрано — кнопки добавления. -->
     <div class="fbar" id="fbar" role="toolbar" aria-label="Быстрые настройки выбранного">
       <div class="fb-ins"><button class="fb-big fb-addtext" title="Добавить текстовый блок на маску"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8M12 8v9"/></svg><span>Текст</span></button><button class="fb-big fb-addshape" title="Добавить фигуру" aria-haspopup="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4.5"/><rect x="12" y="12" width="9" height="9" rx="1.5"/></svg><span>Фигуры ▾</span></button></div>
-      <div class="fb-row" id="fbNone"><button class="fb-b" id="fbAC0" title="Автоконтур — граница вокруг убранных кабинетов"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h9v5h5v9H3z" stroke-dasharray="2.6 1.8"/><rect x="12" y="3" width="5" height="5" rx=".5" fill="currentColor" opacity=".35" stroke="none"/></svg></button><span class="fb-hint">Выберите текст, кабинеты или фигуру (щелчок по крестику в центре) — здесь появятся их настройки. Двойной щелчок по тексту — правка.</span></div>
+      <div class="fb-row" id="fbNone"><select id="fbMFont" class="fb-font fb-pick" title="Шрифт" aria-label="Шрифт"></select><button class="fb-b" id="fbAC0" title="Автоконтур — граница вокруг убранных кабинетов"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h9v5h5v9H3z" stroke-dasharray="2.6 1.8"/><rect x="12" y="3" width="5" height="5" rx=".5" fill="currentColor" opacity=".35" stroke="none"/></svg></button><span class="fb-hint">Выберите текст, кабинеты или фигуру (щелчок по крестику в центре) — здесь появятся их настройки. Двойной щелчок по тексту — правка.</span></div>
       <div class="fb-row" id="fbText" hidden>
         <span class="fb-who" id="fbWho">Текст</span>
         <select id="fbFont" class="fb-font" title="Шрифт" aria-label="Шрифт"></select>
