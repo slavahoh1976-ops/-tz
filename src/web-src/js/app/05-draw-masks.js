@@ -956,7 +956,7 @@ function fmtCabLabel(st, c, r, cols, rows) {
 const mctx = document.createElement("canvas").getContext("2d");
 // 3.0.16: стиль текста (панель форматирования на ПК): шрифт, жирный, курсив, выравнивание, обводка, прозрачность.
 // TX_STY — стиль, которым сейчас меряется и рисуется текст (null — как раньше: Gill Sans, обычный).
-const TX_FONTS = [["", "Gill Sans"], ["Arial, Helvetica, sans-serif", "Arial"], ["Helvetica, Arial, sans-serif", "Helvetica"], ["Verdana, Geneva, sans-serif", "Verdana"], ["Tahoma, Verdana, sans-serif", "Tahoma"], ["\"Trebuchet MS\", Helvetica, sans-serif", "Trebuchet MS"], ["Impact, \"Arial Black\", sans-serif", "Impact"], ["Georgia, \"Times New Roman\", serif", "Georgia"], ["\"Times New Roman\", Times, serif", "Times New Roman"], ["\"Courier New\", Courier, monospace", "Courier New"]];
+const TX_FONTS = [["", "Основной"], ["Arial, Helvetica, sans-serif", "Arial"], ["Helvetica, Arial, sans-serif", "Helvetica"], ["Verdana, Geneva, sans-serif", "Verdana"], ["Tahoma, Verdana, sans-serif", "Tahoma"], ["\"Trebuchet MS\", Helvetica, sans-serif", "Trebuchet MS"], ["Impact, \"Arial Black\", sans-serif", "Impact"], ["Georgia, \"Times New Roman\", serif", "Georgia"], ["\"Times New Roman\", Times, serif", "Times New Roman"], ["\"Courier New\", Courier, monospace", "Courier New"]];
 let TX_STY = null;
 function withSty(sty, fn) {
   const keep = TX_STY;

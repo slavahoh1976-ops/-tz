@@ -166,7 +166,8 @@ const NUM_FORMATS = ["1,1", "1-1", "1 / 1", "C1-R1", "1"];
 const NUM_ORIGINS = ["Слева-снизу", "Слева-сверху", "Справа-снизу", "Справа-сверху"];
 const NUM_POS = ["По центру", "Слева снизу", "Слева сверху", "Справа снизу", "Справа сверху"];
 const CORNER_GLYPH = ["◣", "◤", "◥", "◢", "◟ четверть круга", "◜ четверть круга", "◝ четверть круга", "◞ четверть круга"], CORNER_NUMPOS = [1, 2, 4, 3, 1, 2, 4, 3];
-let FONT = '"Gill Sans", "Gill Sans MT", GillSans, Calibri, "Segoe UI", system-ui, sans-serif';
+// 3.0.43: надписи масок — встроенным LMG Mask (копия PT Sans — ближе всего к Gill Sans; в PDF/SVG — кривыми, у всех одинаково), недостающие знаки — LMG Sans
+let FONT = '"LMG Mask SR", "LMG Sans", "Gill Sans", "Gill Sans MT", GillSans, Calibri, "Segoe UI", system-ui, sans-serif';
 const col = (r, g, b, a = 1) => ({ r, g, b, a });
 const fromRGB = ([r, g, b]) => col(r / 255, g / 255, b / 255, 1);
 const DEF_NUM_COLOR = col(128 / 255, 128 / 255, 128 / 255);

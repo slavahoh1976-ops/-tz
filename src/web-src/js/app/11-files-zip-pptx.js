@@ -156,6 +156,11 @@ async function renderPNG(st, onBand) {
   return renderBands(W, H, (ctx) => drawMask(ctx, st, 1, guidesOf(st)), onBand);
 }
 async function renderBands(W, H, paint, onBand) {
+  // 3.0.41: надписи — встроенным шрифтом, дождаться его загрузки
+  if (typeof SANS_READY !== "undefined") try {
+    await SANS_READY;
+  } catch (e) {
+  }
   const band = Math.max(1, Math.min(H, Math.floor(6e6 / W)));
   const cv = document.createElement("canvas");
   cv.width = W;

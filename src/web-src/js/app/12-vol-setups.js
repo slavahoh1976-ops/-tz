@@ -200,28 +200,6 @@ async function exportVolSetup() {
     status("Ошибка: " + e.message, true);
   }
 }
-function askFontForTz() {
-  return new Promise((res) => {
-    $("modalTitle").textContent = "Подключить шрифт надписей масок?";
-    $("modalText").textContent = "Текст ТЗ и маски в PDF будут вектором. Чтобы и надписи на масках (размеры, номера кабинетов, названия) увеличивались без потери качества, подключите файлы шрифта Gill Sans (.ttf: обычный, жирный и Gill Sans MT для знака «×») — один раз на этом компьютере. Без шрифта эти надписи будут картинкой высокого разрешения.";
-    $("modalText").hidden = false;
-    $("modalInput").hidden = true;
-    $("modalOk").textContent = "Подключить шрифт…";
-    $("modalAlt").textContent = "Сохранить так";
-    $("modalCancel").textContent = "Отмена";
-    $("modalAlt").hidden = false;
-    $("modal").hidden = false;
-    const done = (v) => {
-      $("modal").hidden = true;
-      $("modalAlt").hidden = true;
-      $("modalOk").onclick = $("modalCancel").onclick = $("modalAlt").onclick = null;
-      res(v);
-    };
-    $("modalOk").onclick = () => done("font");
-    $("modalAlt").onclick = () => done("skip");
-    $("modalCancel").onclick = () => done(null);
-  });
-}
 async function exportTZ(label) {
   if (!TPL[label]) {
     status("Шаблон для этого ТЗ ещё не добавлен", true);
@@ -234,16 +212,10 @@ async function exportTZ(label) {
     status("В ТЗ ничего не отмечено", true);
     return;
   }
-  // 3.0.39: без своего шрифта надписи масок в PDF/SVG — картинкой; предложить подключить (после подключения ТЗ сохранится само)
-  if (!/^Vol/.test(label) && typeof UF_FACES !== "undefined" && !UF_FACES.length && !window.__ufSkip) {
-    const a = await askFontForTz();
-    if (a === null) return;
-    if (a === "font") {
-      window.__ufThenSave = () => exportTZ(label);
-      $("tFontFile").click();
-      return;
-    }
-    window.__ufSkip = true;
+  // 3.0.41: встроенный шрифт — до рендера (надписи масок им, в PDF/SVG — кривыми)
+  try {
+    await SANS_READY;
+  } catch (e) {
   }
   // 2.0.150: если ТЗ с таким именем в этом браузере уже выгружали — предложить поднять версию (v2, v3 …)
   const tzBase0 = "".concat(safeName(project.name, "Проект"), " ТЗ_").concat(tzTag(label)).concat(verSfx());

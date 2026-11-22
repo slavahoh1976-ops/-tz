@@ -1,13 +1,13 @@
 {
- "version": "3.0.39",
- "notes": "PDF ТЗ Resolume/D3/MP4 — как из Keynote: весь текст и подписи в кривых, маски вектором, увеличиваются без потери качества; свой шрифт надписей масок (Gill Sans) — кривыми; папка SVG с масками в архиве ТЗ (по галочке). Надписи масок без шрифта — предложение подключить. Windows: версия с установщиком. Быстрое меню: «Двигать кабинеты», поворот, автоконтур; первый лист ТЗ — в один столбец.",
+ "version": "3.0.52",
+ "notes": "Надписи на масках — встроенными шрифтами, ничего подключать не нужно: SLsans Round (по умолчанию), SLsans, Fira Sans, PT Sans и другие — выбор в «Маска» → «Текст» → «Шрифт». PDF ТЗ Resolume/D3/MP4 — целиком в кривых (текст и маски), увеличивается без потери качества; папка SVG с масками в архиве ТЗ (по галочке).",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "a089295f769ebc2fe7cfd74aca8a60680c47ea7bca21590fd790072c99957c68"
+  "sha256": "5f27d541297d77f828236656c9bf970db78a67e2ddc28e00b7274217a3c8c43a"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "5e559556104de2d34ee31cddc120a1a1e0d71430d10039c3d6e5315f7900d3aa"
+  "sha256": "53645af6e4c8195c0d46d9a75fe7b7501c36acfd7973a519340f636eabfa95bd"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"

@@ -4,7 +4,7 @@
 // ступени: 1 — шрифты с кириллицей, 2 — остальные (недостающие знаки берутся со следующей ступени, как в браузере)
 const UF_FAM = (tier) => "LMG UF " + tier;
 const UF_KEY = "ledmask.userFonts";
-const FONT_BASE = FONT;
+const FONT_BASE = FONT.replace('"LMG Mask SR", "LMG Sans", ', "");
 let UF_FACES = [];
 function ufU16(d, o) {
   return d[o] << 8 | d[o + 1];
@@ -177,7 +177,8 @@ async function ufApply() {
   }
   UF_FACES = faces;
   const tiers = [1, 2].filter((t) => faces.some((f) => f.tier === t));
-  FONT = tiers.map((t) => '"' + UF_FAM(t) + '", ').join("") + FONT_BASE;
+  // 3.0.40: знаки, которых нет в своих шрифтах («×», «Ё», «№»), — из встроенного LMG Sans: на экране и в PDF одинаково, в PDF — кривыми
+  if (tiers.length) FONT = tiers.map((t) => '"' + UF_FAM(t) + '", ').join("") + '"LMG Mask SR", "LMG Sans", ' + FONT_BASE;
   ufUi();
   if (typeof requestDraw === "function") requestDraw();
 }
@@ -194,7 +195,7 @@ function ufUi() {
   const lab = $("tFontInfo");
   if (!lab) return;
   const st = ufStored();
-  setTxt(lab, st.length ? UF_FACES.map((f) => f.full).join(", ") || st.map((s2) => s2.name).join(", ") : "не подключён — в PDF надписи картинкой");
+  setTxt(lab, st.length ? UF_FACES.map((f) => f.full).join(", ") || st.map((s2) => s2.name).join(", ") : "встроенный LMG Sans (в PDF — кривыми)");
   $("tFontClear").hidden = !st.length;
 }
 async function ufAddFiles(files) {
@@ -245,8 +246,13 @@ if ($("tFontAdd")) {
       localStorage.removeItem(UF_KEY);
     } catch (e) {}
     await ufApply();
-    status("Свой шрифт отключён — надписи системным шрифтом", true);
+    status("Свой шрифт отключён — надписи встроенным LMG Sans", true);
   };
+}
+// 3.0.42: свои шрифты больше не подключаются — у всех встроенный LMG Sans; запомненные раньше — убрать
+try {
+  localStorage.removeItem(UF_KEY);
+} catch (e) {
 }
 ufApply();
 // ---- контуры букв (TrueType glyf) → команды пути PDF в единицах шрифта, ось Y вверх ----

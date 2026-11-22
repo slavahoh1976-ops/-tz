@@ -616,7 +616,7 @@ class PdfVecCtx {
   // 3.0.37: надпись своим шрифтом — настоящим текстом PDF (шрифт встраивается). false — не получилось, тогда картинкой
   // 3.0.38: надпись своим шрифтом — в кривых (контуры букв из файла шрифта). false — не получилось, тогда картинкой
   _vecText(t, x, y, maxW, stroke) {
-    // шрифты с известными контурами — в порядке списка семейств (как подбирает браузер): свой (LMG UF n) и LMG Sans
+    // шрифты с известными контурами — в порядке списка семейств (как подбирает браузер): свой (LMG UF n), LMG Mask, LMG Sans
     const fnt = this.ov.font, m0 = fnt.match(/([\d.]+)px\s+(.*)$/);
     if (!m0) return false;
     const size = +m0[1], pre = fnt.slice(0, fnt.indexOf(m0[0])), bold = /\bbold\b|\b[6-9]00\b/.test(pre), ital = /\b(italic|oblique)\b/.test(pre);
@@ -626,8 +626,8 @@ class PdfVecCtx {
       if (u && typeof ufPick === "function") {
         const p = ufPick(+u[1], bold, ital);
         if (p) chain.push(p);
-      } else if (fam === "LMG Sans" && typeof sansPick === "function") {
-        const p = sansPick(bold, ital);
+      } else if (typeof BUNDLED_FACES !== "undefined" && BUNDLED_FACES[fam] && typeof bundledPick === "function") {
+        const p = bundledPick(fam, bold, ital);
         if (p) chain.push(p);
       } else break;
     }
