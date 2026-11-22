@@ -591,7 +591,7 @@ $("fbTIClr").onclick = () => {
   if (typeof syncTzOrdBtns === "function") syncTzOrdBtns();
   fbSync();
 };
-const FB_T_TOG = [["fbTOv", "tOverview"], ["fbTProj", "tSaveProj"], ["fbTVmask", "tVolMask"], ["fbTVcom", "tVolCom"], ["fbTV3d", "tVol3d"], ["fbTVinfo", "tVolInfo"], ["fbTVmadrix", "tVolMadrix"], ["fbTVmadshow", "tVolMadshow"], ["fbTVtd", "tVolTd"]];
+const FB_T_TOG = [["fbTOv", "tOverview"], ["fbTProj", "tSaveProj"], ["fbTSvg", "tSvg"], ["fbTVmask", "tVolMask"], ["fbTVcom", "tVolCom"], ["fbTV3d", "tVol3d"], ["fbTVinfo", "tVolInfo"], ["fbTVmadrix", "tVolMadrix"], ["fbTVmadshow", "tVolMadshow"], ["fbTVtd", "tVolTd"]];
 for (const [id, src] of FB_T_TOG) $(id).onclick = () => {
   fbFire(src, !$(src).checked, "change");
   fbSync();
@@ -629,6 +629,7 @@ function fbSyncTz() {
     setTxt($("fbTOvN"), ovn ? String(ovn) : "");
     $("fbTOvClr").disabled = !ovn;
     for (const [id, src] of FB_T_TOG) $(id).setAttribute("aria-pressed", String(!!$(src).checked));
+    $("fbTSvg").hidden = $("tSvgRow").hidden;
     $("fbTVol").hidden = $("tVolWhat").hidden;
     $("fbTVolSet").hidden = $("tVolSetRow").hidden;
     $("fbTVolSep").hidden = $("tVolWhat").hidden && $("tVolSetRow").hidden;

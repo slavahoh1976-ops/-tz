@@ -227,7 +227,8 @@ async function renderBands(W, H, paint, onBand) {
     out.set(p, o);
     o += p.length;
   }
-  return { png: out, w: W, h: H };
+  // 3.0.35: «рисовальщик» — для векторных масок в PDF
+  return { png: out, w: W, h: H, vec: { W, H, paint } };
 }
 const REL_IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
 const REL_SLIDE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
@@ -237,7 +238,7 @@ const xmlEsc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").rep
 const SLIDE_W = 7562850, SLIDE_H = 10696575;
 const BOX = { x: 457200, y: 219e4, w: 6648602, h: 769e4 }, GAP = 165e3, LABEL_H = 22e4, LABEL_GAP = 35e3;
 const labelPt = (text, wEmu) => {
-  mctxRT.font = '10px Arial, "Liberation Sans", Helvetica, sans-serif';
+  mctxRT.font = '10px "LMG Sans", Arial, "Liberation Sans", Helvetica, sans-serif';
   const tw = mctxRT.measureText(text || "").width;
   return Math.max(5, Math.min(10, 10 * (wEmu / PT) * 0.97 / Math.max(1, tw)));
 };
@@ -333,7 +334,7 @@ function groupMasks(masks) {
   }
   return groups;
 }
-const PT = 12700, RT_FONT = 'Arial, "Liberation Sans", Helvetica, sans-serif', RT_LH = 1.2;
+const PT = 12700, RT_FONT = '"LMG Sans", Arial, "Liberation Sans", Helvetica, sans-serif', RT_LH = 1.2;
 const xmlUn = (s) => String(s).replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d)).replace(/&amp;/g, "&");
 const hexU = (c) => c ? String(c).toUpperCase() : null;
 function runsMd(runs) {
@@ -949,7 +950,7 @@ function pngParts(png) {
   }
   return { w, h, ct, bd, idat: out };
 }
-const INFO_FONT = 'Arial, "Liberation Sans", Helvetica, sans-serif';
+const INFO_FONT = '"LMG Sans", Arial, "Liberation Sans", Helvetica, sans-serif';
 function infoFit(lines, wEmu, hEmu) {
   const c = document.createElement("canvas").getContext("2d");
   for (let pt = 10; pt >= 5; pt -= 0.5) {
@@ -1010,7 +1011,7 @@ async function labelImage(text, wPt, hPt, k = 4) {
   c.fillStyle = "#fff";
   c.fillRect(0, 0, W, H);
   const pt = Math.min(10, labelPt(text, wPt * PT));
-  c.font = "".concat(pt * k, 'px Arial, "Liberation Sans", Helvetica, sans-serif');
+  c.font = "".concat(pt * k, 'px "LMG Sans", Arial, "Liberation Sans", Helvetica, sans-serif');
   c.fillStyle = "#222222";
   c.textBaseline = "alphabetic";
   const m = c.measureText(text), asc = (_a = m.fontBoundingBoxAscent) != null ? _a : pt * k * 0.905, desc = (_b = m.fontBoundingBoxDescent) != null ? _b : pt * k * 0.212;
@@ -1024,6 +1025,11 @@ async function labelImage(text, wPt, hPt, k = 4) {
   return { w: W, h: H, data: await zlibDeflate(rgb) };
 }
 async function buildPdf(label, masks, overview_) {
+  // 3.0.39: текст ТЗ — шрифтом LMG Sans (его контуры идут в PDF кривыми)
+  try {
+    await SANS_READY;
+  } catch (e) {
+  }
   const objs = [];
   const add = (body) => {
     objs.push(body);
@@ -1049,9 +1055,9 @@ async function buildPdf(label, masks, overview_) {
     }
     return stream("/Type /XObject /Subtype /Image /Width ".concat(w, " /Height ").concat(h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode"), d);
   };
-  const catalog = add(null), pagesId = add(null);
+  const catalog = add(null), pagesId = add(null), VEC0 = !/^Vol/.test(label);
   const blocks = await tplBlocks(label), edited = blocks.some(reqDraw);
-  const bg1 = jpeg(PDF_BG[PDF_BG[label] ? label : "Resolume"]), bg0 = edited ? jpeg(PDF_BG[bgKey("bare", label)]) : 0, bg2 = jpeg(PDF_BG[bgKey("masks", label)]);
+  const bg1 = VEC0 && PDF_BG[bgKey("bare", label)] ? 0 : jpeg(PDF_BG[PDF_BG[label] ? label : "Resolume"]), bg0 = edited && !(VEC0 && PDF_BG[bgKey("bare", label)]) ? jpeg(PDF_BG[bgKey("bare", label)]) : 0, bg2 = jpeg(PDF_BG[bgKey("masks", label)]);
   const pages = [], f = (n) => n.toFixed(4);
   const full = "q ".concat(f(PDF_W), " 0 0 ").concat(f(PDF_H), " 0 0 cm /BG Do Q\n");
   const page = (xobj, content, annots2 = "") => {
@@ -1064,7 +1070,66 @@ async function buildPdf(label, masks, overview_) {
   };
   const linkAnn = ([x0, y0, x1, y1], uri) => add(str("<< /Type /Annot /Subtype /Link /Rect [".concat(x0, " ").concat(y0, " ").concat(x1, " ").concat(y1, "] /Border [0 0 0] /A << /S /URI /URI (").concat(uri.replace(/[()\\]/g, (m) => "\\" + m), ") >> >>")));
   const annots = (a) => a.length ? " /Annots [".concat(a.map((x) => x + " 0 R").join(" "), "]") : "";
-  if (!edited) {
+  // 3.0.39: вектор (Form XObject) из записи PdfVecCtx: контуры, кривые букв, прозрачность; растр — только то, что иначе нельзя
+  const VEC = !/^Vol/.test(label);
+  const formOf = async (rec, W0, H0) => {
+    const R = [], G = [], FR = [];
+    for (const L of rec.layers) {
+      const sm = stream("/Type /XObject /Subtype /Image /Width ".concat(L.w, " /Height ").concat(L.h, " /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode"), await zlibDeflate(L.al));
+      R.push("/".concat(L.name, " ").concat(stream("/Type /XObject /Subtype /Image /Width ".concat(L.w, " /Height ").concat(L.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /SMask ").concat(sm, " 0 R"), await zlibDeflate(L.rgb)), " 0 R"));
+    }
+    rec.gs.forEach((name, key) => {
+      const [ca, CA] = key.split(",");
+      G.push("/".concat(name, " << /ca ").concat(ca, " /CA ").concat(CA, " >>"));
+    });
+    rec.fonts.forEach((id, name) => FR.push("/".concat(name, " ").concat(id, " 0 R")));
+    return stream("/Type /XObject /Subtype /Form /BBox [0 0 ".concat(W0, " ").concat(H0, "] /Resources << /ExtGState << ").concat(G.join(" "), " >> /XObject << ").concat(R.join(" "), " >> /Font << ").concat(FR.join(" "), " >> >> /Filter /FlateDecode"), await zlibDeflate(enc.encode(rec.content)));
+  };
+  // текст в пунктах листа (x, y — левый нижний угол на листе PDF)
+  const vecText = async (xo, name, paint, x, y, wPt, hPt) => {
+    if (!VEC || !(wPt > 0) || !(hPt > 0)) return null;
+    const rec = pdfVecRecord({ W: wPt, H: hPt, paint }, wPt, hPt, null, true);
+    if (!rec) return null;
+    xo.push([name, await formOf(rec, wPt, hPt)]);
+    return "q 1 0 0 1 ".concat(f(x), " ").concat(f(y), " cm /").concat(name, " Do Q\n");
+  };
+  const labPaint = (text, wPt, hPt) => (c) => {
+    c.fillStyle = "#fff";
+    c.fillRect(0, 0, wPt, hPt);
+    if (!text) return;
+    const pt = Math.min(10, labelPt(text, wPt * PT));
+    c.font = "".concat(pt, 'px "LMG Sans", Arial, "Liberation Sans", Helvetica, sans-serif');
+    c.fillStyle = "#222222";
+    c.textBaseline = "alphabetic";
+    const m = c.measureText(text), asc = m.fontBoundingBoxAscent != null ? m.fontBoundingBoxAscent : pt * 0.905, desc = m.fontBoundingBoxDescent != null ? m.fontBoundingBoxDescent : pt * 0.212;
+    c.fillText(text, (wPt - m.width) / 2, (hPt - (asc + desc)) / 2 + asc);
+  };
+  const bareKey = bgKey("bare", label);
+  if (VEC && PDF_BG[bareKey]) {
+    // 3.0.39: первый лист — фон шаблона без текста + весь текст кривыми (как в PDF из Keynote/Pages)
+    const xo = [["BG", jpeg(PDF_BG[bareKey])]], ann = [];
+    let content = full;
+    for (const info of blocks) {
+      const r = reqRect(info), tx = (r.x + info.ins.l) / EMU_PT, ty = (r.y + info.ins.t) / EMU_PT, tw = (r.w - 2 * info.ins.l) / EMU_PT;
+      const paras = reqParas(info, reqTextOr(info)), th = Math.max(4, Math.min(PDF_H - ty - 2, reqTextFit(info, paras, tw).h + 4)), name = "T" + info.idx;
+      let res = null;
+      const vc = await vecText(xo, name, (c) => {
+        res = rtPaint(c, paras, 0, 0, tw, 1, info.baseSz, info.baseColor, reqCols(info));
+      }, tx, PDF_H - ty - th, tw, th);
+      let links;
+      if (vc && res) {
+        content += vc;
+        links = res.links;
+      } else {
+        const img = await rtImage(paras, tw, th, info.baseSz, info.baseColor, 4, reqCols(info));
+        xo.push([name, textImg(img)]);
+        content += "q ".concat(f(tw), " 0 0 ").concat(f(th), " ").concat(f(tx), " ").concat(f(PDF_H - ty - th), " cm /").concat(name, " Do Q\n");
+        links = img.links;
+      }
+      links.filter((l) => l.y < th).forEach((l) => ann.push(linkAnn([f(tx + l.x), f(PDF_H - ty - l.y - l.h), f(tx + l.x + l.w), f(PDF_H - ty - l.y)], l.url)));
+    }
+    page(xo, content, annots(ann));
+  } else if (!edited) {
     const ann = (PDF_LINKS[label] || []).map(([r, uri]) => linkAnn(r, uri));
     page([["BG", bg1]], full, annots(ann));
   } else {
@@ -1092,7 +1157,10 @@ async function buildPdf(label, masks, overview_) {
   }
   const notePdf = async (NL, xo, name) => {
     if (!NL.note) return "";
-    const [x, y, w, h] = toPdf(NL.note.rect), img = await rtImage(NL.note.paras, w, h, NL.note.sz, "#222222");
+    const [x, y, w, h] = toPdf(NL.note.rect);
+    const vc = await vecText(xo, name, (c) => rtPaint(c, NL.note.paras, 0, 0, w, 1, NL.note.sz, "#222222"), x, y, w, h);
+    if (vc) return vc;
+    const img = await rtImage(NL.note.paras, w, h, NL.note.sz, "#222222");
     xo.push([name, textImg(img)]);
     return "q ".concat(f(w), " 0 0 ").concat(f(h), " ").concat(f(x), " ").concat(f(y), " cm /").concat(name, " Do Q\n");
   };
@@ -1105,10 +1173,15 @@ async function buildPdf(label, masks, overview_) {
     let content = full;
     for (let j = 0; j < ims.length; j++) {
       const im = ims[j], lay = maskCellLayout(hz, ims.length, j, im.w, im.h, NL.box, null, !!NL.note), [lx, ly, lw, lh] = toPdf(lay.label), [ix, iy, iw, ih] = toPdf(lay.image);
-      const lab = await labelImage(im.caption || "", lw, lh);
-      xo.push(["L" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(lab.w, " /Height ").concat(lab.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), lab.data)]);
+      const lv = await vecText(xo, "L" + j, labPaint(im.caption || "", lw, lh), lx, ly, lw, lh);
+      if (lv) content += lv;
+      else {
+        const lab = await labelImage(im.caption || "", lw, lh);
+        xo.push(["L" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(lab.w, " /Height ").concat(lab.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), lab.data)]);
+        content += "q ".concat(f(lw), " 0 0 ").concat(f(lh), " ").concat(f(lx), " ").concat(f(ly), " cm /L").concat(j, " Do Q\n");
+      }
       xo.push(["O" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(im.w, " /Height ").concat(im.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode"), im.jpeg)]);
-      content += "q ".concat(f(lw), " 0 0 ").concat(f(lh), " ").concat(f(lx), " ").concat(f(ly), " cm /L").concat(j, " Do Q\nq ").concat(f(iw), " 0 0 ").concat(f(ih), " ").concat(f(ix), " ").concat(f(iy), " cm /O").concat(j, " Do Q\n");
+      content += "q ".concat(f(iw), " 0 0 ").concat(f(ih), " ").concat(f(ix), " ").concat(f(iy), " cm /O").concat(j, " Do Q\n");
     }
     page(xo, content + nc);
   }
@@ -1120,13 +1193,37 @@ async function buildPdf(label, masks, overview_) {
     for (let j = 0; j < g.length; j++) {
       const m = masks[g[j]], lay = maskCellLayout(hz, g.length, j, m.w, m.h, tzLabBox(NL.box), m.info, !!NL.note, evenSc(emapPdf, m));
       if (lay.info) {
-        const [tx, ty, tw, th] = toPdf(lay.info), inf = await infoImage(m.info, tw, th);
-        xo.push(["I" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(inf.w, " /Height ").concat(inf.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), inf.data)]);
-        content += "q ".concat(f(tw), " 0 0 ").concat(f(th), " ").concat(f(tx), " ").concat(f(ty), " cm /I").concat(j, " Do Q\n");
+        const [tx, ty, tw, th] = toPdf(lay.info);
+        const iv = await vecText(xo, "I" + j, (c) => {
+          c.fillStyle = "#fff";
+          c.fillRect(0, 0, tw, th);
+          infoPaint(c, infoFit(m.info, tw * PT, th * PT), 0, 0, 1);
+        }, tx, ty, tw, th);
+        if (iv) content += iv;
+        else {
+          const inf = await infoImage(m.info, tw, th);
+          xo.push(["I" + j, stream("/Type /XObject /Subtype /Image /Width ".concat(inf.w, " /Height ").concat(inf.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), inf.data)]);
+          content += "q ".concat(f(tw), " 0 0 ").concat(f(th), " ").concat(f(tx), " ").concat(f(ty), " cm /I").concat(j, " Do Q\n");
+        }
       }
       const [lx, ly, lw, lh] = toPdf(lay.label), [ix, iy, iw, ih] = toPdf(lay.image);
-      const lab = m.label ? await labelImage(m.label, lw, lh) : null;
+      const lv = m.label ? await vecText(xo, "L" + j, labPaint(m.label, lw, lh), lx, ly, lw, lh) : null;
+      if (lv) content += lv;
+      const lab = m.label && !lv ? await labelImage(m.label, lw, lh) : null;
       const lid = lab && stream("/Type /XObject /Subtype /Image /Width ".concat(lab.w, " /Height ").concat(lab.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode"), lab.data);
+      // 3.0.35: маска вектором (Form XObject), если есть «рисовальщик»; иначе — PNG как раньше.
+      // 3.0.36: только ТЗ Resolume, D3 и MP4 — «Волюметрик» как был (PNG)
+      const rec = m.vec && !/^Vol/.test(label) ? pdfVecRecord(m.vec, iw, ih) : null;
+      if (rec) {
+        if (lid) {
+          xo.push(["L" + j, lid]);
+          content += "q ".concat(f(lw), " 0 0 ").concat(f(lh), " ").concat(f(lx), " ").concat(f(ly), " cm /L").concat(j, " Do Q\n");
+        }
+        const W0 = m.vec.W, H0 = m.vec.H;
+        xo.push(["M" + j, await formOf(rec, W0, H0)]);
+        content += "q ".concat(f(iw), " 0 0 ").concat(f(ih), " ").concat(f(ix), " ").concat(f(iy), " cm q ").concat((1 / W0).toFixed(8), " 0 0 ").concat((1 / H0).toFixed(8), " 0 0 cm /M").concat(j, " Do Q Q\n");
+        continue;
+      }
       const pp = pngParts(m.png);
       const mid = stream("/Type /XObject /Subtype /Image /Width ".concat(pp.w, " /Height ").concat(pp.h, " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ").concat(pp.w, " >>"), pp.idat);
       if (lid) {

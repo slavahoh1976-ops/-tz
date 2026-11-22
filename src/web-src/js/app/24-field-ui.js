@@ -453,6 +453,8 @@ function refreshTZPanel() {
   syncTzOrdBtns();
   $("tOverview").checked = tz.overview;
   $("tSaveProj").checked = tz.projZip !== false;
+  $("tSvg").checked = tz.svgMasks === true;
+  $("tSvgRow").hidden = /^Vol/.test(ui.tzTpl || "");
   renderImgList();
   const n = ui.images.length;
   const ns = imgGroups(ui.images).length;
