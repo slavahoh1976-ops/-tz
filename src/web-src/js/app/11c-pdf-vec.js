@@ -622,9 +622,9 @@ class PdfVecCtx {
     const size = +m0[1], pre = fnt.slice(0, fnt.indexOf(m0[0])), bold = /\bbold\b|\b[6-9]00\b/.test(pre), ital = /\b(italic|oblique)\b/.test(pre);
     const chain = [];
     for (const fam0 of m0[2].split(",")) {
-      const fam = fam0.trim().replace(/^["']|["']$/g, ""), u = fam.match(/^LMG UF (\d)$/);
+      const fam = fam0.trim().replace(/^["']|["']$/g, ""), u = fam.match(/^LMG UF ([AB\d])$/);
       if (u && typeof ufPick === "function") {
-        const p = ufPick(+u[1], bold, ital);
+        const p = ufPick(u[1] === "A" ? 1 : u[1] === "B" ? 2 : +u[1], bold, ital);
         if (p) chain.push(p);
       } else if (typeof BUNDLED_FACES !== "undefined" && BUNDLED_FACES[fam] && typeof bundledPick === "function") {
         const p = bundledPick(fam, bold, ital);

@@ -2,7 +2,8 @@
 // программе/браузере (localStorage), в сайт и сборки не попадают. Шрифт ставится первым в FONT (надписи масок
 // на экране и в PNG), а в PDF ТЗ Resolume/D3/MP4 надписи этим шрифтом идут в кривых (контуры букв, 3.0.38).
 // ступени: 1 — шрифты с кириллицей, 2 — остальные (недостающие знаки берутся со следующей ступени, как в браузере)
-const UF_FAM = (tier) => "LMG UF " + tier;
+// 3.0.58 (Mac): без цифр в имени — движок Safari/WebKit не регистрирует семейство вида «LMG UF 1»
+const UF_FAM = (tier) => "LMG UF " + (tier === 1 ? "A" : "B");
 const UF_KEY = "ledmask.userFonts";
 const FONT_BASE = FONT.replace('"LMG Mask SR", "LMG Sans", ', "");
 let UF_FACES = [];
@@ -162,14 +163,27 @@ async function ufApply() {
   // одно начертание на ступень: более позднее заменяет раннее
   faces = faces.filter((f, i) => !faces.some((g, j) => j > i && g.tier === f.tier && g.kind === f.kind));
   try {
-    for (const ff of Array.from(document.fonts)) if (/LMG UF \d/.test(ff.family)) document.fonts.delete(ff);
+    for (const ff of Array.from(document.fonts)) if (/LMG UF [AB\d]/.test(ff.family)) document.fonts.delete(ff);
   } catch (e) {}
   for (const f of faces) {
     try {
       const dsc = { weight: f.weight >= 600 ? "700" : "400", style: f.italic ? "italic" : "normal" };
-      if (f.range) dsc.unicodeRange = f.range;
-      const ff = new FontFace(UF_FAM(f.tier), f.bytes, dsc);
-      await ff.load();
+      const buf = f.bytes.buffer.slice(f.bytes.byteOffset, f.bytes.byteOffset + f.bytes.byteLength);
+      let ff = null;
+      if (f.range) {
+        try {
+          ff = new FontFace(UF_FAM(f.tier), buf.slice(0), Object.assign({ unicodeRange: f.range.toUpperCase().replace(/U\+/g, "U+") }, dsc));
+          await ff.load();
+        } catch (e) {
+          // движок не принял unicode-range — без него (подменённые знаки возьмутся из шрифта)
+          console.warn("unicodeRange", f.file, e);
+          ff = null;
+        }
+      }
+      if (!ff) {
+        ff = new FontFace(UF_FAM(f.tier), buf, dsc);
+        await ff.load();
+      }
       document.fonts.add(ff);
     } catch (e) {
       console.warn("FontFace", f.file, e);

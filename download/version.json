@@ -1,13 +1,13 @@
 {
- "version": "3.0.58",
- "notes": "3.0.58: оформление ТЗ вектором во всех шаблонах (шапка, контакты Comfortaa, рамка, логотипы Arena/disguise/MP4); PPTX — SVG + встроенный шрифт; свой шрифт масок снова можно добавить; расстановка масок на листе «Крупно»: перетаскивание, размер, помощник рядами, несколько масок сразу, «Одного размера»; быстрые меню — шире разделение групп",
+ "version": "3.0.59",
+ "notes": "3.0.59: Mac — исправлен свой шрифт масок (не применялся)",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "b733f300e14abbce6932a04f63ca53a387879029b49e3ffe92927d36aa9f3eb4"
+  "sha256": "fc0bfc96a7c0ec13c808385fff8ccbdb6c58df9653a9c76e5ae824518a383bdc"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "4183e46a50770b8729922b406a515ed7bed3a1c1404064845bc52178270f6630"
+  "sha256": "a0ab8b201b4c7a369cea61322f097563e3bfacf3d56ca0838764f35d94cc50d7"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
