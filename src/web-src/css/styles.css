@@ -2152,9 +2152,10 @@ html.pc[data-mode=vol] .fbar {
 }
 .fb-sep {
   width: 1px;
-  height: 20px;
+  height: 24px;
   background: var(--line);
-  margin: 0 3px;
+  margin: 0 10px; /* 3.0.58: группы кнопок по разделам — заметнее разделены */
+  flex: none;
 }
 .fbar select,
 .fbar input[type=number] {
@@ -2380,12 +2381,12 @@ html.pc[data-mode=vol] .fbar {
 .fbar {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 .fb-ins {
   display: flex;
   gap: 5px;
-  padding-right: 8px;
+  padding-right: 12px;
   border-right: 1px solid var(--line);
   align-self: stretch;
   align-items: center;
@@ -2490,3 +2491,4 @@ html[data-page=tz] .fbar .fb-ins {
 .fb-ted .tzbar select{height:28px;font-size:12px}
 .fb-ted .tzipsw .sw{width:20px;height:20px}
 .fb-ted .b.accent{margin-left:4px}
+#tZoomAssist[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }

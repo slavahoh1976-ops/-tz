@@ -215,6 +215,7 @@ async function exportTZ(label) {
   // 3.0.41: встроенный шрифт — до рендера (надписи масок им, в PDF/SVG — кривыми)
   try {
     await SANS_READY;
+    if (typeof UF_READY !== "undefined") await UF_READY;
   } catch (e) {
   }
   // 2.0.150: если ТЗ с таким именем в этом браузере уже выгружали — предложить поднять версию (v2, v3 …)

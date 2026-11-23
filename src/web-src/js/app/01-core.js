@@ -100,6 +100,7 @@ const PDF_BG = {
   bare_Resolume: "{{b64:pdf-backgrounds/Resolume-bare.jpg}}", bare_D3: "{{b64:pdf-backgrounds/D3-bare.jpg}}", bare_MP4: "{{b64:pdf-backgrounds/MP4-bare.jpg}}",
   masks_Resolume: "{{b64:pdf-backgrounds/Resolume-masks.jpg}}", masks_D3: "{{b64:pdf-backgrounds/D3-masks.jpg}}", masks_MP4: "{{b64:pdf-backgrounds/MP4-masks.jpg}}",
   Vol2: "{{b64:pdf-backgrounds/Vol2.jpg}}", Vol4: "{{b64:pdf-backgrounds/Vol4.jpg}}", Vol3: "{{b64:pdf-backgrounds/Vol3.jpg}}",
+  deco: "{{b64:pdf-backgrounds/deco.png}}", logo_Resolume: "{{b64:pdf-backgrounds/logo_Resolume.png}}", logo_D3: "{{b64:pdf-backgrounds/logo_D3.png}}", logo_MP4: "{{b64:pdf-backgrounds/logo_MP4.png}}",
   bare_Vol2: "{{b64:pdf-backgrounds/Vol2-bare.jpg}}", bare_Vol3: "{{b64:pdf-backgrounds/Vol3-bare.jpg}}", masks_Vol2: "{{b64:pdf-backgrounds/Vol2-masks.jpg}}"
 };
 // у Vol4 фон без текста и фон масок — как у Vol2 (отличаются только тексты), у Vol3 фон масок — тоже
