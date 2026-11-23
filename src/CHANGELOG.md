@@ -1,5 +1,25 @@
 # Изменения
 
+## 3.0.65
+- Новая иконка «СРОЧНОЕ ТЗ» везде: сайт и программа, Windows (exe и установщик), Mac, Android.
+- В шапке программы — «СРОЧНОЕ ТЗ», под ним «LED Pixel Mask Generator».
+
+## 3.0.64
+- HohSans и HohSans Round заменены новой версией шрифта автора (уже, больше знаков: + = % # @ & ₽ € « » „ “, украинские буквы); дорисованы × ± − ^. HohSans — по умолчанию.
+
+## 3.0.63
+- Шрифты автора программы HohSans (по умолчанию) и HohSans Round — первыми в списке; SLsans и SLsans Round убраны (в старых проектах — HohSans и HohSans Round). Дорисованы знаки × + = − ± < > % ° | [ ] \ _ … * # ~ ^ $.
+
+## 3.0.62
+- Свой шрифт: настоящие шрифты (например, Gill Sans Nova) больше не принимаются за «кириллизованные» — латинские È Ë Ï è ë ï берутся из самого шрифта.
+
+## 3.0.61
+- Шрифты надписей масок: оставлены 17 — SLsans Round (по умолчанию), SLsans, Fira Sans, Source Sans 3, Lato, Jost, Istok, Roboto, Noto Sans, Arimo, IBM Plex Sans, Inter, Manrope, Wix Madefor Text, Ubuntu Sans, Fira Sans Condensed, Play. Если в проекте был выбран убранный шрифт — надписи шрифтом по умолчанию.
+
+## 3.0.60
+- Шрифты надписей масок: +20 свободных шрифтов с латиницей и кириллицей (Roboto, Open Sans, Noto Sans, Arimo, IBM Plex Sans, Inter, Montserrat, Manrope, Golos Text, Onest, Wix Madefor Text, Commissioner, Ubuntu Sans, Roboto Condensed, PT Sans Narrow, Fira Sans Condensed, Arsenal, Exo 2, Play, JetBrains Mono) — всего 30, встроены в программу, в PDF/SVG — кривыми.
+- Выбор шрифта (в «Маске» и в быстром меню) — каждое название написано своим шрифтом.
+
 ## 3.0.59
 - Mac: свой шрифт масок не применялся — имя семейства с цифрой («LMG UF 1») движок WebKit не регистрирует; теперь «LMG UF A/B», а если диапазон знаков (unicode-range) не принят, шрифт подключается без него.
 
