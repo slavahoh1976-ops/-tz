@@ -322,6 +322,51 @@ function maskCellLayout(hz, n, j, w, h, B = BOX, info, topAlign, fixedScale) {
   const by = topAlign ? cy0 : cy0 + Math.floor((chh - (LH + LG + eh)) / 2), ix = cx0 + Math.floor((cw - ew) / 2);
   return { label: [cx0, by, cw, LH], image: [ix, by + LH + LG, ew, eh] };
 }
+// 3.0.55: ручная расстановка масок на листе ТЗ — project.tz.mpos[ключ] = { x, y, w } (левый верх и ширина картинки, EMU).
+// Высота — по пропорциям маски; подпись над маской и «Информация» едут вместе с ней.
+// 3.0.57: «одинаковые маски — одного размера» и для расставленных вручную: маски одного разрешения —
+// общий (наименьший) масштаб, каждая на своём центре. Разрешение берём по ключу (в PDF маска может быть уменьшена).
+let tzEvCache = { sig: "", map: null, res: null };
+function tzEvenW(key) {
+  if (!project.tz || project.tz.evenSize === false || !project.tz.mpos) return 0;
+  const sig = JSON.stringify(project.tz.mpos) + "|" + (typeof ui !== "undefined" ? ui.tzTpl : "");
+  if (tzEvCache.sig !== sig) {
+    const res = {}, map = {};
+    try {
+      for (const it of tzItems()) res[it.key] = [it.w, it.h];
+      for (const im of tzImages()) res[imgKey(im)] = [im.w, im.h];
+    } catch (e) {}
+    for (const k2 of Object.keys(project.tz.mpos)) {
+      const r = res[k2];
+      if (!r || !(r[0] > 0)) continue;
+      const g = r[0] + "x" + r[1], sc = project.tz.mpos[k2].w / r[0];
+      map[g] = map[g] == null ? sc : Math.min(map[g], sc);
+    }
+    tzEvCache = { sig, map, res };
+  }
+  const r = tzEvCache.res[key];
+  if (!r) return 0;
+  const sc = tzEvCache.map[r[0] + "x" + r[1]];
+  return sc > 0 ? sc * r[0] : 0;
+}
+function tzPlace(lay, key, mw, mh) {
+  const P = key && project.tz && project.tz.mpos && project.tz.mpos[key];
+  if (!P || !lay || !lay.image) return lay;
+  const [ix, iy, iw, ih] = lay.image, ar = mh > 0 && mw > 0 ? mh / mw : ih / Math.max(1, iw), ew = tzEvenW(key);
+  const w = Math.max(1, Math.round(ew > 0 && ew < P.w ? ew : P.w)), h = Math.max(1, Math.round(w * ar));
+  // уменьшили до общего размера — на прежнем центре
+  const x = Math.round(P.x + (P.w - w) / 2), y = Math.round(P.y + (P.w * ar - h) / 2), out = { ...lay, image: [x, y, w, h] };
+  if (lay.label) {
+    const [lx, ly, lw, lh] = lay.label, gap = iy - (ly + lh);
+    void lx;
+    out.label = [Math.round(x + w / 2 - lw / 2), y - gap - lh, lw, lh];
+  }
+  if (lay.info) {
+    const [tx, ty, tw, th] = lay.info;
+    out.info = [x + w + (tx - (ix + iw)), y + (ty - iy), tw, th];
+  }
+  return out;
+}
 // 2.0.60: вид сверху, вид снизу и 3D волюметрика — вместе на одном листе (по 3), отдельно от масок
 const volExtra = (m) => /^v[cb3]:/.test(m.key || "");
 function autoGroupOne(masks, i) {
@@ -801,7 +846,7 @@ async function buildPptx(tplB64, masks, overview, label) {
     const items = groups[gi].kind === "img" ? groups[gi].ims.map((im) => ({ png: im.jpeg, w: im.w, h: im.h, label: im.caption || "", ext: "jpeg", key: imgKey(im) })) : g.map((mi) => masks[mi]);
     const NL = noteLayout(noteText(noteKey(items)), noteKey(items));
     items.forEach((m, j) => {
-      const lay = maskCellLayout(hz, items.length, j, m.w, m.h, groups[gi].kind === "img" ? NL.box : tzLabBox(NL.box), m.info, !!NL.note, groups[gi].kind === "img" ? 0 : evenSc(emap, m)), [cx0, cy0, cw] = lay.label;
+      const lay = tzPlace(maskCellLayout(hz, items.length, j, m.w, m.h, groups[gi].kind === "img" ? NL.box : tzLabBox(NL.box), m.info, !!NL.note, groups[gi].kind === "img" ? 0 : evenSc(emap, m)), m.key, m.w, m.h), [cx0, cy0, cw] = lay.label;
       if (lay.info) {
         // «Информация» волюметрика — обычный текст на слайде (можно править в PowerPoint)
         const [tx, ty, tw, th] = lay.info, fit = infoFit(m.info, tw, th), sz = Math.round(fit.pt * 100);
@@ -828,6 +873,8 @@ async function buildPptx(tplB64, masks, overview, label) {
       types = types.replace("</Types>", '<Override PartName="/ppt/slides/'.concat(sname, '" ContentType="').concat(CT_SLIDE, '"/></Types>'));
     }
   });
+  // 3.0.54: общие файлы оформления (шапка SVG+JPG, иконки, шрифт Comfortaa) — один раз в программе, в шаблонах только разметка
+  if (typeof PPTX_DECO !== "undefined" && /vl_head\.svg/.test(txt("ppt/slideLayouts/_rels/slideLayout1.xml.rels"))) for (const n of Object.keys(PPTX_DECO)) put(n, b64ToBytes(PPTX_DECO[n]));
   map.set("ppt/presentation.xml", enc.encode(pres));
   map.set("ppt/_rels/presentation.xml.rels", enc.encode(presRels));
   map.set("[Content_Types].xml", enc.encode(types));
@@ -1033,6 +1080,7 @@ async function buildPdf(label, masks, overview_) {
   // 3.0.39: текст ТЗ — шрифтом LMG Sans (его контуры идут в PDF кривыми)
   try {
     await SANS_READY;
+    if (typeof UF_READY !== "undefined") await UF_READY;
   } catch (e) {
   }
   const objs = [];
@@ -1064,8 +1112,21 @@ async function buildPdf(label, masks, overview_) {
   const blocks = await tplBlocks(label), edited = blocks.some(reqDraw);
   const bg1 = VEC0 && PDF_BG[bgKey("bare", label)] ? 0 : jpeg(PDF_BG[PDF_BG[label] ? label : "Resolume"]), bg0 = edited && !(VEC0 && PDF_BG[bgKey("bare", label)]) ? jpeg(PDF_BG[bgKey("bare", label)]) : 0, bg2 = jpeg(PDF_BG[bgKey("masks", label)]);
   const pages = [], f = (n) => n.toFixed(4);
-  const full = "q ".concat(f(PDF_W), " 0 0 ").concat(f(PDF_H), " 0 0 cm /BG Do Q\n");
+  // 3.0.53–3.0.54: оформление вектором поверх фона без него: шапка, футер (Form /HD), рамка (цвет первого листа и остальных), логотип продукта на первом листе
+  const HDV = typeof PDF_HEAD !== "undefined", tk = HDV && PDF_HEAD.fcol[label] ? label : "Resolume";
+  const pxcm = HDV ? "q ".concat((PDF_W / PDF_HEAD.w).toFixed(8), " 0 0 ").concat((-PDF_H / PDF_HEAD.h).toFixed(8), " 0 ").concat(f(PDF_H), " cm\n") : "";
+  let hdId = 0;
+  if (HDV) {
+    const shd = Object.keys(PDF_HEAD.sh).map((k) => "/".concat(k, " ").concat(PDF_HEAD.sh[k])).join(" ");
+    hdId = stream("/Type /XObject /Subtype /Form /BBox [0 0 ".concat(f(PDF_W), " ").concat(f(PDF_H), "] /Resources << /Shading << ").concat(shd, " >> >> /Filter /FlateDecode"), await zlibDeflate(enc.encode(pxcm + PDF_HEAD.ops + "\n" + PDF_HEAD.foot + "\nQ\n")));
+  }
+  const frameOps = (i) => pxcm.concat(PDF_HEAD.fcol[tk][i], " rg 0 0 ").concat(PDF_HEAD.fx, " ").concat(PDF_HEAD.h, " re 0 ").concat(PDF_HEAD.fy, " ").concat(PDF_HEAD.w, " ").concat(PDF_HEAD.h - PDF_HEAD.fy + 2, " re f Q\n");
+  const bgFull = "q ".concat(f(PDF_W), " 0 0 ").concat(f(PDF_H), " 0 0 cm /BG Do Q\n");
+  const full = bgFull + (hdId ? "/HD Do\n" + frameOps(1) : "");
+  const lg = HDV && PDF_HEAD.logo[label];
+  const full1 = bgFull + (hdId ? "/HD Do\n" + frameOps(0) + (lg ? pxcm + lg.ops + "\nQ\n" : "") : "");
   const page = (xobj, content, annots2 = "") => {
+    if (hdId && content.indexOf("/HD Do") >= 0) xobj = xobj.concat([["HD", hdId]]);
     const cs = stream("", str(content));
     pages.push(add(str("<< /Type /Page /Parent ".concat(pagesId, " 0 R /MediaBox [0 0 ").concat(f(PDF_W), " ").concat(f(PDF_H), "] /Resources << /XObject << ").concat(xobj.map(([n, id]) => "/".concat(n, " ").concat(id, " 0 R")).join(" "), " >> >> /Contents ").concat(cs, " 0 R").concat(annots2, " >>"))));
   };
@@ -1098,9 +1159,8 @@ async function buildPdf(label, masks, overview_) {
     xo.push([name, await formOf(rec, wPt, hPt)]);
     return "q 1 0 0 1 ".concat(f(x), " ").concat(f(y), " cm /").concat(name, " Do Q\n");
   };
+  // 3.0.55: без белой подложки — маски можно ставить рядом, подпись не закрывает соседей (лист и так белый)
   const labPaint = (text, wPt, hPt) => (c) => {
-    c.fillStyle = "#fff";
-    c.fillRect(0, 0, wPt, hPt);
     if (!text) return;
     const pt = Math.min(10, labelPt(text, wPt * PT));
     c.font = "".concat(pt, 'px "LMG Sans", Arial, "Liberation Sans", Helvetica, sans-serif');
@@ -1113,7 +1173,7 @@ async function buildPdf(label, masks, overview_) {
   if (VEC && PDF_BG[bareKey]) {
     // 3.0.39: первый лист — фон шаблона без текста + весь текст кривыми (как в PDF из Keynote/Pages)
     const xo = [["BG", jpeg(PDF_BG[bareKey])]], ann = [];
-    let content = full;
+    let content = full1;
     for (const info of blocks) {
       const r = reqRect(info), tx = (r.x + info.ins.l) / EMU_PT, ty = (r.y + info.ins.t) / EMU_PT, tw = (r.w - 2 * info.ins.l) / EMU_PT;
       const paras = reqParas(info, reqTextOr(info)), th = Math.max(4, Math.min(PDF_H - ty - 2, reqTextFit(info, paras, tw).h + 4)), name = "T" + info.idx;
@@ -1136,11 +1196,11 @@ async function buildPdf(label, masks, overview_) {
     page(xo, content, annots(ann));
   } else if (!edited) {
     const ann = (PDF_LINKS[label] || []).map(([r, uri]) => linkAnn(r, uri));
-    page([["BG", bg1]], full, annots(ann));
+    page([["BG", bg1]], full1, annots(ann));
   } else {
     // Неизменённые блоки — вырезаны из отрисовки шаблона по рамкам PDF_CLIPS, изменённые — нарисованы заново
     const xo = [["BG", bg0], ["F", bg1]], ann = [], clips = PDF_CLIPS[label] || [], links = PDF_LINKS[label] || [];
-    let content = full;
+    let content = full1;
     const clipOf = (info) => clips[info.idx] || [info.rect.x, info.rect.y, info.rect.w, info.rect.h];
     const inClip = ([x0, y0, x1, y1], c) => x0 >= c[0] / EMU_PT - 1 && x1 <= (c[0] + c[2]) / EMU_PT + 1 && y0 >= PDF_H - (c[1] + c[3]) / EMU_PT - 1 && y1 <= PDF_H - c[1] / EMU_PT + 1;
     for (const info of blocks) {
@@ -1177,7 +1237,7 @@ async function buildPdf(label, masks, overview_) {
     const nc = await notePdf(NL, xo, "N0");
     let content = full;
     for (let j = 0; j < ims.length; j++) {
-      const im = ims[j], lay = maskCellLayout(hz, ims.length, j, im.w, im.h, NL.box, null, !!NL.note), [lx, ly, lw, lh] = toPdf(lay.label), [ix, iy, iw, ih] = toPdf(lay.image);
+      const im = ims[j], lay = tzPlace(maskCellLayout(hz, ims.length, j, im.w, im.h, NL.box, null, !!NL.note), imgKey(im), im.w, im.h), [lx, ly, lw, lh] = toPdf(lay.label), [ix, iy, iw, ih] = toPdf(lay.image);
       const lv = await vecText(xo, "L" + j, labPaint(im.caption || "", lw, lh), lx, ly, lw, lh);
       if (lv) content += lv;
       else {
@@ -1196,12 +1256,10 @@ async function buildPdf(label, masks, overview_) {
     let content = full;
     const nc = await notePdf(NL, xo, "N0");
     for (let j = 0; j < g.length; j++) {
-      const m = masks[g[j]], lay = maskCellLayout(hz, g.length, j, m.w, m.h, tzLabBox(NL.box), m.info, !!NL.note, evenSc(emapPdf, m));
+      const m = masks[g[j]], lay = tzPlace(maskCellLayout(hz, g.length, j, m.w, m.h, tzLabBox(NL.box), m.info, !!NL.note, evenSc(emapPdf, m)), m.key, m.w, m.h);
       if (lay.info) {
         const [tx, ty, tw, th] = toPdf(lay.info);
         const iv = await vecText(xo, "I" + j, (c) => {
-          c.fillStyle = "#fff";
-          c.fillRect(0, 0, tw, th);
           infoPaint(c, infoFit(m.info, tw * PT, th * PT), 0, 0, 1);
         }, tx, ty, tw, th);
         if (iv) content += iv;

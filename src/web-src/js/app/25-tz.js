@@ -875,7 +875,7 @@ function bgImg(key2) {
   if (!bgImgs[key2] && PDF_BG[key2]) {
     const im = new Image();
     im.onload = requestDraw;
-    im.src = "data:image/jpeg;base64," + PDF_BG[key2];
+    im.src = "data:image/" + (/^(deco|logo_)/.test(key2) ? "png" : "jpeg") + ";base64," + PDF_BG[key2];
     bgImgs[key2] = im;
   }
   return bgImgs[key2] && bgImgs[key2].complete ? bgImgs[key2] : null;
@@ -932,6 +932,7 @@ function drawTZ() {
   ui.tzHits = [];
   ui.tzSlideHits = [];
   ui.tzImgHits = [];
+  ui.tzMaskHits = [];
   const slides = [{ kind: "title" }];
   for (const { hz, g } of imgGroups(imgs)) slides.push({ kind: "ov", hz, ims: g.map((j) => imgs[j]) });
   maskGroups(items).forEach((g, mgi) => slides.push({ kind: "g", mgi, ...g }));
@@ -959,6 +960,17 @@ function drawTZ() {
     c.fillStyle = "#fff";
     c.fillRect(x, y, sw, sh);
     if (bg) c.drawImage(bg, x, y, sw, sh);
+    // 3.0.54: в фонах нет шапки, футера, рамки и логотипа продукта (в PDF/PPTX они вектором) — дорисовываем
+    if (bg && typeof PDF_HEAD !== "undefined") {
+      const dk = bgImg("deco"), kx = sw / PDF_HEAD.w, ky = sh / PDF_HEAD.h, tk = PDF_HEAD.fcol[ui.tzTpl] ? ui.tzTpl : "Resolume";
+      if (dk) c.drawImage(dk, x, y, sw, sh);
+      const fc = PDF_HEAD.fcol[tk][sl.kind === "title" ? 0 : 1].split(" ").map((v) => Math.round(+v * 255));
+      c.fillStyle = "rgb(".concat(fc.join(","), ")");
+      c.fillRect(x, y, PDF_HEAD.fx * kx, sh);
+      c.fillRect(x, y + PDF_HEAD.fy * ky, sw, sh - PDF_HEAD.fy * ky);
+      const lg = sl.kind === "title" && PDF_HEAD.logo[ui.tzTpl], li = lg && bgImg("logo_" + ui.tzTpl);
+      if (li) c.drawImage(li, x + lg.rect[0] * kx, y + lg.rect[1] * ky, lg.rect[2] * kx, lg.rect[3] * ky);
+    }
     const kp = k * PT;
     if (sl.kind === "title" && blocks) {
       const full = editedTitle ? bgImg(fullKey) : null, clips = PDF_CLIPS[ui.tzTpl] || [], selBlock = isReqSel(ui.tzSel) ? selBk() : null;
@@ -1016,14 +1028,22 @@ function drawTZ() {
       c.textAlign = "left";
       c.textBaseline = "alphabetic";
     };
+    // 3.0.55: на листе «Крупно» маски можно расставлять (перетаскивание, размер за углы)
+    const mhit = (key2, lay, mw, mh, B, es) => {
+      if (ui.tzZoom < 0) return;
+      const [ix, iy, iw, ih] = lay.image;
+      ui.tzMaskHits.push({ key: key2, x: x + ix * k, y: y + iy * k, w: iw * k, h: ih * k, k, ex: ix, ey: iy, ew: iw, eh: ih, mw, mh, sx: x, sy: y, lab: lay.label, B, es: es || 0, placed: !!(project.tz.mpos && project.tz.mpos[key2]) });
+    };
     if (sl.kind === "ov") sl.ims.forEach((im, j) => {
-      const lay = maskCellLayout(sl.hz, sl.ims.length, j, im.w, im.h, NL.box, null, !!NL.note), [ix, iy, iw, ih] = lay.image;
+      const lay = tzPlace(maskCellLayout(sl.hz, sl.ims.length, j, im.w, im.h, NL.box, null, !!NL.note), imgKey(im), im.w, im.h), [ix, iy, iw, ih] = lay.image;
       cell(lay, im.img, im.caption || "");
       ui.tzImgHits.push({ x: x + ix * k, y: y + iy * k, w: iw * k, h: ih * k, im });
+      mhit(imgKey(im), lay, im.w, im.h, NL.box);
     });
     if (sl.kind === "g") sl.g.forEach((mi, j) => {
       const it = items[mi];
-      const lay = maskCellLayout(sl.hz, sl.g.length, j, it.w, it.h, tzLabBox(NL.box), it.info, !!NL.note, evenSc(emap, it));
+      const lay = tzPlace(maskCellLayout(sl.hz, sl.g.length, j, it.w, it.h, tzLabBox(NL.box), it.info, !!NL.note, evenSc(emap, it)), it.key, it.w, it.h);
+      mhit(it.key, lay, it.w, it.h, tzLabBox(NL.box), evenSc(emap, it));
       if (lay.info) {
         const [tx, ty, tw, th] = lay.info;
         infoPaint(c, infoFit(it.info, tw, th), x + tx * k, y + ty * k, k * PT);
@@ -1053,6 +1073,13 @@ function drawTZ() {
     c.font = "13px ".concat(FONT);
     c.fillText("В ТЗ ничего не отмечено", pad, R.height - 10);
   }
+  tzMaskOverlay(c);
+  for (const k2 of [...ui.tzMSel]) if (!ui.tzMaskHits.some((q) => q.key === k2)) ui.tzMSel.delete(k2);
+  if (ui.tzMaskSel && !ui.tzMSel.has(ui.tzMaskSel)) ui.tzMSel.add(ui.tzMaskSel);
+  const sb = $("tZoomSame");
+  if (sb) sb.hidden = !(ui.tzZoom >= 0 && ui.tzMSel.size >= 2);
+  const rb = $("tZoomReset");
+  if (rb) rb.hidden = !(ui.tzZoom >= 0 && ui.tzMaskHits.some((q) => q.placed));
   const hv = ui.tzDrag ? ui.tzDrag.hit : ui.tzHover;
   if (ui.tzEdit) tzIpPlace();
   if (hv && !(ui.tzEdit && hv.pk === ui.tzEdit.pk)) {
@@ -1082,9 +1109,12 @@ function syncTzZoomUI() {
   $("tZoomPrev").disabled = !z || ui.tzZoom <= 0;
   $("tZoomNext").disabled = !z || ui.tzZoom >= n - 1;
   setTxt($("tZoomNo"), z ? "лист ".concat(ui.tzZoom + 1, " из ").concat(n) : "");
+  if (typeof syncTzAssist === "function") syncTzAssist();
 }
 function tzZoomTo(i) {
   ui.tzZoom = i;
+  ui.tzMaskSel = ui.tzMaskHover = null;
+  ui.tzMSel = new Set();
   ui.tzView = { z: 1, x: 0, y: 0 };
   ui.tzHover = null;
   requestDraw();
@@ -1096,6 +1126,31 @@ $("tZoom").onclick = () => {
   tzZoomTo(h ? h.no : 0);
 };
 $("tZoomPrev").onclick = () => ui.tzZoom > 0 && tzZoomTo(ui.tzZoom - 1);
+function syncTzAssist() {
+  const b = $("tZoomAssist");
+  if (!b) return;
+  b.setAttribute("aria-pressed", String(!!ui.tzAssist));
+  b.hidden = ui.tzZoom < 0;
+}
+if ($("tZoomAssist")) $("tZoomAssist").onclick = () => {
+  ui.tzAssist = !ui.tzAssist;
+  try {
+    localStorage.setItem("ledmask.tzAssist", ui.tzAssist ? "1" : "0");
+  } catch (e) {}
+  syncTzAssist();
+  if (typeof status === "function") status(ui.tzAssist ? "Помощник расстановки включён: маски выстраиваются рядами, ровно и симметрично" : "Помощник выключен: маски ставятся свободно", true);
+};
+if ($("tZoomSame")) $("tZoomSame").onclick = tzSameSize;
+if ($("tZoomReset")) $("tZoomReset").onclick = () => {
+  // 3.0.55: маски этого листа — обратно на автоматические места
+  const keys = ui.tzMaskHits.filter((q) => q.placed).map((q) => q.key);
+  if (!keys.length || !project.tz.mpos) return;
+  for (const k2 of keys) delete project.tz.mpos[k2];
+  ui.tzMaskSel = null;
+  requestDraw();
+  scheduleAutosave();
+  scheduleHistory();
+};
 $("tZoomNext").onclick = () => ui.tzZoom < ui.tzSlideCount - 1 && tzZoomTo(ui.tzZoom + 1);
 window.addEventListener("keydown", (e) => {
   if (ui.page !== "tz") return;
@@ -1106,6 +1161,31 @@ window.addEventListener("keydown", (e) => {
   }
   const t = e.target;
   if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  // 3.0.57: маски на листе — Ctrl/Cmd+A все, Esc снять выделение, стрелки — сдвиг (Shift — крупнее)
+  if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A" || e.code === "KeyA") && ui.tzMaskHits.length && !ui.tzEdit) {
+    tzSetSel(ui.tzMaskHits.map((q) => q.key), ui.tzMaskSel || ui.tzMaskHits[0].key);
+    requestDraw();
+    e.preventDefault();
+    return;
+  }
+  if (ui.tzMSel.size && !ui.tzEdit) {
+    const st = SLIDE_W * (e.shiftKey ? 0.02 : 0.002), mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] }[e.key];
+    if (e.key === "Escape") {
+      tzSetSel([]);
+      requestDraw();
+      e.preventDefault();
+      return;
+    }
+    if (mv) {
+      project.tz.mpos = project.tz.mpos || {};
+      for (const q of ui.tzMaskHits) if (ui.tzMSel.has(q.key)) project.tz.mpos[q.key] = { x: Math.round(Math.max(0, Math.min(SLIDE_W - q.ew, q.ex + mv[0]))), y: Math.round(Math.max(tzLabOff(q), Math.min(SLIDE_H - q.eh, q.ey + mv[1]))), w: q.ew };
+      requestDraw();
+      scheduleAutosave();
+      scheduleHistory();
+      e.preventDefault();
+      return;
+    }
+  }
   if (e.key === "Escape") {
     if (!tzViewReset()) tzZoomTo(-1);
   } else if (e.key === "ArrowLeft") $("tZoomPrev").click();
@@ -1123,8 +1203,438 @@ const tzHitAt = (p) => {
   }
   return null;
 };
+// ---- 3.0.55: расстановка масок на листе «Крупно» ----
+ui.tzMaskHits = [];
+ui.tzMaskSel = null; // основная (по ней — маркеры углов и образец размера)
+ui.tzMSel = new Set(); // 3.0.57: выделенные маски
+ui.tzMarq = null;
+ui.tzMaskHover = null;
+ui.tzMDrag = null;
+ui.tzSnap = null;
+const TZ_HANDLE = () => matchMedia("(pointer: coarse)").matches ? 14 : 8;
+function tzMaskHitAt(p) {
+  if (ui.tzZoom < 0) return null;
+  const hs = TZ_HANDLE(), sel = ui.tzMaskHits.find((q) => q.key === ui.tzMaskSel);
+  if (sel) {
+    for (const [cn, cx, cy] of [["nw", sel.x, sel.y], ["ne", sel.x + sel.w, sel.y], ["sw", sel.x, sel.y + sel.h], ["se", sel.x + sel.w, sel.y + sel.h]]) {
+      if (Math.abs(p[0] - cx) <= hs && Math.abs(p[1] - cy) <= hs) return { hit: sel, corner: cn };
+    }
+  }
+  for (let i = ui.tzMaskHits.length - 1; i >= 0; i--) {
+    const q = ui.tzMaskHits[i];
+    if (p[0] >= q.x && p[0] <= q.x + q.w && p[1] >= q.y && p[1] <= q.y + q.h) return { hit: q, corner: null };
+  }
+  return null;
+}
+function tzMaskOverlay(c) {
+  if (ui.tzZoom < 0) return;
+  const hs = TZ_HANDLE();
+  for (const q of ui.tzMaskHits) {
+    const main = q.key === ui.tzMaskSel, sel = main || ui.tzMSel.has(q.key), hov = ui.tzMaskHover && q.key === ui.tzMaskHover;
+    if (!sel && !hov) continue;
+    c.save();
+    c.strokeStyle = "#1ec8b4";
+    c.lineWidth = sel ? 1.6 : 1.2;
+    if (!sel) c.setLineDash([4, 3]);
+    c.strokeRect(q.x - 0.5, q.y - 0.5, q.w + 1, q.h + 1);
+    if (sel && !main) c.fillStyle = "rgba(30,200,180,.10)", c.fillRect(q.x, q.y, q.w, q.h);
+    if (main) {
+      c.setLineDash([]);
+      c.fillStyle = "#fff";
+      for (const [cx, cy] of [[q.x, q.y], [q.x + q.w, q.y], [q.x, q.y + q.h], [q.x + q.w, q.y + q.h]]) {
+        c.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
+        c.strokeRect(cx - hs / 2, cy - hs / 2, hs, hs);
+      }
+    }
+    c.restore();
+  }
+  if (ui.tzMarq) {
+    const m = ui.tzMarq;
+    c.save();
+    c.fillStyle = "rgba(30,200,180,.10)";
+    c.strokeStyle = "#1ec8b4";
+    c.setLineDash([4, 3]);
+    c.lineWidth = 1;
+    c.fillRect(Math.min(m.x0, m.x1), Math.min(m.y0, m.y1), Math.abs(m.x1 - m.x0), Math.abs(m.y1 - m.y0));
+    c.strokeRect(Math.min(m.x0, m.x1), Math.min(m.y0, m.y1), Math.abs(m.x1 - m.x0), Math.abs(m.y1 - m.y0));
+    c.restore();
+  }
+  if (ui.tzMDrag && ui.tzMDrag.slot && ui.tzMDrag.moved && !ui.tzMDrag.corner) {
+    const q = ui.tzMaskHits.find((h) => h.key === ui.tzMDrag.key), sl = ui.tzMDrag.slot;
+    if (q) {
+      const ar = q.eh / Math.max(1, q.ew);
+      c.save();
+      c.fillStyle = "rgba(30,200,180,.14)";
+      c.strokeStyle = "rgba(30,200,180,.9)";
+      c.setLineDash([5, 4]);
+      c.lineWidth = 1.5;
+      c.fillRect(q.sx + sl.x * q.k, q.sy + sl.y * q.k, sl.w * q.k, sl.w * ar * q.k);
+      c.strokeRect(q.sx + sl.x * q.k, q.sy + sl.y * q.k, sl.w * q.k, sl.w * ar * q.k);
+      c.restore();
+    }
+  }
+  if (ui.tzSnap && ui.tzMDrag) {
+    const q = ui.tzMaskHits.find((h) => h.key === ui.tzMDrag.key);
+    if (q) {
+      c.save();
+      c.strokeStyle = "rgba(255,80,160,.9)";
+      c.lineWidth = 1;
+      c.setLineDash([3, 3]);
+      const sh = PDF_H / PDF_W;
+      void sh;
+      const sw = SLIDE_W * q.k, shh = SLIDE_H * q.k;
+      for (const vx of ui.tzSnap.x) { c.beginPath(); c.moveTo(q.sx + vx * q.k, q.sy); c.lineTo(q.sx + vx * q.k, q.sy + shh); c.stroke(); }
+      for (const vy of ui.tzSnap.y) { c.beginPath(); c.moveTo(q.sx, q.sy + vy * q.k); c.lineTo(q.sx + sw, q.sy + vy * q.k); c.stroke(); }
+      c.restore();
+    }
+  }
+}
+// ---- 3.0.56: помощник расстановки — ряды, одинаковая высота в ряду, ровные промежутки, по центру ----
+ui.tzAssist = (() => {
+  try {
+    return localStorage.getItem("ledmask.tzAssist") !== "0";
+  } catch (e) {
+    return true;
+  }
+})();
+const tzLabOff = (q) => q.lab ? q.ey - q.lab[1] : 0; // от верха подписи до верха картинки
+function tzRowsOf(list) {
+  // ряды по вертикальному перекрытию (≥ 40% меньшей высоты), внутри ряда — слева направо
+  const it = list.slice().sort((a, b) => a.y + a.h / 2 - (b.y + b.h / 2)), rows = [];
+  for (const q of it) {
+    const r = rows[rows.length - 1];
+    if (r) {
+      const top = Math.max(r.top, q.y), bot = Math.min(r.bot, q.y + q.h);
+      if (bot - top >= 0.4 * Math.min(q.h, r.minH)) {
+        r.items.push(q);
+        r.top = Math.min(r.top, q.y);
+        r.bot = Math.max(r.bot, q.y + q.h);
+        r.minH = Math.min(r.minH, q.h);
+        continue;
+      }
+    }
+    rows.push({ items: [q], top: q.y, bot: q.y + q.h, minH: q.h });
+  }
+  for (const r of rows) r.items.sort((a, b) => a.x + a.w / 2 - (b.x + b.w / 2));
+  return rows;
+}
+// раскладка рядов в рамке B: ряд — во всю ширину, ровные промежутки, всё по центру.
+// r.fix — заданная высота ряда (тянули за угол / ряд не трогали). «Одинаковые маски — одного размера»:
+// маски одного разрешения получают общий (наименьший) масштаб, в том числе с учётом других слайдов (q.es).
+function tzArrange(rows, B, force) {
+  const res = {}, even = project.tz.evenSize !== false;
+  const pxW = (q) => q.mw > 0 ? q.mw : q.ar * 1000, pxH = (q) => q.mh > 0 ? q.mh : 1000;
+  for (const r of rows) {
+    const sa = r.items.reduce((s2, q) => s2 + q.ar, 0), fitH = (B.w - GAP * (r.items.length - 1)) / Math.max(1e-6, sa);
+    const h = r.fix != null ? Math.min(fitH, r.fix) : fitH;
+    for (const q of r.items) q.sc = h / pxH(q); // EMU на пиксель маски
+  }
+  if (even) {
+    const grp = {};
+    for (const r of rows) for (const q of r.items) {
+      const k2 = pxW(q) + "x" + pxH(q);
+      grp[k2] = Math.min(grp[k2] == null ? Infinity : grp[k2], q.sc, q.es > 0 ? q.es : Infinity);
+    }
+    // тянули угол: размер этой маски — общий для всех масок её разрешения
+    if (force) grp[force.k] = force.sc;
+    for (const r of rows) for (const q of r.items) q.sc = grp[pxW(q) + "x" + pxH(q)];
+  }
+  // ряд не шире поля
+  for (const r of rows) {
+    const rw = r.items.reduce((s2, q) => s2 + pxW(q) * q.sc, 0) + GAP * (r.items.length - 1);
+    if (rw > B.w) for (const q of r.items) q.sc *= (B.w - GAP * (r.items.length - 1)) / Math.max(1, rw - GAP * (r.items.length - 1));
+  }
+  const rowH = (r) => Math.max(...r.items.map((q) => pxH(q) * q.sc)), rowL = (r) => Math.max(...r.items.map((q) => q.lab));
+  const need = rows.reduce((s2, r) => s2 + rowH(r) + rowL(r), 0) + GAP * (rows.length - 1);
+  const room = B.h - GAP * (rows.length - 1) - rows.reduce((s2, r) => s2 + rowL(r), 0);
+  const k = need > B.h ? room / Math.max(1, rows.reduce((s2, r) => s2 + rowH(r), 0)) : 1;
+  // 3.0.57: по высоте ряды стоят там, куда их поставили (центр — только по ширине листа и внутри ряда);
+  // наезжают — нижний ряд отодвигается вниз на промежуток; не влезают — подтягиваются вверх
+  // по высоте можно от шапки до строки контактов (шире рабочего поля шаблона)
+  const Y0 = Math.min(B.y, 1.8e6), Y1 = Math.max(B.y + B.h, 10.15e6);
+  const full = rows.map((r) => rowH(r) * k + rowL(r)), tops = rows.map((r, i) => Math.max(Y0, Math.min(Y1 - full[i], (r.top != null ? r.top : B.y + rowL(r)) - rowL(r))));
+  for (let i = 1; i < rows.length; i++) tops[i] = Math.max(tops[i], tops[i - 1] + full[i - 1] + GAP);
+  if (rows.length) {
+    tops[rows.length - 1] = Math.min(tops[rows.length - 1], Y1 - full[rows.length - 1]);
+    for (let i = rows.length - 2; i >= 0; i--) tops[i] = Math.min(tops[i], tops[i + 1] - GAP - full[i]);
+    if (tops[0] < Y0) {
+      let y = Y0;
+      rows.forEach((r, i) => { tops[i] = y; y += full[i] + GAP; });
+    }
+  }
+  rows.forEach((r, ri) => {
+    const H = rowH(r) * k, ws = r.items.map((q) => pxW(q) * q.sc * k), rw = ws.reduce((s2, v) => s2 + v, 0) + GAP * (r.items.length - 1);
+    let x = B.x + (B.w - rw) / 2;
+    const iy = tops[ri] + rowL(r);
+    r.items.forEach((q, j2) => {
+      // разная высота в ряду — по центру ряда
+      const h = pxH(q) * q.sc * k;
+      res[q.key] = { x: Math.round(x), y: Math.round(iy + (H - h) / 2), w: Math.round(ws[j2]) };
+      x += ws[j2] + GAP;
+    });
+  });
+  return res;
+}
+function tzAssistDrag(d, x, y, w) {
+  // d.snap — маски листа на начало перетаскивания (без перетаскиваемой), в EMU
+  const q = d.hit, ar = q.mh > 0 && q.mw > 0 ? q.mw / q.mh : q.ew / Math.max(1, q.eh), me = { key: q.key, x, y, w, h: w / ar, ar, lab: tzLabOff(q), mw: q.mw, mh: q.mh, es: q.es || 0 };
+  const rows = tzRowsOf(d.snap.map((o) => ({ ...o })));
+  // ряды, которых перестановка не касается, сохраняют свою высоту (их могли подогнать за угол)
+  for (const r of rows) if (!r.items.some((o) => d.srcKeys && d.srcKeys.has(o.key))) r.fix = r.items.reduce((s2, o) => s2 + o.h, 0) / r.items.length;
+  const touch = (row) => { delete row.fix; };
+  if (d.corner) {
+    // тянули угол: высота ряда этой маски = её новая высота
+    let row = rows.find((r) => r.top <= y + me.h / 2 && r.bot >= y + me.h / 2);
+    if (!row) {
+      row = { items: [], top: y, bot: y + me.h, minH: me.h };
+      rows.push(row);
+      rows.sort((a, b) => (a.top + a.bot) / 2 - (b.top + b.bot) / 2);
+    }
+    row.items.push(me);
+    row.items.sort((a, b) => a.x + a.w / 2 - (b.x + b.w / 2));
+    row.fix = me.h;
+  } else {
+    const cy = y + me.h / 2, cx = x + w / 2;
+    let row = rows.find((r) => cy >= r.top && cy <= r.bot);
+    if (row) {
+      touch(row);
+      row.items.push(me);
+      row.items.sort((a, b) => (a === me ? cx : a.x + a.w / 2) - (b === me ? cx : b.x + b.w / 2));
+    } else {
+      rows.push({ items: [me], top: y, bot: y + me.h, minH: me.h });
+      rows.sort((a, b) => (a.top + a.bot) / 2 - (b.top + b.bot) / 2);
+    }
+    // ряд, где маска стояла раньше, сохраняет заданную высоту (если её задавали), остальные — во всю ширину
+  }
+  const pw = q.mw > 0 ? q.mw : ar * 1000, ph = q.mh > 0 ? q.mh : 1000;
+  const pos = tzArrange(rows.filter((r) => r.items.length), q.B || BOX, d.corner ? { k: pw + "x" + ph, sc: me.h / ph } : null);
+  project.tz.mpos = project.tz.mpos || {};
+  for (const k2 of Object.keys(pos)) if (k2 !== q.key) project.tz.mpos[k2] = pos[k2];
+  d.slot = pos[q.key];
+  // во время перетаскивания маска идёт за мышью (размером своего будущего места); угол — сразу на месте
+  project.tz.mpos[q.key] = d.corner ? d.slot : { x: Math.round(x + w / 2 - d.slot.w / 2), y: Math.round(y), w: d.slot.w };
+  ui.tzAssistRows = rows.length;
+}
+// ---- 3.0.57: несколько масок — вместе двигать, масштабировать, «Одного размера» ----
+const tzMItem = (o) => ({ key: o.key, x: o.ex, y: o.ey, w: o.ew, h: o.eh, ar: o.mh > 0 && o.mw > 0 ? o.mw / o.mh : o.ew / Math.max(1, o.eh), lab: tzLabOff(o), mw: o.mw, mh: o.mh, es: o.es || 0 });
+function tzSetSel(keys, main) {
+  ui.tzMSel = new Set(keys);
+  ui.tzMaskSel = main != null ? main : keys.length ? keys[keys.length - 1] : null;
+}
+function tzGroupDrag(p, shift) {
+  const d = ui.tzMDrag, k = d.hit.k, G = d.group;
+  const dx = (p[0] - d.px) / k, dy = (p[1] - d.py) / k, thr = 6 / k;
+  project.tz.mpos = project.tz.mpos || {};
+  ui.tzSnap = { x: [], y: [] };
+  if (d.corner) {
+    // угол основной маски — все выделенные в той же пропорции (каждая от своего левого верха)
+    const m = G.find((o) => o.key === d.key), ax = d.corner[1] === "w" ? m.x + m.w : m.x;
+    const px = (d.corner[1] === "w" ? m.x : m.x + m.w) + dx, py = (d.corner[0] === "n" ? m.y : m.y + m.h) + dy, ay = d.corner[0] === "n" ? m.y + m.h : m.y;
+    const nw = Math.max(SLIDE_W * 0.04, Math.max(Math.abs(px - ax), Math.abs(py - ay) * m.w / m.h)), f = nw / m.w;
+    for (const o of G) {
+      const w = Math.min(SLIDE_W, o.w * f), h = o.h * f;
+      let x = o.key === d.key && d.corner[1] === "w" ? ax - w : o.x, y = o.key === d.key && d.corner[0] === "n" ? ay - h : o.y;
+      x = Math.max(0, Math.min(SLIDE_W - w, x));
+      y = Math.max(o.lab, Math.min(SLIDE_H - h, y));
+      project.tz.mpos[o.key] = { x: Math.round(x), y: Math.round(y), w: Math.round(w) };
+    }
+    return;
+  }
+  // рамка группы
+  const L = Math.min(...G.map((o) => o.x)), R = Math.max(...G.map((o) => o.x + o.w)), T = Math.min(...G.map((o) => o.y - o.lab)), Bm = Math.max(...G.map((o) => o.y + o.h));
+  let mx = dx, my = dy;
+  if (!shift) {
+    const others = ui.tzMaskHits.filter((o) => !ui.tzMSel.has(o.key));
+    const tx = [SLIDE_W / 2, BOX.x, BOX.x + BOX.w], ty = [];
+    for (const o of others) {
+      tx.push(o.ex, o.ex + o.ew / 2, o.ex + o.ew);
+      ty.push(o.ey, o.ey + o.eh / 2, o.ey + o.eh);
+    }
+    const best = (vals, ts) => {
+      let b = null;
+      for (const v of vals) for (const t of ts) if (Math.abs(t - v) < thr && (!b || Math.abs(t - v) < Math.abs(b.d))) b = { d: t - v, t };
+      return b;
+    };
+    const sx = best([L + mx, (L + R) / 2 + mx, R + mx], tx), sy = best([T + my, (T + Bm) / 2 + my, Bm + my], ty);
+    if (sx) { mx += sx.d; ui.tzSnap.x.push(sx.t); }
+    if (sy) { my += sy.d; ui.tzSnap.y.push(sy.t); }
+  }
+  mx = Math.max(-L, Math.min(SLIDE_W - R, mx));
+  my = Math.max(-T, Math.min(SLIDE_H - Bm, my));
+  for (const o of G) project.tz.mpos[o.key] = { x: Math.round(o.x + mx), y: Math.round(o.y + my), w: Math.round(o.w) };
+}
+function tzSameSize() {
+  const sel = ui.tzMaskHits.filter((q) => ui.tzMSel.has(q.key)), ref = sel.find((q) => q.key === ui.tzMaskSel) || sel[0];
+  if (!ref || sel.length < 2) return;
+  const arOf = (q) => q.ew / Math.max(1, q.eh), same = sel.every((q) => Math.abs(arOf(q) - arOf(ref)) / arOf(ref) < 0.01);
+  project.tz.mpos = project.tz.mpos || {};
+  const items = ui.tzMaskHits.map(tzMItem);
+  for (const it of items) {
+    if (!ui.tzMSel.has(it.key) || it.key === ref.key) continue;
+    // одинаковые пропорции — одна ширина; разные — одна высота
+    const w = same ? ref.ew : ref.eh * it.w / Math.max(1, it.h), h = w * it.h / Math.max(1, it.w);
+    it.x = Math.max(0, Math.min(SLIDE_W - w, it.x + it.w / 2 - w / 2));
+    it.y = Math.max(it.lab, Math.min(SLIDE_H - h, it.y + it.h / 2 - h / 2));
+    it.w = w;
+    it.h = h;
+  }
+  if (ui.tzAssist) {
+    // помощник: ряды с новыми размерами — ровно, с промежутками, по центру
+    const rows = tzRowsOf(items);
+    for (const r of rows) r.fix = Math.max(...r.items.map((o) => o.h));
+    const pos = tzArrange(rows, ref.B || BOX);
+    for (const k2 of Object.keys(pos)) project.tz.mpos[k2] = pos[k2];
+  } else for (const it of items) if (ui.tzMSel.has(it.key)) project.tz.mpos[it.key] = { x: Math.round(it.x), y: Math.round(it.y), w: Math.round(it.w) };
+  requestDraw();
+  scheduleAutosave();
+  scheduleHistory();
+}
+function tzMaskDrag(p, shift) {
+  const d = ui.tzMDrag, q = d.hit, k = q.k, ar = q.mh > 0 && q.mw > 0 ? q.mh / q.mw : d.h0 / d.w0;
+  const dx = (p[0] - d.px) / k, dy = (p[1] - d.py) / k, thr = 6 / k, minW = Math.round(SLIDE_W * 0.04);
+  const others = ui.tzMaskHits.filter((h) => h.key !== q.key && h.sx === q.sx && h.sy === q.sy);
+  const tx = [SLIDE_W / 2, BOX.x, BOX.x + BOX.w], ty = [];
+  for (const o of others) {
+    tx.push(o.ex, o.ex + o.ew / 2, o.ex + o.ew);
+    ty.push(o.ey, o.ey + o.eh / 2, o.ey + o.eh);
+  }
+  const snap = (vals, targets) => {
+    let best = null;
+    for (const [v, off] of vals) for (const t of targets) if (Math.abs(t - v) < thr && (!best || Math.abs(t - v) < Math.abs(best.d))) best = { d: t - v, t, off };
+    return best;
+  };
+  let x, y, w;
+  ui.tzSnap = { x: [], y: [] };
+  if (!d.corner) {
+    x = d.x0 + dx;
+    y = d.y0 + dy;
+    w = d.w0;
+    const h = w * ar;
+    if (!shift) {
+      const sx = snap([[x, 0], [x + w / 2, 0], [x + w, 0]], tx), sy = snap([[y, 0], [y + h / 2, 0], [y + h, 0]], ty);
+      if (sx) { x += sx.d; ui.tzSnap.x.push(sx.t); }
+      if (sy) { y += sy.d; ui.tzSnap.y.push(sy.t); }
+    }
+  } else {
+    // угол тянем, противоположный стоит на месте; пропорции маски сохраняются
+    const ax = d.corner[1] === "w" ? d.x0 + d.w0 : d.x0, ay = d.corner[0] === "n" ? d.y0 + d.h0 : d.y0;
+    const px = (d.corner[1] === "w" ? d.x0 : d.x0 + d.w0) + dx, py = (d.corner[0] === "n" ? d.y0 : d.y0 + d.h0) + dy;
+    w = Math.max(minW, Math.max(Math.abs(px - ax), Math.abs(py - ay) / ar));
+    if (!shift) {
+      const ex = d.corner[1] === "w" ? ax - w : ax + w, s = snap([[ex, 0]], tx);
+      if (s) { w = Math.max(minW, Math.abs(s.t - ax)); ui.tzSnap.x.push(s.t); }
+    }
+    w = Math.min(w, SLIDE_W);
+    x = d.corner[1] === "w" ? ax - w : ax;
+    y = d.corner[0] === "n" ? ay - w * ar : ay;
+  }
+  const h = w * ar, lab = q.lab ? q.lab[3] + Math.max(0, q.ey - (q.lab[1] + q.lab[3])) : 0;
+  x = Math.max(0, Math.min(SLIDE_W - w, x));
+  y = Math.max(lab, Math.min(SLIDE_H - h, y));
+  if (d.snap) y = Math.max(1.8e6 + lab, Math.min(10.15e6 - h, y));
+  if (d.snap) {
+    ui.tzSnap = null;
+    return tzAssistDrag(d, x, y, w);
+  }
+  project.tz.mpos = project.tz.mpos || {};
+  project.tz.mpos[q.key] = { x: Math.round(x), y: Math.round(y), w: Math.round(w) };
+}
 function tzPointer(e, type) {
   const p = tzLocal(e);
+  if (type === "down" && ui.tzZoom >= 0) {
+    const mh = tzMaskHitAt(p), th = tzHitAt(p), add = e.ctrlKey || e.metaKey;
+    if (mh && (mh.corner || !th)) {
+      const key0 = mh.hit.key;
+      if (add && !mh.corner && ui.tzMSel.has(key0)) {
+        // Ctrl/Cmd по выделенной — снять с неё выделение
+        ui.tzMSel.delete(key0);
+        if (ui.tzMaskSel === key0) ui.tzMaskSel = [...ui.tzMSel].pop() || null;
+        requestDraw();
+        return;
+      }
+      if (add) ui.tzMSel.add(key0);
+      else if (!ui.tzMSel.has(key0)) ui.tzMSel = new Set([key0]);
+      ui.tzMaskSel = key0;
+      pv.setPointerCapture(e.pointerId);
+      if (ui.tzMSel.size > 1) {
+        ui.tzMDrag = { key: key0, hit: mh.hit, corner: mh.corner, px: p[0], py: p[1], moved: false, add, group: ui.tzMaskHits.filter((o) => ui.tzMSel.has(o.key)).map(tzMItem) };
+        requestDraw();
+        return;
+      }
+      ui.tzMDrag = { key: mh.hit.key, hit: mh.hit, corner: mh.corner, px: p[0], py: p[1], x0: mh.hit.ex, y0: mh.hit.ey, w0: mh.hit.ew, h0: mh.hit.eh, moved: false };
+      if (ui.tzAssist && !e.shiftKey) {
+        const q0 = mh.hit;
+        const all = ui.tzMaskHits.filter((o) => o.sx === q0.sx && o.sy === q0.sy).map((o) => ({ key: o.key, x: o.ex, y: o.ey, w: o.ew, h: o.eh, ar: o.mh > 0 && o.mw > 0 ? o.mw / o.mh : o.ew / Math.max(1, o.eh), lab: tzLabOff(o), mw: o.mw, mh: o.mh, es: o.es || 0 }));
+        ui.tzMDrag.snap = all.filter((o) => o.key !== q0.key);
+        // ряд, откуда берём маску, — подгоняется заново
+        const src = tzRowsOf(all).find((r) => r.items.some((o) => o.key === q0.key));
+        ui.tzMDrag.srcKeys = new Set(src ? src.items.map((o) => o.key).filter((k2) => k2 !== q0.key) : []);
+      }
+      requestDraw();
+      return;
+    }
+    // пустое место на листе — рамка выделения (с Ctrl/Cmd — добавить к выделенным)
+    const sh0 = !th && ui.tzSlideHits.find((q) => p[0] >= q.x && p[0] <= q.x + q.w && p[1] >= q.y && p[1] <= q.y + q.h);
+    if (sh0 && ui.tzMaskHits.length) {
+      if (!add) tzSetSel([]);
+      ui.tzMarq = { x0: p[0], y0: p[1], x1: p[0], y1: p[1], base: new Set(ui.tzMSel) };
+      pv.setPointerCapture(e.pointerId);
+      requestDraw();
+      return;
+    }
+    if (ui.tzMaskSel || ui.tzMSel.size) {
+      tzSetSel([]);
+      requestDraw();
+    }
+  }
+  if (ui.tzMarq) {
+    const m = ui.tzMarq;
+    if (type === "move") {
+      m.x1 = p[0];
+      m.y1 = p[1];
+      const L = Math.min(m.x0, m.x1), R = Math.max(m.x0, m.x1), T = Math.min(m.y0, m.y1), B2 = Math.max(m.y0, m.y1);
+      const hit = ui.tzMaskHits.filter((q) => q.x < R && q.x + q.w > L && q.y < B2 && q.y + q.h > T).map((q) => q.key);
+      tzSetSel([...new Set([...m.base, ...hit])]);
+      requestDraw();
+      return;
+    }
+    ui.tzMarq = null;
+    requestDraw();
+    return;
+  }
+  if (ui.tzMDrag) {
+    const d = ui.tzMDrag;
+    if (type === "move") {
+      if (!d.moved && Math.abs(p[0] - d.px) + Math.abs(p[1] - d.py) < 3) return;
+      d.moved = true;
+      if (d.group) tzGroupDrag(p, e.shiftKey);
+      else tzMaskDrag(p, e.shiftKey);
+      requestDraw();
+      return;
+    }
+    // щелчок без сдвига по маске из группы — выделить только её
+    if (d.group && !d.moved && !d.add) tzSetSel([d.key]);
+    ui.tzMDrag = null;
+    ui.tzSnap = null;
+    if (d.moved && d.snap && d.slot) project.tz.mpos[d.key] = d.slot;
+    requestDraw();
+    if (d.moved) {
+      scheduleAutosave();
+      scheduleHistory();
+    }
+    return;
+  }
+  if (type === "move" && ui.tzZoom >= 0 && !ui.tzDrag && !ui.tzPan) {
+    const mh = tzMaskHitAt(p), th = tzHitAt(p), key2 = mh && !th ? mh.hit.key : null;
+    if (key2 !== ui.tzMaskHover) {
+      ui.tzMaskHover = key2;
+      requestDraw();
+    }
+    if (mh && (mh.corner || !th)) {
+      pv.style.cursor = mh.corner ? (mh.corner === "nw" || mh.corner === "se" ? "nwse-resize" : "nesw-resize") : "move";
+      return;
+    }
+  }
   if (type === "down") {
     const h = tzHitAt(p);
     if (!h && ui.tzView.z > 1) {

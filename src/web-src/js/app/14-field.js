@@ -2,7 +2,7 @@ function freshField(k) {
   return { id: newUid(), name: k ? "Общее поле ".concat(k + 1) : "Общее поле", items: [], title: { on: true, x: 0, y: 0, size: 0, meters: false }, stack: false };
 }
 function freshFieldState() {
-  return { fields: [], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { tpl2: true, tpl3: true, tpl4: true, tpl5: true, tpl6: true, fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskPerS: {}, evenSize: true, lab: { res: true, name: true, phys: true, file: false }, maskGrid: "", req: {}, notes: {}, pos: {} } };
+  return { fields: [], fieldCur: 0, cuts: [], cutCur: 0, outs: [], outCur: 0, tz: { tpl2: true, tpl3: true, tpl4: true, tpl5: true, tpl6: true, fields: {}, masks: {}, cuts: {}, overview: true, projZip: true, imgPer: 0, maskPer: 0, maskPerS: {}, evenSize: true, lab: { res: true, name: true, phys: true, file: false }, maskGrid: "", req: {}, notes: {}, pos: {}, mpos: {} } };
 }
 function loadFieldState(d, raw) {
   const seen = /* @__PURE__ */ new Set();
@@ -58,6 +58,14 @@ function loadFieldState(d, raw) {
     }
     return o;
   };
+  // 3.0.55: расстановка масок на листах ТЗ
+  const mposMap = (m) => {
+    const o = {};
+    if (m && typeof m === "object" && !Array.isArray(m)) {
+      for (const [k, v] of Object.entries(m)) if (v && isFinite(+v.x) && isFinite(+v.y) && +v.w > 0) o[k] = { x: Math.round(+v.x), y: Math.round(+v.y), w: Math.round(+v.w) };
+    }
+    return o;
+  };
   const strMap = (m) => {
     const o = {};
     if (m && typeof m === "object" && !Array.isArray(m)) {
@@ -65,7 +73,7 @@ function loadFieldState(d, raw) {
     }
     return o;
   };
-  project.tz = { fields: boolMap(tz.fields), masks: boolMap(tz.masks), overview: tz.overview == null ? true : !!tz.overview, projZip: tz.projZip !== false, svgMasks: tz.svgMasks === true, volMask: tz.volMask === true, volCom: tz.volCom !== false, vol3d: tz.vol3d !== false, volInfo: tz.volInfo !== false, adrMadrix: tz.adrMadrix === true, adrMadshow: tz.adrMadshow === true, adrTd: tz.adrTd === true, imgPer: Math.max(0, Math.min(3, pint(tz.imgPer, 0))), maskPer: Math.max(0, Math.min(10, pint(tz.maskPer, 0))), maskPerS: (() => { const o = {}, src = tz.maskPerS && typeof tz.maskPerS === "object" ? tz.maskPerS : {}; for (const kk of Object.keys(src)) { const v = pint(src[kk], 0); if (/^\d+$/.test(kk) && v >= 1 && v <= 10) o[kk] = v; } return o; })(), evenSize: tz.evenSize !== false, lab: (() => { const l = tz.lab && typeof tz.lab === "object" ? tz.lab : {}; return { res: l.res !== false, name: l.name !== false, phys: l.phys !== false, file: l.file === true }; })(), maskGrid: /^\d+x\d+$/.test(tz.maskGrid || "") ? tz.maskGrid : "", req: strMap(tz.req), notes: strMap(tz.notes), pos: posMap(tz.pos) };
+  project.tz = { fields: boolMap(tz.fields), masks: boolMap(tz.masks), overview: tz.overview == null ? true : !!tz.overview, projZip: tz.projZip !== false, svgMasks: tz.svgMasks === true, volMask: tz.volMask === true, volCom: tz.volCom !== false, vol3d: tz.vol3d !== false, volInfo: tz.volInfo !== false, adrMadrix: tz.adrMadrix === true, adrMadshow: tz.adrMadshow === true, adrTd: tz.adrTd === true, imgPer: Math.max(0, Math.min(3, pint(tz.imgPer, 0))), maskPer: Math.max(0, Math.min(10, pint(tz.maskPer, 0))), maskPerS: (() => { const o = {}, src = tz.maskPerS && typeof tz.maskPerS === "object" ? tz.maskPerS : {}; for (const kk of Object.keys(src)) { const v = pint(src[kk], 0); if (/^\d+$/.test(kk) && v >= 1 && v <= 10) o[kk] = v; } return o; })(), evenSize: tz.evenSize !== false, lab: (() => { const l = tz.lab && typeof tz.lab === "object" ? tz.lab : {}; return { res: l.res !== false, name: l.name !== false, phys: l.phys !== false, file: l.file === true }; })(), maskGrid: /^\d+x\d+$/.test(tz.maskGrid || "") ? tz.maskGrid : "", req: strMap(tz.req), notes: strMap(tz.notes), pos: posMap(tz.pos), mpos: mposMap(tz.mpos) };
   // 2.0.114: порядок листов ТЗ и выбранный тип ТЗ — раньше при открытии сбрасывались
   if (Array.isArray(tz.order)) project.tz.order = tz.order.filter((k) => typeof k === "string" && /^[fmco]:/.test(k));
   // 3.0.9: первый лист Resolume, D3 и MP4 — два блока вместо десяти; правки старых блоков к ним не подходят — сбрасываем
@@ -667,6 +675,7 @@ pv.addEventListener("dblclick", (e) => {
     const th = tzHitAt([x, y]);
     if (th) tzIpStart(th.pk, x, y);
     else if (h) openMarkEditor(h.im);
+    else if (ui.tzZoom >= 0 && typeof tzMaskHitAt === "function" && tzMaskHitAt([x, y])) return; // 3.0.55: по маске на листе «Крупно» — не выходить из него
     else {
       // двойной щелчок по листу — крупно / обратно ко всем листам
       const sh = (ui.tzSlideHits || []).find((q) => x >= q.x && x <= q.x + q.w && y >= q.y && y <= q.y + q.h);

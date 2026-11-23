@@ -591,7 +591,7 @@ $("fbTIClr").onclick = () => {
   if (typeof syncTzOrdBtns === "function") syncTzOrdBtns();
   fbSync();
 };
-const FB_T_TOG = [["fbTOv", "tOverview"], ["fbTProj", "tSaveProj"], ["fbTSvg", "tSvg"], ["fbTVmask", "tVolMask"], ["fbTVcom", "tVolCom"], ["fbTV3d", "tVol3d"], ["fbTVinfo", "tVolInfo"], ["fbTVmadrix", "tVolMadrix"], ["fbTVmadshow", "tVolMadshow"], ["fbTVtd", "tVolTd"]];
+const FB_T_TOG = [["fbTOv", "tOverview"], ["fbTProj", "tSaveProj"], ["fbTSvg", "tSvg"], ["fbTVmask", "tVolMask"], ["fbTVcom", "tVolCom"], ["fbTV3d", "tVol3d"], ["fbTVinfo", "tVolInfo"]];
 for (const [id, src] of FB_T_TOG) $(id).onclick = () => {
   fbFire(src, !$(src).checked, "change");
   fbSync();
@@ -631,7 +631,7 @@ function fbSyncTz() {
     for (const [id, src] of FB_T_TOG) $(id).setAttribute("aria-pressed", String(!!$(src).checked));
     $("fbTSvg").hidden = $("tSvgRow").hidden;
     $("fbTVol").hidden = $("tVolWhat").hidden;
-    $("fbTVolSet").hidden = $("tVolSetRow").hidden;
+    if ($("fbTVolSet")) $("fbTVolSet").hidden = $("tVolSetRow").hidden;
     $("fbTVolSep").hidden = $("tVolWhat").hidden && $("tVolSetRow").hidden;
   } else if (fbTzCtx === "text") {
     setTxt($("fbTTWho"), txt.startsWith("note:") ? "Подпись слайда" : "Текст шаблона");

@@ -176,12 +176,16 @@ async function ufApply() {
     }
   }
   UF_FACES = faces;
-  const tiers = [1, 2].filter((t) => faces.some((f) => f.tier === t));
-  // 3.0.40: знаки, которых нет в своих шрифтах («×», «Ё», «№»), — из встроенного LMG Sans: на экране и в PDF одинаково, в PDF — кривыми
-  if (tiers.length) FONT = tiers.map((t) => '"' + UF_FAM(t) + '", ').join("") + '"LMG Mask SR", "LMG Sans", ' + FONT_BASE;
+  // 3.0.53: свой шрифт — пункт «Свой: …» в выборе шрифта маски (applyMaskFont ставит его в FONT)
   ufUi();
   if (typeof requestDraw === "function") requestDraw();
 }
+// 3.0.53: семейства своего шрифта для FONT; недостающие знаки («×», «Ё», «№») — из встроенного LMG Sans (в PDF — кривыми)
+function ufFontChain() {
+  const tiers = [1, 2].filter((t) => UF_FACES.some((f) => f.tier === t));
+  return tiers.map((t) => '"' + UF_FAM(t) + '", ').join("");
+}
+const ufName = () => UF_FACES.length ? (UF_FACES.find((f) => f.tier === 1) || UF_FACES[0]).family : (ufStored()[0] || {}).name || "";
 // начертание ступени для жирности/курсива — как подбирает браузер; синтетика, если нужного нет
 function ufPick(tier, bold, ital) {
   const fs = UF_FACES.filter((f) => f.tier === tier);
@@ -192,14 +196,13 @@ function ufPick(tier, bold, ital) {
   return { face: best, fakeBold: bold && best.weight < 600, fakeItal: ital && !best.italic };
 }
 function ufUi() {
-  const lab = $("tFontInfo");
-  if (!lab) return;
-  const st = ufStored();
-  setTxt(lab, st.length ? UF_FACES.map((f) => f.full).join(", ") || st.map((s2) => s2.name).join(", ") : "встроенный LMG Sans (в PDF — кривыми)");
-  $("tFontClear").hidden = !st.length;
+  if (typeof maskFontOptions === "function") maskFontOptions();
+  const del = $("mFontDel");
+  if (del) del.hidden = !ufStored().length;
 }
 async function ufAddFiles(files) {
   const cur = ufStored(), msgs = [];
+  let ok = 0;
   for (const file of files) {
     const bytes = new Uint8Array(await file.arrayBuffer());
     let info;
@@ -219,42 +222,56 @@ async function ufAddFiles(files) {
       }
     }
     cur.push({ name: file.name, b64: ufB64(bytes) });
-    if (info.tier === 2) msgs.push("«".concat(file.name, "»: без русских букв — из него берутся только недостающие знаки"));
+    ok++;
+    if (info.tier === 2) msgs.push("«".concat(file.name, "»: без русских букв — русские надписи будут встроенным шрифтом"));
+  }
+  if (!ok) {
+    status(msgs.join(" · ") || "Шрифт не подключён", true);
+    return;
   }
   try {
     localStorage.setItem(UF_KEY, JSON.stringify(cur));
   } catch (e) {
-    status("Не хватило места для шрифта в хранилище браузера", true);
+    status("Не хватило места для шрифта в хранилище программы", true);
     return;
   }
   await ufApply();
-  status(msgs.length ? msgs.join(" · ") : "Шрифт подключён: надписи масок — этим шрифтом, в PDF ТЗ — в кривых", true);
+  // сразу выбираем его для масок проекта
+  if (project && project.tz) {
+    project.tz.maskFont = "U";
+    if (typeof applyMaskFont === "function") applyMaskFont();
+    if (typeof changed === "function") changed();
+    else requestDraw();
+  }
+  status(msgs.length ? msgs.join(" · ") : "Свой шрифт добавлен: «".concat(ufName(), "» — надписи масок им, в PDF и SVG — кривыми"), true);
 }
-if ($("tFontAdd")) {
-  $("tFontAdd").onclick = () => $("tFontFile").click();
-  $("tFontFile").onchange = async (e) => {
+function ufPickFile() {
+  const inp = $("mFontFile");
+  if (inp) inp.click();
+}
+if ($("mFontFile")) {
+  $("mFontFile").onchange = async (e) => {
     const fs = Array.from(e.target.files || []);
     e.target.value = "";
     if (fs.length) await ufAddFiles(fs);
-    // подключали из окна «Сохранить ТЗ» — сохраняем дальше
-    const then = window.__ufThenSave;
-    window.__ufThenSave = null;
-    if (then && UF_FACES.length) setTimeout(then, 300);
   };
-  $("tFontClear").onclick = async () => {
+  $("mFontAdd").onclick = ufPickFile;
+  $("mFontDel").onclick = async () => {
+    if (!confirm("Убрать свой шрифт «".concat(ufName(), "» из программы? Надписи масок перейдут на встроенный шрифт."))) return;
     try {
       localStorage.removeItem(UF_KEY);
     } catch (e) {}
     await ufApply();
-    status("Свой шрифт отключён — надписи встроенным LMG Sans", true);
+    if (project && project.tz && project.tz.maskFont === "U") {
+      project.tz.maskFont = "SR";
+      if (typeof changed === "function") changed();
+    }
+    requestDraw();
+    status("Свой шрифт убран — надписи встроенным SLsans Round", true);
   };
 }
-// 3.0.42: свои шрифты больше не подключаются — у всех встроенный LMG Sans; запомненные раньше — убрать
-try {
-  localStorage.removeItem(UF_KEY);
-} catch (e) {
-}
-ufApply();
+// 3.0.53: свой шрифт снова можно добавить (хранится в программе/браузере, в проект и сборки не попадает)
+const UF_READY = Promise.resolve().then(ufApply);
 // ---- контуры букв (TrueType glyf) → команды пути PDF в единицах шрифта, ось Y вверх ----
 function ufGlyphPath(f, gid, depth) {
   if (!f.paths) f.paths = new Map();

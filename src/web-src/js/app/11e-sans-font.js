@@ -51,27 +51,49 @@ function bundledPick(fam, bold, ital) {
 const sansPick = (bold, ital) => bundledPick(SANS_FAMILY, bold, ital);
 // шрифт надписей масок — один на проект (project.tz.maskFont), недостающие знаки — из LMG Sans
 const FONT_SYS = '"Gill Sans", "Gill Sans MT", GillSans, Calibri, "Segoe UI", system-ui, sans-serif';
+function ufHas() {
+  return typeof ufStored === "function" && ufStored().length > 0;
+}
 const maskFontKey = () => {
   const k = project && project.tz && project.tz.maskFont;
+  if (k === "U") return ufHas() ? "U" : "SR";
   return MASK_FONTS.some((f) => f[0] === k) ? k : "SR";
 };
 function applyMaskFont() {
-  FONT = '"LMG Mask '.concat(maskFontKey(), '", "LMG Sans", ').concat(FONT_SYS);
+  const k = maskFontKey();
+  // 3.0.53: свой шрифт; пока не загружен — встроенный SR
+  const uf = k === "U" && typeof ufFontChain === "function" ? ufFontChain() : "";
+  FONT = k === "U" ? uf + '"LMG Mask SR", "LMG Sans", ' + FONT_SYS : '"LMG Mask '.concat(k, '", "LMG Sans", ').concat(FONT_SYS);
   const sel = $("mFont"), fb = $("fbMFont");
-  if (sel && sel.value !== maskFontKey()) sel.value = maskFontKey();
-  if (fb && fb.value !== maskFontKey()) fb.value = maskFontKey();
+  if (sel && sel.value !== k) sel.value = k;
+  if (fb && fb.value !== k) fb.value = k;
+}
+function maskFontOptions() {
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const own = ufHas() ? '<option value="U">Свой: '.concat(esc(typeof ufName === "function" ? ufName() : ""), "</option>") : "";
+  for (const id of ["mFont", "fbMFont"]) {
+    const el = $(id);
+    if (!el) continue;
+    el.innerHTML = MASK_FONTS.map(([k, n]) => '<option value="'.concat(k, '">').concat(n, "</option>")).join("") + own + '<option value="__add">＋ Добавить свой шрифт (.ttf)…</option>';
+    el.value = maskFontKey();
+  }
 }
 for (const id of ["mFont", "fbMFont"]) {
   const el = $(id);
   if (!el) continue;
-  el.innerHTML = MASK_FONTS.map(([k, n]) => '<option value="'.concat(k, '">').concat(n, "</option>")).join("");
   el.onchange = (e) => {
+    if (e.target.value === "__add") {
+      e.target.value = maskFontKey();
+      if (typeof ufPickFile === "function") ufPickFile();
+      return;
+    }
     project.tz.maskFont = e.target.value;
     applyMaskFont();
     if (typeof changed === "function") changed();
     else requestDraw();
   };
 }
+maskFontOptions();
 {
   // при каждой перерисовке — шрифт текущего проекта (загрузка, новый проект, отмена)
   const rd0 = requestDraw;

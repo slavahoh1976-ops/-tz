@@ -1,13 +1,13 @@
 {
- "version": "3.0.52",
- "notes": "Надписи на масках — встроенными шрифтами, ничего подключать не нужно: SLsans Round (по умолчанию), SLsans, Fira Sans, PT Sans и другие — выбор в «Маска» → «Текст» → «Шрифт». PDF ТЗ Resolume/D3/MP4 — целиком в кривых (текст и маски), увеличивается без потери качества; папка SVG с масками в архиве ТЗ (по галочке).",
+ "version": "3.0.58",
+ "notes": "3.0.58: оформление ТЗ вектором во всех шаблонах (шапка, контакты Comfortaa, рамка, логотипы Arena/disguise/MP4); PPTX — SVG + встроенный шрифт; свой шрифт масок снова можно добавить; расстановка масок на листе «Крупно»: перетаскивание, размер, помощник рядами, несколько масок сразу, «Одного размера»; быстрые меню — шире разделение групп",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "5f27d541297d77f828236656c9bf970db78a67e2ddc28e00b7274217a3c8c43a"
+  "sha256": "b733f300e14abbce6932a04f63ca53a387879029b49e3ffe92927d36aa9f3eb4"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "53645af6e4c8195c0d46d9a75fe7b7501c36acfd7973a519340f636eabfa95bd"
+  "sha256": "4183e46a50770b8729922b406a515ed7bed3a1c1404064845bc52178270f6630"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
