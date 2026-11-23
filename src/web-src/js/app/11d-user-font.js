@@ -5,7 +5,7 @@
 // 3.0.58 (Mac): без цифр в имени — движок Safari/WebKit не регистрирует семейство вида «LMG UF 1»
 const UF_FAM = (tier) => "LMG UF " + (tier === 1 ? "A" : "B");
 const UF_KEY = "ledmask.userFonts";
-const FONT_BASE = FONT.replace('"LMG Mask SR", "LMG Sans", ', "");
+const FONT_BASE = FONT.replace('"LMG Mask HS", "LMG Sans", ', "");
 let UF_FACES = [];
 function ufU16(d, o) {
   return d[o] << 8 | d[o + 1];
@@ -87,6 +87,9 @@ function ufParse(bytes) {
       }
     });
     if (cyrK.size) for (let c = 160; c <= 255; c++) if (cmap.has(c) && cyrK.has(key(cmap.get(c)))) bad.push(c);
+    // 3.0.62: в настоящих шрифтах È Ë Ï è ë ï законно рисуются теми же контурами, что Ѐ Ё Ї ѐ ё ї;
+    // «кириллизованная» подмена (cp1251) затрагивает десятки знаков — только её и исключаем
+    if (bad.length < 16) bad.length = 0;
     for (const c of bad) cmap.delete(c);
   }
   let range = "";
@@ -277,11 +280,11 @@ if ($("mFontFile")) {
     } catch (e) {}
     await ufApply();
     if (project && project.tz && project.tz.maskFont === "U") {
-      project.tz.maskFont = "SR";
+      project.tz.maskFont = "HS";
       if (typeof changed === "function") changed();
     }
     requestDraw();
-    status("Свой шрифт убран — надписи встроенным SLsans Round", true);
+    status("Свой шрифт убран — надписи встроенным HohSans", true);
   };
 }
 // 3.0.53: свой шрифт снова можно добавить (хранится в программе/браузере, в проект и сборки не попадает)

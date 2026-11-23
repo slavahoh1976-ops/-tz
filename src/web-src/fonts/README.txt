@@ -8,5 +8,5 @@ LMG Mask P/F/S/L/Y/C/J/I — урезанные (латиница, кирилл�
 Lato, Ysabeau Office, Scada, Jost, Istok. Шрифты с зарезервированными именами (PT Sans/ParaType, Source, Lato,
 Istok) внутри переименованы. Лицензии — LICENSE-*-OFL.txt. Пересборка: tools/mkfonts.py.
 
-SLsans-Regular.ttf — шрифт SLsans (© 2026 SLsans authors), добавлен по просьбе автора программы.
-SLsansRound-Regular.ttf — шрифт SLsans Round (© 2026 SLsans authors), добавлен по просьбе автора программы.
+HohSans-Regular.ttf — шрифт HohSans (© 2026 HohSans, оригинальный рисунок автора программы, версия от 23.11.2026); знаки × ± − ^ дорисованы его же генератором (tools/hohsans/build2.py).
+HohSansRound-Regular.ttf — шрифт HohSans Round (© 2026 HohSans), скруглённый вариант.
