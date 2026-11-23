@@ -7,4 +7,4 @@
 Android-версия собирается автоматически (GitHub Actions → «Android APK») из `index.html` и выкладывается в Releases → `android-latest`.
 
 `src/` — исходники веб-версии (`web-src/`, `build_web.py`, `CHANGELOG.md`, `VERSION`). Сборка: `python src/build_web.py` → `src/build/web/index.html`.
-Все версии и исходники одним архивом: https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-3.0.52.zip
+Все версии и исходники одним архивом: https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-3.0.58.zip
