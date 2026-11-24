@@ -2565,3 +2565,13 @@ button.fpick::after {
 .fpick-it:hover { background: rgba(30, 200, 180, .14); }
 .fpick-it.on { background: rgba(30, 200, 180, .24); color: var(--accent); }
 .fpick-it.add { font-size: 14px; color: var(--muted, #9aa5b1); border-top: 1px solid var(--line); margin-top: 4px; border-radius: 0 0 6px 6px; }
+
+/* 3.0.68: в Safari поле правки внутри блока с user-select: none не получает курсор и не правится
+   (Chrome это прощает) — в редактируемых полях выделение разрешено явно */
+[contenteditable="true"],
+[contenteditable="true"] *,
+.mtxed,
+.mtxed * {
+  -webkit-user-select: text;
+  user-select: text;
+}

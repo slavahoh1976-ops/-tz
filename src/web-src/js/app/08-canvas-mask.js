@@ -586,6 +586,30 @@ pv.addEventListener("pointerdown", (e) => {
       }
     }
   }
+  // 3.0.69: двойное нажатие по тексту или фигуре не выделяет кабинеты за ними — выбор возвращается к тому,
+  // что был до первого нажатия; одиночное нажатие — как раньше (кабинет под буквами)
+  {
+    const now = performance.now(), plain = !e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && (ui.tool || "select") !== "pan" && ui.tool !== "black";
+    const p0 = ui.dblPrev, near = e.pointerType === "touch" ? 24 : 8;
+    if (plain && p0 && p0.uid === st.uid && now - p0.at <= 450 && Math.hypot(x - p0.x, y - p0.y) <= near) {
+      ui.dblPrev = null;
+      const onText = typeof mtxHit === "function" && !!mtxHit(x, y);
+      const si = !onText && typeof shapesHere === "function" && shapesHere(st) ? shapeEdgeAt(st, x, y, true) : -1;
+      if (onText || si >= 0) {
+        ui.selected.clear();
+        for (const q of p0.sel) ui.selected.add(q);
+        ui.anchor = p0.anchor;
+        ui.selPri = p0.pri;
+        if (si >= 0) {
+          ui.selShape = si;
+          selOnly("shape");
+        } else if (p0.shape >= 0 && st.cacheShapes && st.cacheShapes[p0.shape]) ui.selShape = p0.shape;
+        syncShapes();
+        changed();
+        return;
+      }
+    } else ui.dblPrev = plain ? { at: now, x, y, uid: st.uid, sel: [...ui.selected], anchor: ui.anchor, pri: ui.selPri, shape: ui.selShape } : null;
+  }
   // 2.0.81: в проекции и ТВ кабинетов нет — текст выбирается и двигается мышью сразу, без «Активного текста»
   // 2.0.94: и в LED (инструмент «Выбор») — щелчок по тексту выбирает его; Alt — выделять кабинеты под текстом
   if (st.kind === "proj" || st.kind === "tv" || st.kind === "ring" || (!st.kind || st.kind === "led") && (ui.tool || "select") === "select" && !e.altKey) {
