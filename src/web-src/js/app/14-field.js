@@ -62,7 +62,11 @@ function loadFieldState(d, raw) {
   const mposMap = (m) => {
     const o = {};
     if (m && typeof m === "object" && !Array.isArray(m)) {
-      for (const [k, v] of Object.entries(m)) if (v && isFinite(+v.x) && isFinite(+v.y) && +v.w > 0) o[k] = { x: Math.round(+v.x), y: Math.round(+v.y), w: Math.round(+v.w) };
+      for (const [k, v] of Object.entries(m)) {
+        if (!(v && isFinite(+v.x) && isFinite(+v.y) && +v.w > 0)) continue;
+        o[k] = { x: Math.round(+v.x), y: Math.round(+v.y), w: Math.round(+v.w) };
+        if (typeof v.sl === "string") o[k].sl = v.sl;
+      }
     }
     return o;
   };
