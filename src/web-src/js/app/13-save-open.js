@@ -126,8 +126,9 @@ window.addEventListener("beforeunload", (e) => {
   e.preventDefault();
   e.returnValue = "";
 });
-// 2.0.48: «Последние проекты» — сам проект запоминается в хранилище программы (до 10 штук)
-const RECENT_KEY = "ledmask.recent", RECENT_MAX = 10;
+// 2.0.48: «Последние проекты» — сам проект запоминается в хранилище программы
+// 3.0.66: до 50 штук; весь список — не больше ~3 млн знаков, чтобы оставить место автосохранению и своему шрифту
+const RECENT_KEY = "ledmask.recent", RECENT_MAX = 50, RECENT_BUDGET = 3e6;
 function recentGet() {
   try {
     const a = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
@@ -137,9 +138,11 @@ function recentGet() {
   }
 }
 function recentPut(list) {
-  for (let tries = 0; tries < 30; tries++) {
+  for (let tries = 0; tries < 200; tries++) {
     try {
-      localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+      const js = JSON.stringify(list);
+      if (js.length > RECENT_BUDGET && list.length > 1) throw new Error("budget");
+      localStorage.setItem(RECENT_KEY, js);
       return true;
     } catch (e) {
       // места не хватает: сначала убираем картинки у старых записей, потом сами старые записи

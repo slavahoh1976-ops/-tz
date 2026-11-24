@@ -420,14 +420,29 @@ function mtxStart(h) {
   $("wrap").appendChild(box);
   TX_HIDE = it || st;
   requestDraw();
-  mtxEd = { box, ed, k: h.k, i: h.i, uid: st.uid, v0: lines[edIdx][0] };
-  ed.focus();
+  mtxEd = { box, ed, k: h.k, i: h.i, uid: st.uid, v0: lines[edIdx][0], t0: performance.now() };
   // всё выделено — можно сразу печатать новый текст или щёлкнуть, чтобы поставить курсор
-  const r = document.createRange();
-  r.selectNodeContents(ed);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(r);
+  const selAll = () => {
+    ed.focus();
+    const r = document.createRange();
+    r.selectNodeContents(ed);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  };
+  selAll();
+  mtxDbg("редактор открыт");
+  if (MTX_DBG) setTimeout(() => {
+    try {
+      const cs = getComputedStyle(ed), r = ed.getBoundingClientRect(), sl = window.getSelection();
+      mtxDbg("текст: «" + ed.textContent + "» rect " + Math.round(r.width) + "×" + Math.round(r.height) + " display=" + cs.display + " vis=" + cs.visibility + " op=" + getComputedStyle(box).opacity);
+      mtxDbg("шрифт: " + cs.fontSize + " " + cs.fontFamily.slice(0, 60) + " цвет " + cs.color);
+      mtxDbg("fonts.check=" + document.fonts.check(ed.style.font || cs.font) + " style.font=«" + String(ed.style.font).slice(0, 50) + "»");
+      mtxDbg("фокус в поле=" + (document.activeElement === ed) + " выделение=" + (sl ? sl.rangeCount + "/" + String(sl).slice(0, 20) : "-") + " editable=" + ed.isContentEditable + " userSelect=" + (cs.webkitUserSelect || cs.userSelect));
+    } catch (er) {
+      mtxDbg("ошибка журнала: " + er.message);
+    }
+  }, 300);
   ed.addEventListener("keydown", (e) => {
     e.stopPropagation();
     if (e.key === "Enter") {
@@ -444,11 +459,20 @@ function mtxStart(h) {
     const t = (e.clipboardData || window.clipboardData).getData("text").replace(/\s*\n\s*/g, " ");
     document.execCommand("insertText", false, t);
   });
-  ed.addEventListener("blur", () => mtxStop());
+  // 3.0.68: Safari после двойного нажатия сразу уводит фокус с только что открытого поля — первые полсекунды возвращаем его
+  ed.addEventListener("blur", () => {
+    if (mtxEd && mtxEd.ed === ed && performance.now() - mtxEd.t0 < 600) {
+      mtxDbg("потеря фокуса сразу после открытия — вернул");
+      setTimeout(() => mtxEd && mtxEd.ed === ed && selAll(), 0);
+      return;
+    }
+    mtxStop();
+  });
 }
 function mtxStop(cancel) {
   const m = mtxEd;
   if (!m) return;
+  mtxDbg("редактор закрыт" + (cancel ? " (отмена)" : ""));
   mtxEd = null;
   const v = m.ed.textContent.replace(/\s+/g, " ").trim();
   m.box.remove();
@@ -469,9 +493,30 @@ function mtxStop(cancel) {
     $("scrName").dispatchEvent(new Event("change"));
   }
 }
+// 3.0.68: журнал для проверки в Safari (только в отдельной проверочной сборке)
+const MTX_DBG = false;
+function mtxDbg(t) {
+  if (!MTX_DBG) return;
+  let b = $("mtxDbgLog");
+  if (!b) {
+    b = document.createElement("div");
+    b.id = "mtxDbgLog";
+    b.style.cssText = "position:fixed;left:6px;bottom:6px;z-index:99999;max-width:520px;max-height:42vh;overflow:auto;background:rgba(0,0,0,.85);color:#7f7;font:12px/1.35 monospace;padding:6px 8px;border-radius:6px;white-space:pre-wrap;pointer-events:none";
+    document.body.appendChild(b);
+  }
+  b.textContent = (b.textContent + "\n" + Math.round(performance.now()) + " " + t).split("\n").slice(-28).join("\n");
+}
+if (MTX_DBG) {
+  for (const ev of ["pointerdown", "pointerup", "mousedown", "mouseup", "click", "dblclick", "focusin", "focusout", "lostpointercapture", "pointercancel"]) document.addEventListener(ev, (e) => {
+    const t = e.target, nm = t ? (t.id || t.className || t.tagName) : "?";
+    mtxDbg(ev + " " + (e.pointerType || "") + " det=" + (e.detail != null ? e.detail : "") + " btn=" + (e.button != null ? e.button : "") + " trusted=" + e.isTrusted + " → " + String(nm).slice(0, 30));
+  }, true);
+  mtxDbg("UA: " + navigator.userAgent.slice(0, 120));
+}
 pv.addEventListener("dblclick", (e) => {
   if (document.documentElement.dataset.page !== "mask" || ui.bezDraw) return;
   const [x, y] = local(e), h = mtxHit(x, y);
+  mtxDbg("dblclick на холсте: текст " + (h ? h.k : "не найден") + " (x=" + Math.round(x) + ", y=" + Math.round(y) + ")");
   if (!h) return;
   e.preventDefault();
   mtxStart(h);

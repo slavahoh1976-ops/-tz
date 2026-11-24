@@ -1,13 +1,13 @@
 {
- "version": "3.0.65",
- "notes": "3.0.65: новая иконка «СРОЧНОЕ ТЗ» везде; в шапке — «СРОЧНОЕ ТЗ» / LED Pixel Mask Generator; шрифты масок: HohSans по умолчанию, 17 встроенных шрифтов, выбор — названия своим шрифтом; исправлен свой шрифт (Gill Sans Nova)",
+ "version": "3.0.69",
+ "notes": "3.0.69: двойное нажатие по тексту/фигуре не выделяет кабинеты; Mac/Safari — правка текста двойным нажатием; последние проекты — до 50",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "a176d524d1891ed7efe32a6679dd32faee965934d3f7daeac2b8139ff738d85c"
+  "sha256": "8e20d3eb966a1c3cc50ea33b709df7d19c8541a349b652026da742f3305bf325"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "fa2e8b8f9d24e735754fbc98bae6bbefec7cb9c5cd7d78f79da4a42710213244"
+  "sha256": "da1e93ff02b2b894c85fefbf9704318b8cee8a2e63fb99306d00bf9fea98308a"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"
