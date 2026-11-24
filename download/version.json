@@ -1,13 +1,13 @@
 {
- "version": "3.0.69",
- "notes": "3.0.69: двойное нажатие по тексту/фигуре не выделяет кабинеты; Mac/Safari — правка текста двойным нажатием; последние проекты — до 50",
+ "version": "3.0.73",
+ "notes": "3.0.73: помощник расстановки сохраняет выставленные размеры масок, угол идёт за курсором; маски не наезжают друг на друга после смены состава листа; исправлена ошибка reading 'tpl'",
  "mac": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Mac.zip",
-  "sha256": "8e20d3eb966a1c3cc50ea33b709df7d19c8541a349b652026da742f3305bf325"
+  "sha256": "c3b28fdc80bb6c4691dc89f955ef4f5346bf30633c95ada8d206eb662da601d4"
  },
  "windows": {
   "url": "https://slavahoh1976-ops.github.io/-tz/download/LED-Pixel-Mask-Generator-Windows.exe",
-  "sha256": "da1e93ff02b2b894c85fefbf9704318b8cee8a2e63fb99306d00bf9fea98308a"
+  "sha256": "409cabc93986a09b32d366f1b948ca35fcc8a3b70dcc8254ff06693a0f76e781"
  },
  "android": {
   "url": "https://github.com/slavahoh1976-ops/-tz/releases/download/android-latest/LED-Mask-Android.apk"

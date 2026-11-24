@@ -925,6 +925,32 @@ pv.addEventListener("wheel", (e) => {
   ui.tzHover = null;
   requestDraw();
 }, { passive: false });
+// 3.0.70: ручная позиция маски помнит, с какими масками она стояла на листе (sl). Состав листа
+// изменился («Масок на слайде», порядок, включили/выключили маску) — старые координаты не подходят
+// новому листу (маски наезжали друг на друга): позиция сбрасывается, маска встаёт автоматически.
+function tzMposSync(slides, items) {
+  const M = project.tz && project.tz.mpos;
+  if (!M || !Object.keys(M).length) return;
+  let drop = false;
+  for (const sl of slides) {
+    const keys = sl.kind === "ov" ? sl.ims.map((im) => imgKey(im)) : sl.kind === "g" ? sl.g.map((i) => items[i].key) : null;
+    if (!keys) continue;
+    const sig = keys.join("\u0001");
+    for (const k2 of keys) {
+      const P = M[k2];
+      if (!P) continue;
+      if (P.sl == null) P.sl = sig;
+      else if (P.sl !== sig) {
+        delete M[k2];
+        drop = true;
+      }
+    }
+  }
+  if (drop) {
+    tzEvCache.sig = "";
+    if (typeof scheduleAutosave === "function") scheduleAutosave();
+  }
+}
 function drawTZ() {
   const R = prepCanvas([16, 9]), c = pctx, items = tzItems(), imgs = tzImages();
   c.translate(ui.tzView.x, ui.tzView.y);
@@ -936,6 +962,7 @@ function drawTZ() {
   const slides = [{ kind: "title" }];
   for (const { hz, g } of imgGroups(imgs)) slides.push({ kind: "ov", hz, ims: g.map((j) => imgs[j]) });
   maskGroups(items).forEach((g, mgi) => slides.push({ kind: "g", mgi, ...g }));
+  tzMposSync(slides, items);
   const emap = evenScaleMap(maskGroups(items), items);
   // 2.0.80: «Крупно» — один лист на всё окно (двойной щелчок по листу, кнопки ◀ ▶, Esc — все листы)
   slides.forEach((sl2, i) => sl2.no = i);
@@ -1321,19 +1348,20 @@ function tzRowsOf(list) {
 // раскладка рядов в рамке B: ряд — во всю ширину, ровные промежутки, всё по центру.
 // r.fix — заданная высота ряда (тянули за угол / ряд не трогали). «Одинаковые маски — одного размера»:
 // маски одного разрешения получают общий (наименьший) масштаб, в том числе с учётом других слайдов (q.es).
-function tzArrange(rows, B, force) {
+function tzArrange(rows, B, force, own) {
   const res = {}, even = project.tz.evenSize !== false;
   const pxW = (q) => q.mw > 0 ? q.mw : q.ar * 1000, pxH = (q) => q.mh > 0 ? q.mh : 1000;
   for (const r of rows) {
     const sa = r.items.reduce((s2, q) => s2 + q.ar, 0), fitH = (B.w - GAP * (r.items.length - 1)) / Math.max(1e-6, sa);
     const h = r.fix != null ? Math.min(fitH, r.fix) : fitH;
-    for (const q of r.items) q.sc = h / pxH(q); // EMU на пиксель маски
+    // 3.0.73: у маски свой размер (fixH — высота, которую ей дали) — его не трогаем; во всю ширину — только маски без него
+    for (const q of r.items) q.sc = (q.fixH > 0 ? q.fixH : h) / pxH(q); // EMU на пиксель маски
   }
   if (even) {
     const grp = {};
     for (const r of rows) for (const q of r.items) {
       const k2 = pxW(q) + "x" + pxH(q);
-      grp[k2] = Math.min(grp[k2] == null ? Infinity : grp[k2], q.sc, q.es > 0 ? q.es : Infinity);
+      grp[k2] = Math.min(grp[k2] == null ? Infinity : grp[k2], q.sc, q.es > 0 && !(q.fixH > 0) ? q.es : Infinity); // 3.0.73: выставленный размер — не урезать до авто
     }
     // тянули угол: размер этой маски — общий для всех масок её разрешения
     if (force) grp[force.k] = force.sc;
@@ -1345,13 +1373,29 @@ function tzArrange(rows, B, force) {
     if (rw > B.w) for (const q of r.items) q.sc *= (B.w - GAP * (r.items.length - 1)) / Math.max(1, rw - GAP * (r.items.length - 1));
   }
   const rowH = (r) => Math.max(...r.items.map((q) => pxH(q) * q.sc)), rowL = (r) => Math.max(...r.items.map((q) => q.lab));
-  const need = rows.reduce((s2, r) => s2 + rowH(r) + rowL(r), 0) + GAP * (rows.length - 1);
-  const room = B.h - GAP * (rows.length - 1) - rows.reduce((s2, r) => s2 + rowL(r), 0);
-  const k = need > B.h ? room / Math.max(1, rows.reduce((s2, r) => s2 + rowH(r), 0)) : 1;
   // 3.0.57: по высоте ряды стоят там, куда их поставили (центр — только по ширине листа и внутри ряда);
   // наезжают — нижний ряд отодвигается вниз на промежуток; не влезают — подтягиваются вверх
   // по высоте можно от шапки до строки контактов (шире рабочего поля шаблона)
-  const Y0 = Math.min(B.y, 1.8e6), Y1 = Math.max(B.y + B.h, 10.15e6);
+  const Y0 = Math.min(B.y, 1.8e6), Y1 = Math.max(B.y + B.h, 10.15e6), AV = Y1 - Y0;
+  // 3.0.72: места по высоте — от шапки до контактов (раньше считалось по рабочему полю шаблона, и ряды
+  // уменьшались раньше времени). Тянут угол и всё не влезает — остальные ряды не трогаем, растёт
+  // только эта маска (и маски её разрешения), пока есть место
+  const sumL = rows.reduce((s2, r) => s2 + rowL(r), 0), sumH = () => rows.reduce((s2, r) => s2 + rowH(r), 0);
+  const pk = force && force.key ? force.key : own;
+  if (pk && sumH() + sumL + GAP * (rows.length - 1) > AV) {
+    const fr = rows.find((r) => r.items.some((q) => q.key === pk)), oq = fr && fr.items.find((q) => q.key === pk);
+    if (oq) {
+      const ok = pxW(oq) + "x" + pxH(oq), excess = sumH() + sumL + GAP * (rows.length - 1) - AV, oh = pxH(oq) * oq.sc;
+      const rest = Math.max(0, ...fr.items.filter((q) => q !== oq && !(even && pxW(q) + "x" + pxH(q) === ok)).map((q) => pxH(q) * q.sc));
+      const nh = rowH(fr) - excess;
+      if (nh >= rest && nh > 0.04 * AV && nh < oh) {
+        const f = nh / oh;
+        for (const r of rows) for (const q of r.items) if (q === oq || even && pxW(q) + "x" + pxH(q) === ok) q.sc *= f;
+      }
+    }
+  }
+  const need = sumH() + sumL + GAP * (rows.length - 1);
+  const k = need > AV ? (AV - GAP * (rows.length - 1) - sumL) / Math.max(1, sumH()) : 1;
   const full = rows.map((r) => rowH(r) * k + rowL(r)), tops = rows.map((r, i) => Math.max(Y0, Math.min(Y1 - full[i], (r.top != null ? r.top : B.y + rowL(r)) - rowL(r))));
   for (let i = 1; i < rows.length; i++) tops[i] = Math.max(tops[i], tops[i - 1] + full[i - 1] + GAP);
   if (rows.length) {
@@ -1375,23 +1419,28 @@ function tzArrange(rows, B, force) {
   });
   return res;
 }
-function tzAssistDrag(d, x, y, w) {
+function tzAssistLay(d, x, y, w) {
   // d.snap — маски листа на начало перетаскивания (без перетаскиваемой), в EMU
   const q = d.hit, ar = q.mh > 0 && q.mw > 0 ? q.mw / q.mh : q.ew / Math.max(1, q.eh), me = { key: q.key, x, y, w, h: w / ar, ar, lab: tzLabOff(q), mw: q.mw, mh: q.mh, es: q.es || 0 };
-  const rows = tzRowsOf(d.snap.map((o) => ({ ...o })));
+  const rows = tzRowsOf(d.snap.map((o) => ({ ...o, fixH: o.h })));
+  me.fixH = me.h;
   // ряды, которых перестановка не касается, сохраняют свою высоту (их могли подогнать за угол)
   for (const r of rows) if (!r.items.some((o) => d.srcKeys && d.srcKeys.has(o.key))) r.fix = r.items.reduce((s2, o) => s2 + o.h, 0) / r.items.length;
   const touch = (row) => { delete row.fix; };
   if (d.corner) {
     // тянули угол: высота ряда этой маски = её новая высота
-    let row = rows.find((r) => r.top <= y + me.h / 2 && r.bot >= y + me.h / 2);
+    // ряд — тот, где маска стояла на начало растягивания (выросшая маска не «выпадает» в новый ряд)
+    const cy0 = d.y0 != null && d.h0 != null ? d.y0 + d.h0 / 2 : y + me.h / 2;
+    let row = rows.find((r) => r.top <= cy0 && r.bot >= cy0);
     if (!row) {
       row = { items: [], top: y, bot: y + me.h, minH: me.h };
       rows.push(row);
       rows.sort((a, b) => (a.top + a.bot) / 2 - (b.top + b.bot) / 2);
     }
     row.items.push(me);
-    row.items.sort((a, b) => a.x + a.w / 2 - (b.x + b.w / 2));
+    // порядок в ряду — как на начало растягивания (растущая маска не перескакивает через соседку)
+    const mc = (o) => o === me && d.x0 != null ? d.x0 + d.w0 / 2 : o.x + o.w / 2;
+    row.items.sort((a, b) => mc(a) - mc(b));
     row.fix = me.h;
   } else {
     const cy = y + me.h / 2, cx = x + w / 2;
@@ -1407,13 +1456,54 @@ function tzAssistDrag(d, x, y, w) {
     // ряд, где маска стояла раньше, сохраняет заданную высоту (если её задавали), остальные — во всю ширину
   }
   const pw = q.mw > 0 ? q.mw : ar * 1000, ph = q.mh > 0 ? q.mh : 1000;
-  const pos = tzArrange(rows.filter((r) => r.items.length), q.B || BOX, d.corner ? { k: pw + "x" + ph, sc: me.h / ph } : null);
+  const pos = tzArrange(rows.filter((r) => r.items.length), q.B || BOX, d.corner ? { k: pw + "x" + ph, sc: me.h / ph, key: q.key } : null, q.key);
+  return { pos, rows: rows.length, ar };
+}
+function tzAssistDrag(d, x, y, w) {
+  const q = d.hit;
+  let L2 = tzAssistLay(d, x, y, w);
+  // 3.0.73: угол — под курсором. Ряд стоит по центру листа, маска растёт в обе стороны, поэтому
+  // «противоположный угол на месте» не работает (угол отставал от мыши вдвое). Подбираем ширину,
+  // при которой угол раскладки доходит до курсора; места нет — угол останавливается.
+  if (d.corner && d.cur && d.anc) {
+    const [px, py] = d.cur, [ax, ay] = d.anc, ar = L2.ar, e = d.corner[1] === "e", sS = d.corner[0] === "s";
+    const at = (w2) => {
+      const x2 = e ? ax : ax - w2, y2 = sS ? ay : ay - w2 / ar, L3 = tzAssistLay(d, x2, y2, w2), sl = L3.pos[q.key];
+      return { L3, gx: e ? sl.x + sl.w - px : px - sl.x, gy: sS ? sl.y + sl.w / ar - py : py - sl.y };
+    };
+    // ширина, при которой угол доходит до курсора по оси (null — по этой оси курсора не достать)
+    const lo0 = Math.max(1, d.minW || 1), hi0 = SLIDE_W;
+    const N = 48, smp = [];
+    for (let i = 0; i <= N; i++) {
+      const w2 = lo0 + (hi0 - lo0) * i / N;
+      smp.push({ w: w2, r: at(w2) });
+    }
+    const solve = (ax2) => {
+      const j = smp.findIndex((o) => o.r[ax2] >= 0);
+      if (j < 0) return null;
+      if (j === 0) return lo0;
+      let lo = smp[j - 1].w, hi = smp[j].w;
+      for (let i = 0; i < 16; i++) {
+        const mid = (lo + hi) / 2;
+        if (at(mid)[ax2] < 0) lo = mid;
+        else hi = mid;
+      }
+      return hi;
+    };
+    // курсор дальше, чем маска может вырасти, — самый большой размер, который даёт место
+    const biggest = () => smp.reduce((a2, o) => (o.r.L3.pos[q.key].w > a2.r.L3.pos[q.key].w ? o : a2), smp[0]).w;
+    const wx = solve("gx"), wy = solve("gy"), wv = [wx, wy].filter((v) => v != null);
+    // курсор недостижим ни по одной оси (угол держат соседи или край листа) — размер по сдвигу мыши, как без помощника
+    const best = wv.length ? at(Math.max(...wv)).L3 : at(Math.min(w, biggest())).L3;
+    L2 = best;
+  }
+  const pos = L2.pos;
   project.tz.mpos = project.tz.mpos || {};
   for (const k2 of Object.keys(pos)) if (k2 !== q.key) project.tz.mpos[k2] = pos[k2];
   d.slot = pos[q.key];
   // во время перетаскивания маска идёт за мышью (размером своего будущего места); угол — сразу на месте
   project.tz.mpos[q.key] = d.corner ? d.slot : { x: Math.round(x + w / 2 - d.slot.w / 2), y: Math.round(y), w: d.slot.w };
-  ui.tzAssistRows = rows.length;
+  ui.tzAssistRows = L2.rows;
 }
 // ---- 3.0.57: несколько масок — вместе двигать, масштабировать, «Одного размера» ----
 const tzMItem = (o) => ({ key: o.key, x: o.ex, y: o.ey, w: o.ew, h: o.eh, ar: o.mh > 0 && o.mw > 0 ? o.mw / o.mh : o.ew / Math.max(1, o.eh), lab: tzLabOff(o), mw: o.mw, mh: o.mh, es: o.es || 0 });
@@ -1480,8 +1570,8 @@ function tzSameSize() {
   }
   if (ui.tzAssist) {
     // помощник: ряды с новыми размерами — ровно, с промежутками, по центру
+    for (const it of items) it.fixH = it.h; // у каждой маски — свой (новый) размер
     const rows = tzRowsOf(items);
-    for (const r of rows) r.fix = Math.max(...r.items.map((o) => o.h));
     const pos = tzArrange(rows, ref.B || BOX);
     for (const k2 of Object.keys(pos)) project.tz.mpos[k2] = pos[k2];
   } else for (const it of items) if (ui.tzMSel.has(it.key)) project.tz.mpos[it.key] = { x: Math.round(it.x), y: Math.round(it.y), w: Math.round(it.w) };
@@ -1534,6 +1624,11 @@ function tzMaskDrag(p, shift) {
   if (d.snap) y = Math.max(1.8e6 + lab, Math.min(10.15e6 - h, y));
   if (d.snap) {
     ui.tzSnap = null;
+    if (d.corner) {
+      d.cur = [(d.corner[1] === "w" ? d.x0 : d.x0 + d.w0) + dx, (d.corner[0] === "n" ? d.y0 : d.y0 + d.h0) + dy];
+      d.anc = [d.corner[1] === "w" ? d.x0 + d.w0 : d.x0, d.corner[0] === "n" ? d.y0 + d.h0 : d.y0];
+      d.minW = minW;
+    }
     return tzAssistDrag(d, x, y, w);
   }
   project.tz.mpos = project.tz.mpos || {};
